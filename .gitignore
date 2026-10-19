@@ -1,0 +1,48 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+dist-ssr/
+build/
+out/
+coverage/
+*.tsbuildinfo
+.vite/
+.vitest/
+
+# cloudflare / wrangler
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+worker-configuration.d.ts.bak
+
+# env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# test artefacts
+playwright-report/
+test-results/
+blob-report/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editors / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# claude code local state
+.claude/settings.local.json
+.claude/agent-memory-local/
