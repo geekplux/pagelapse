@@ -39,6 +39,18 @@ const CASES: [string, string, string, boolean][] = [
   ['nfc', 'Café', 'Café', true],
   ['nfc', 'Å ring', 'Å ring', true],
   ['nfc', 'Café', 'Cafe', false],
+  // Round-1 verifier regressions: content that must not be masked.
+  ['dotted date', 'Due 03.10.2012', 'Due 04.11.2013', true],
+  ['version', 'Node 18.17.10', 'Node 20.11.10', false],
+  ['version', 'Python 3.10.12', 'Python 3.11.10', false],
+  ['last updated', 'This page was last edited by Alice to add history', 'This page was last edited by Bob to remove history', false],
+  ['last updated', 'The last modified files are shown first', 'The last modified folders are shown first', false],
+  ['last updated', 'Last modified: 2 days ago', 'Last modified: 5 hours ago', true],
+  ['time zone', 'Meet at 10:30 eastern gate', 'Meet at 10:30 western gate', false],
+  ['time zone', 'Live at 10:30 EST', 'Live at 18:00 PDT', true],
+  ['counter', '100 people died', '2,000 people died', false],
+  ['tracking', 'Watch youtube.com/watch?v=abc123', 'Watch youtube.com/watch?v=xyz789', false],
+  ['cache-buster', 'Font a.woff2?t=1&v=2', 'Font a.woff2?t=9', true],
 ];
 
 describe('normalizeForCompare', () => {
@@ -49,5 +61,13 @@ describe('normalizeForCompare', () => {
   it('keeps bare years and is idempotent', () => {
     expect(n('the 2014 Olympics')).toContain('2014');
     for (const [, a] of CASES) expect(n(n(a))).toBe(n(a));
+  });
+
+  it('keeps content that only looks like noise', () => {
+    expect(n('Node 18.17.10')).toBe('Node 18.17.10');
+    expect(n('last edited by Alice to add history')).toBe('last edited by Alice to add history');
+    expect(n('Meet at 10:30 eastern gate')).toBe('Meet at ⟨time⟩ eastern gate');
+    expect(n('100 people died')).toBe('100 people died');
+    expect(n('youtube.com/watch?v=abc123&utm_source=x')).toBe('youtube.com/watch?v=abc123');
   });
 });
