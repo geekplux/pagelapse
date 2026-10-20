@@ -99,3 +99,34 @@ export interface SampleFixture {
   snapshots: FixtureSnapshot[];
   summaries?: Record<string, FixtureSummary>;
 }
+
+/**
+ * One word-level edit; `text` is original text (B's for `equal`/`ins`, A's for `del`),
+ * whitespace included. An `equal` run whose A text differs (quotes, dashes, spacing) has it in `from`.
+ */
+export interface WordOp {
+  type: 'equal' | 'ins' | 'del';
+  text: string;
+  from?: string;
+}
+
+/**
+ * One block-level edit from page A to page B; `a`/`b` index the blocks of A/B. Ops are
+ * in B order: replaying the non-`removed` ops rebuilds B (see `applyDiff`).
+ * `modified` carries B's kind/level and word ops; `normalizedEqual` is true when the two
+ * texts only differ in content that `normalizeForCompare` masks (dates, counters, ...).
+ * `moved` is an identical block that changed position.
+ */
+export type BlockOp =
+  | { type: 'equal'; a: number; b: number }
+  | { type: 'added'; b: number; block: Block }
+  | { type: 'removed'; a: number }
+  | { type: 'modified'; a: number; b: number; kind: BlockKind; level?: HeadingLevel; words: WordOp[]; normalizedEqual: boolean }
+  | { type: 'moved'; a: number; b: number };
+
+/** Result of `diffPages`. `cutoff` is true when `maxEditDistance` was hit and the diff fell back to block replacement. */
+export interface PageDiff {
+  ops: BlockOp[];
+  titleChanged: boolean;
+  cutoff: boolean;
+}

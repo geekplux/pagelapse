@@ -15,3 +15,6 @@ export * from './url.ts';
 export * from './outline.ts';
 export * from './cdx.ts';
 export * from './sampling.ts';
+export * from './normalize.ts';
+export * from './myers.ts';
+export * from './diff.ts';
