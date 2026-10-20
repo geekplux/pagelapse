@@ -1,0 +1,41 @@
+import { diffPages } from './diff.ts';
+import { toChangeRecord } from './changeRecord.ts';
+import { ruleSummary } from './ruleSummary.ts';
+import { scoreDiff } from './score.ts';
+import type { SnapshotPage, Timeline } from './types.ts';
+
+/** Options for {@link buildTimeline} and {@link appendSnapshot}, passed on to `diffPages`. */
+export interface TimelineOptions {
+  maxEditDistance?: number;
+}
+
+/** A timeline with no captures yet; grow it with {@link appendSnapshot}. */
+export function emptyTimeline(url: string): Timeline {
+  return { url, snapshots: [], entries: [], trivialCaptures: [], baseline: 0 };
+}
+
+/**
+ * Returns a new timeline with capture `s` appended (the input is not mutated). `s` is diffed
+ * against the baseline, the last *meaningful* capture, so slow drift through many trivial
+ * captures still surfaces. A meaningful change adds an entry and becomes the new baseline; a
+ * trivial one is only listed in `trivialCaptures`. Captures must arrive in time order.
+ */
+export function appendSnapshot(t: Timeline, s: SnapshotPage, opts: TimelineOptions = {}): Timeline {
+  const last = t.snapshots.at(-1);
+  if (last && s.ts <= last.ts) throw new RangeError(`appendSnapshot: capture ${s.ts} is not after ${last.ts}`);
+  const snapshots = [...t.snapshots, s];
+  const base = t.snapshots[t.baseline];
+  if (!base) return { ...t, snapshots };
+  const diff = diffPages(base, s, opts);
+  const significance = scoreDiff(diff, base, s);
+  if (significance.magnitude === 'trivial') return { ...t, snapshots, trivialCaptures: [...t.trivialCaptures, s.ts] };
+  const record = toChangeRecord(diff, base, s);
+  const entry = { from: base.ts, to: s.ts, diff, significance, record, ruleSummary: ruleSummary(record) };
+  return { ...t, snapshots, entries: [...t.entries, entry], baseline: snapshots.length - 1 };
+}
+
+/** Builds the timeline of `snapshots` (sorted by time first); same result as appending them one by one. */
+export function buildTimeline(url: string, snapshots: readonly SnapshotPage[], opts: TimelineOptions = {}): Timeline {
+  const sorted = [...snapshots].sort((x, y) => (x.ts < y.ts ? -1 : x.ts > y.ts ? 1 : 0));
+  return sorted.reduce((t, s) => appendSnapshot(t, s, opts), emptyTimeline(url));
+}

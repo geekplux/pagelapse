@@ -130,3 +130,52 @@ export interface PageDiff {
   titleChanged: boolean;
   cutoff: boolean;
 }
+
+/** How much a change matters; `trivial` changes are filtered out of the timeline. */
+export type Magnitude = 'trivial' | 'minor' | 'moderate' | 'major';
+
+/** Result of `scoreDiff`: `score` is 0..1 (marker area follows it), `reasons` are short, human-readable. */
+export interface Significance {
+  score: number;
+  magnitude: Magnitude;
+  reasons: string[];
+}
+
+/** Compact, page-free description of one change: the only input a summariser ever sees (<= 1,200 chars as JSON). */
+export interface ChangeRecord {
+  /** `"<fromTs>-<toTs>"`, see `pairKey`. */
+  pair: string;
+  /** The later capture's title (clipped). */
+  title: string;
+  titleChanged?: true;
+  headingsAdded: string[];
+  headingsRemoved: string[];
+  /** Snippets (<= 160 chars) of the largest added / removed blocks, in page order. */
+  added: string[];
+  removed: string[];
+  /** Excerpts around the first edit of the most-changed blocks. */
+  modified: { before: string; after: string }[];
+  stats: { wordsAdded: number; wordsRemoved: number; blocksAdded: number; blocksRemoved: number; blocksModified: number };
+}
+
+/** One meaningful change on the timeline: `from` is the baseline (last meaningful capture), `to` the new capture. */
+export interface TimelineEntry {
+  from: string;
+  to: string;
+  diff: PageDiff;
+  significance: Significance;
+  record: ChangeRecord;
+  ruleSummary: string;
+}
+
+/** The model the UI consumes; build with `buildTimeline` or grow with `appendSnapshot`. */
+export interface Timeline {
+  url: string;
+  /** Every capture, chronological. */
+  snapshots: SnapshotPage[];
+  entries: TimelineEntry[];
+  /** Timestamps of captures whose change from the baseline was trivial (hidden, but counted). */
+  trivialCaptures: string[];
+  /** Index into `snapshots` of the current comparison baseline. */
+  baseline: number;
+}

@@ -18,3 +18,7 @@ export * from './sampling.ts';
 export * from './normalize.ts';
 export * from './myers.ts';
 export * from './diff.ts';
+export * from './score.ts';
+export * from './changeRecord.ts';
+export * from './ruleSummary.ts';
+export * from './timeline.ts';
