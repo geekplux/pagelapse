@@ -4,7 +4,7 @@
 "label": "rust-lang.org home page",
 "url": "https://www.rust-lang.org/",
 "description": "The Rust programming language's home page, from the 2018 redesign through later rewrites of its pitch, sections and calls to action.",
-"source": {"archive":"arquivo-pt","recordedAt":"2026-10-20","recorder":"wayback-diff record-samples 0.1.0 (extractor v2)","license":"MIT","attribution":"Text excerpted from www.rust-lang.org by the Rust project contributors; the site source is dual-licensed MIT or Apache-2.0 (github.com/rust-lang/www.rust-lang.org)."},
+"source": {"archive":"arquivo-pt","recordedAt":"2026-10-20","recorder":"wayback-diff record-samples 0.1.0 (extractor v2)","license":"MIT","attribution":"Trimmed text excerpt from www.rust-lang.org by the Rust project contributors; the site source is dual-licensed MIT or Apache-2.0 (github.com/rust-lang/www.rust-lang.org)."},
 "blocks": [
   {"k":"heading","t":"The Rust 2018 Edition is here!","l":3},
   {"k":"heading","t":"Performance","l":3},

@@ -5,6 +5,9 @@ import config from './samples.config.json';
 
 const RAW = import.meta.glob<string>(['./*.json', '!./samples.config.json'], { query: '?raw', import: 'default', eager: true });
 const KB = 1000;
+/** Monetary figures and finance terms; no committed sample may state any (CLAUDE.md: nothing finance-related). */
+const FINANCE =
+  /[$€£¥]\s?\d|\bUS\$|\d[\d,.]*\s?(million|billion)\s+(dollars|euros)|\b(dollars|euros)\b|\bbudget\b|\brevenue\b|\bassets\b|\bfunding of\b|\bdonations? of (US)?[$€£¥]/i;
 
 async function gzipBytes(text: string): Promise<number> {
   const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
@@ -28,6 +31,12 @@ describe('committed samples', () => {
     expect(f.snapshots.length).toBeGreaterThanOrEqual(8);
     expect(new Set(f.snapshots.map((s) => s.digest)).size).toBe(f.snapshots.length);
     expect(new TextEncoder().encode(raw).length).toBeLessThanOrEqual(150 * KB);
+  });
+
+  it.each(Object.entries(RAW))('%s states no monetary figures in any block', (_, raw) => {
+    const f = parseSampleFixture(JSON.parse(raw));
+    expect(f.blocks.map((b) => b.t).filter((t) => FINANCE.test(t))).toEqual([]);
+    expect(f.snapshots.map((s) => s.title).filter((t) => FINANCE.test(t))).toEqual([]);
   });
 
   it('default sample is <= 40 KB gzip (AC 30)', async () => {

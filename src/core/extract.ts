@@ -12,19 +12,25 @@ export interface ExtractOptions {
   maxChars?: number;
 }
 
-type El = { tag: string; children: (El | string)[] };
+/** `nav` marks `<nav>`/`[role=navigation]` subtrees, which {@link collect} includes only on request. */
+type El = { tag: string; children: (El | string)[]; nav?: true };
 type Ctx = { kind: BlockKind; level?: HeadingLevel };
 
-/** If the main-content selection has fewer words than this, the whole body is used. */
+/** If the main-content selection has fewer words than this, the whole body is used (then navs, see NavMode). */
 const MIN_MAIN_WORDS = 50;
+/**
+ * Which navigation subtrees {@link collect} keeps: none (main content), `content` navs that hold
+ * paragraphs (descriptive tiles rather than link menus, e.g. git-scm.com's home page), or all of them.
+ */
+type NavMode = 'none' | 'content' | 'all';
 /** Deeper elements are flattened into their ancestor, so traversals never overflow the stack. */
 const MAX_DEPTH = 256;
 /** htmlparser2's open-element stack costs O(n) per tag, so parsing stops beyond this many open tags. */
 const MAX_OPEN = 4096;
 const SKIP_TAGS = new Set(
-  'script style noscript template svg iframe object canvas nav aside footer button select textarea label title'.split(' '),
+  'script style noscript template svg iframe object canvas aside footer button select textarea label title'.split(' '),
 );
-const SKIP_ROLES = new Set(['navigation', 'banner', 'contentinfo', 'search']);
+const SKIP_ROLES = new Set(['banner', 'contentinfo', 'search']);
 // Wiki chrome that sits inside the content column ([edit] links, citation marks, navboxes, TOC).
 const SKIP_CLASS = /(?:^|\s)(?:mw-editsection|mw-jump-link|mw-jump|vector-dropdown|noprint|navbox|catlinks|printfooter|reference|toc)(?:\s|$)/;
 const SKIP_ID = /^(?:siteSub|contentSub|jump-to-nav)$/;
@@ -40,6 +46,8 @@ const LIST: Ctx = { kind: 'list-item' };
 const CTX: Record<string, Ctx> = { li: LIST, dt: LIST, dd: LIST, blockquote: { kind: 'quote' }, pre: { kind: 'code' } };
 
 const collapse = (s: string) => s.replace(/\s+/g, ' ').trim();
+const wordCount = (blocks: Block[]) => blocks.reduce((n, b) => n + b.text.split(' ').length, 0);
+const hasParagraph = (el: El): boolean => el.children.some((c) => typeof c !== 'string' && (c.tag === 'p' || hasParagraph(c)));
 
 function isBoilerplate(tag: string, a: Record<string, string>, inMain: boolean): boolean {
   return (
@@ -62,7 +70,7 @@ const inlineText = (n: El | string): string =>
   typeof n === 'string' ? n : n.tag === 'br' ? ' ' : n.children.map(inlineText).join('');
 
 /** Turns element trees into blocks; `<br><br>` splits a block, a single `<br>` is a space. */
-function collect(roots: El[]): Block[] {
+function collect(roots: El[], navs: NavMode = 'none'): Block[] {
   const out: Block[] = [];
   let buf = '';
   const flush = ({ kind, level }: Ctx) => {
@@ -81,6 +89,7 @@ function collect(roots: El[]): Block[] {
       buf += '\n';
       return;
     }
+    if (n.nav && (navs === 'none' || (navs === 'content' && !hasParagraph(n)))) return;
     if (n.tag === 'tr' && !hasLayout(n)) {
       flush(ctx);
       const cells = n.children.flatMap((c) => (typeof c === 'string' ? [] : [collapse(inlineText(c))]));
@@ -111,7 +120,8 @@ function collect(roots: El[]): Block[] {
  * Extracts the readable title and content blocks from raw archived HTML. Pure and
  * deterministic: drops scripts, navigation, footers, headers outside the main content,
  * hidden elements and Wayback toolbar remnants; prefers `<main>`/`[role=main]`, then
- * `<article>`, falling back to the whole body when that selection has < 50 words.
+ * `<article>`, falling back to the whole body when that selection has < 50 words. The body
+ * fallback keeps navs that contain paragraphs, and if it still has < 50 words, every nav.
  * Pass already-decoded text (charset handling happens at fetch time).
  */
 export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedPage {
@@ -119,12 +129,13 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
   const root: El = { tag: 'body', children: [] };
   const mains: El[] = [];
   const articles: El[] = [];
-  const stack: { tag: string; parent: El; skips: boolean; main: boolean; deep: boolean }[] = [];
+  const stack: { tag: string; parent: El; skips: boolean; main: boolean; deep: boolean; nav: boolean }[] = [];
   let cur = root;
   let depth = 0;
   let flattened = false;
   let skip = 0;
   let inMain = 0;
+  let inNav = 0;
   let title: string | undefined;
   let inTitle = false;
 
@@ -135,10 +146,13 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
           title = '';
           inTitle = true;
         }
-        const skips = skip > 0 || isBoilerplate(tag, a, inMain > 0);
+        const isNav = tag === 'nav' || a.role === 'navigation';
+        // Flattened (too deep) navs cannot be told apart later, so they stay dropped.
+        const skips = skip > 0 || isBoilerplate(tag, a, inMain > 0) || (isNav && depth >= MAX_DEPTH);
         const deep = !skips && depth >= MAX_DEPTH;
-        const main = !skips && !deep && (tag === 'main' || tag === 'article' || a.role === 'main');
-        stack.push({ tag, parent: cur, skips, main, deep });
+        const main = !skips && !deep && !inNav && (tag === 'main' || tag === 'article' || a.role === 'main');
+        const nav = !skips && isNav;
+        stack.push({ tag, parent: cur, skips, main, deep, nav });
         if (stack.length >= MAX_OPEN) {
           flattened = true;
           parser.pause();
@@ -154,10 +168,11 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
           return;
         }
         depth++;
-        const el: El = { tag, children: [] };
+        const el: El = nav ? { tag, children: [], nav } : { tag, children: [] };
         cur.children.push(el);
         if (main && !inMain) (tag === 'article' ? articles : mains).push(el);
         if (main) inMain++;
+        if (nav) inNav++;
         cur = el;
       },
       ontext(text) {
@@ -171,6 +186,7 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
         if (f.skips) skip--;
         else if (!f.deep) depth--;
         if (f.main) inMain--;
+        if (f.nav) inNav--;
         cur = f.parent;
       },
     },
@@ -181,7 +197,8 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
 
   const selected = mains.length ? mains : articles;
   let blocks = selected.length ? collect(selected) : [];
-  if (blocks.reduce((n, b) => n + b.text.split(' ').length, 0) < MIN_MAIN_WORDS) blocks = collect([root]);
+  if (wordCount(blocks) < MIN_MAIN_WORDS) blocks = collect([root], 'content');
+  if (wordCount(blocks) < MIN_MAIN_WORDS) blocks = collect([root], 'all');
 
   const page: ExtractedPage = { title: collapse(title ?? ''), blocks: [] };
   if (flattened) page.truncated = true;

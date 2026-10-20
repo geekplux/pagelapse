@@ -1,7 +1,8 @@
 // Records the built-in samples from a web archive into trimmed, block-interned fixtures.
 // The only code that touches the live network (AC 20); never imported by tests.
 //
-// Usage: pnpm record:samples [--archive internet-archive|arquivo-pt] [--only <id>] [--max 14] [--dry-run]
+// Usage: pnpm record:samples [--archive internet-archive|arquivo-pt] [--only <id>] [--max 14] [--dry-run] [--offline]
+// --offline re-records from .cache/record/ only and fails on a cache miss instead of fetching.
 // Politeness: one request at a time, >= 1.5 s apart, identified User-Agent, and every response
 // (CDX and raw HTML) cached in .cache/record/ so re-runs never refetch. Delete it to refresh.
 import { createHash } from 'node:crypto';
@@ -24,7 +25,7 @@ interface SampleConfig {
   url: string;
   description: string;
   maxChars: number;
-  /** Optional regex; matching blocks are trimmed from this sample (noise, money figures). */
+  /** Optional case-insensitive regex; matching blocks are trimmed from every capture (noise, money figures). */
   dropBlocks?: string;
   license: string;
   attribution: string;
@@ -39,6 +40,7 @@ const { values: args } = parseArgs({
     only: { type: 'string' },
     max: { type: 'string', default: '14' },
     'dry-run': { type: 'boolean', default: false },
+    offline: { type: 'boolean', default: false },
   },
 });
 const archive = args.archive as ArchiveId;
@@ -59,6 +61,7 @@ let requests = 0;
 async function cachedGet(url: string): Promise<string> {
   const file = join(cacheDir, `${createHash('sha256').update(url).digest('hex')}.txt`);
   if (existsSync(file)) return readFileSync(file, 'utf8');
+  if (args.offline) throw new Error(`--offline: ${url} is not in .cache/record/${archive}/`);
   await delay(Math.max(0, lastRequest + GAP_MS - Date.now()));
   console.error(`GET ${url}`);
   requests++;
@@ -94,6 +97,7 @@ for (const cfg of configs) {
   const index = new Map<string, number>();
   const snapshots: FixtureSnapshot[] = [];
   let previous = '';
+  const drop = cfg.dropBlocks ? new RegExp(cfg.dropBlocks, 'iu') : null;
   for (const cap of sampled) {
     let html: string;
     try {
@@ -104,7 +108,7 @@ for (const cfg of configs) {
       continue;
     }
     const page = extractPage(html, { maxChars: cfg.maxChars });
-    if (cfg.dropBlocks) page.blocks = page.blocks.filter((b) => !new RegExp(cfg.dropBlocks!, 'u').test(b.text));
+    if (drop) page.blocks = page.blocks.filter((b) => !drop.test(b.text));
     const content = JSON.stringify([page.title, page.blocks]);
     // Near-empty shells (redirect stubs, script-only pages) and content-identical captures add nothing.
     if (page.blocks.length < 3 || content === previous) continue;

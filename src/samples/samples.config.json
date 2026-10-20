@@ -5,9 +5,9 @@
     "url": "https://en.wikipedia.org/wiki/Internet_Archive",
     "description": "The encyclopedia article about the archive itself, opening section and early history, as it grew and was reworded over a decade of edits.",
     "maxChars": 9000,
-    "dropBlocks": "^(?:Coordinates:|\\d+°|(?:Revenue|Total assets|Operating income|Net income|Endowment|Budget) \\|)",
+    "dropBlocks": "^(?:Coordinates:|\\d+°)|[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bdonations? of (?:US)?[$€£¥]|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b",
     "license": "CC-BY-SA-4.0",
-    "attribution": "Text excerpted from the Wikipedia article “Internet Archive” by Wikipedia contributors (see the article history); revisions before June 2023 were published under CC BY-SA 3.0."
+    "attribution": "Trimmed text excerpt, not the full article (blocks stating monetary figures are omitted), from the Wikipedia article “Internet Archive” by Wikipedia contributors (see the article history); revisions before June 2023 were published under CC BY-SA 3.0."
   },
   {
     "id": "git-scm",
@@ -16,7 +16,7 @@
     "description": "The Git project's home page: the tagline, the latest release number and the links to docs and downloads, through a decade of releases and redesigns.",
     "maxChars": 6000,
     "license": "MIT",
-    "attribution": "Text excerpted from git-scm.com by the Git project contributors; the site source is MIT-licensed (github.com/git/git-scm.com)."
+    "attribution": "Trimmed text excerpt from git-scm.com by the Git project contributors; the site source is MIT-licensed (github.com/git/git-scm.com)."
   },
   {
     "id": "rust-lang",
@@ -25,6 +25,6 @@
     "description": "The Rust programming language's home page, from the 2018 redesign through later rewrites of its pitch, sections and calls to action.",
     "maxChars": 6000,
     "license": "MIT",
-    "attribution": "Text excerpted from www.rust-lang.org by the Rust project contributors; the site source is dual-licensed MIT or Apache-2.0 (github.com/rust-lang/www.rust-lang.org)."
+    "attribution": "Trimmed text excerpt from www.rust-lang.org by the Rust project contributors; the site source is dual-licensed MIT or Apache-2.0 (github.com/rust-lang/www.rust-lang.org)."
   }
 ]

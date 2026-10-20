@@ -80,6 +80,28 @@ describe('extractPage', () => {
     `);
   });
 
+  it('keeps descriptive navs (with paragraphs) when there is no <main>, but not link menus', () => {
+    expect(render(extract('content-in-nav'))).toMatchInlineSnapshot(`
+      "title: Quillmark - plain-text notes that sync
+      p Quillmark keeps your notes as plain text files and syncs them between devices. Every note stays readable in any editor, works offline, and can be searched, versioned and backed up with the tools you already use.
+      h3 About
+      li Why plain text outlives every note-taking app.
+      h3 Learn
+      li A short guide, keyboard shortcuts and a cheat sheet.
+      h3 Install
+      li Builds for desktop and mobile platforms.
+      p Version 3.2 adds offline search."
+    `);
+  });
+
+  it.each([
+    ['drops even descriptive navs inside a long enough <main>', `<main><p>${words(60)}</p><nav><p>Related blurb</p></nav></main>`, false],
+    ['includes link-only navs when the page has < 50 words without them', '<nav><a href="/a">Related one</a></nav><p>Tiny page.</p>', true],
+    ['drops link-only navs when the rest has >= 50 words', `<nav><a href="/a">Related one</a></nav><p>${words(60)}</p>`, false],
+  ])('%s', (_, body, related) => {
+    expect(render(extractPage(`<body>${body}</body>`)).includes('Related')).toBe(related);
+  });
+
   it('keeps already-decoded non-UTF-8 text', () => {
     expect(render(extract('latin1-charset'))).toMatchInlineSnapshot(`
       "title: Jardim Botânico – Visitas guiadas
