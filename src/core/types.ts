@@ -29,6 +29,13 @@ export interface ExtractedPage {
   truncated?: boolean;
 }
 
+/** One node of a page's heading outline, see `deriveOutline`. */
+export interface OutlineNode {
+  level: HeadingLevel;
+  text: string;
+  children: OutlineNode[];
+}
+
 /** An extracted page tied to the capture it came from. */
 export interface SnapshotPage extends ExtractedPage {
   /** 14-digit CDX timestamp, `YYYYMMDDhhmmss` (UTC). */
@@ -36,8 +43,11 @@ export interface SnapshotPage extends ExtractedPage {
   digest: string;
 }
 
+/** A web archive we can query and fetch captures from. */
+export type ArchiveId = 'internet-archive' | 'arquivo-pt';
+
 /** Where a sample fixture's data came from. */
-export type SampleArchive = 'internet-archive' | 'arquivo-pt' | 'illustrative';
+export type SampleArchive = ArchiveId | 'illustrative';
 
 /** Provenance of a sample fixture, shown in the UI. */
 export interface SampleSource {
