@@ -2,7 +2,7 @@ STATE: IN-PROGRESS
 
 # Status
 
-- Current phase: 6 verified; PR being opened
+- Current phase: 7 (`phase-7-timeline-ui`) starting
 - Blockers: none
 
 | Phase | Branch | PR | State | Verify rounds |
@@ -12,7 +12,7 @@ STATE: IN-PROGRESS
 | 3 | phase-3-extract | [#4](https://github.com/geekplux/wayback-diff/pull/4) | PR open (PASS) | 2 |
 | 4 | phase-4-recorder-samples | [#5](https://github.com/geekplux/wayback-diff/pull/5) | PR open (PASS) | 1 |
 | 5 | phase-5-diff-engine | [#6](https://github.com/geekplux/wayback-diff/pull/6) | PR open (PASS) | 2 |
-| 6 | phase-6-significance | (opening) | verified PASS | 1 |
+| 6 | phase-6-significance | [#7](https://github.com/geekplux/wayback-diff/pull/7) | PR open (PASS) | 1 |
 | 7 | phase-7-timeline-ui | - | not started | 0 |
 | 8 | phase-8-diff-view | - | not started | 0 |
 | 9 | phase-9-worker-archive-api | - | not started | 0 |
@@ -26,4 +26,4 @@ Follow-ups:
 - Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-20 (phase 6 verified)
+Last updated: 2026-10-20 (PR #7 opened)
