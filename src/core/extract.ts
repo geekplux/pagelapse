@@ -4,7 +4,7 @@ import { Parser } from 'htmlparser2';
 import type { Block, BlockKind, ExtractedPage, HeadingLevel } from './types.ts';
 
 /** Version of the extraction rules; bump it to invalidate cached extractions (PLAN 5.7). */
-export const EXTRACTOR_VERSION = 1;
+export const EXTRACTOR_VERSION = 2;
 
 /** Size caps for {@link extractPage}; defaults are 400 blocks and 30,000 characters (AC 19). */
 export interface ExtractOptions {
@@ -26,7 +26,8 @@ const SKIP_TAGS = new Set(
 );
 const SKIP_ROLES = new Set(['navigation', 'banner', 'contentinfo', 'search']);
 // Wiki chrome that sits inside the content column ([edit] links, citation marks, navboxes, TOC).
-const SKIP_CLASS = /(?:^|\s)(?:mw-editsection|mw-jump-link|noprint|navbox|catlinks|printfooter|reference|toc)(?:\s|$)/;
+const SKIP_CLASS = /(?:^|\s)(?:mw-editsection|mw-jump-link|mw-jump|vector-dropdown|noprint|navbox|catlinks|printfooter|reference|toc)(?:\s|$)/;
+const SKIP_ID = /^(?:siteSub|contentSub|jump-to-nav)$/;
 const BLOCK_TAGS = new Set(
   'address article blockquote body center dd details dir div dl dt fieldset figcaption figure form h1 h2 h3 h4 h5 h6 header hr html li main menu ol p pre section summary table tbody td tfoot th thead tr ul caption'.split(' '),
 );
@@ -48,7 +49,8 @@ function isBoilerplate(tag: string, a: Record<string, string>, inMain: boolean):
     a.hidden !== undefined ||
     a['aria-hidden'] === 'true' ||
     /display:\s*none/i.test(a.style ?? '') ||
-    SKIP_CLASS.test(a.class ?? '')
+    SKIP_CLASS.test(a.class ?? '') ||
+    SKIP_ID.test(a.id ?? '')
   );
 }
 

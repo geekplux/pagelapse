@@ -17,7 +17,7 @@ const NOISE =
 const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
 
 describe('extractPage', () => {
-  it('has a cache-busting version', () => expect(EXTRACTOR_VERSION).toBe(1));
+  it('has a cache-busting version', () => expect(EXTRACTOR_VERSION).toBe(2));
 
   it('extracts a Wikipedia-like article', () => {
     expect(render(extract('wikipedia-article'))).toMatchInlineSnapshot(`
