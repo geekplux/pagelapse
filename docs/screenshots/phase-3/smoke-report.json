@@ -8,8 +8,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 596,
-      "timeToReadyMs": 188,
+      "durationMs": 643,
+      "timeToReadyMs": 216,
       "notes": [
         "4 capture dates visible",
         "light paper rgb(246, 241, 231)",
@@ -23,8 +23,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 545,
-      "timeToReadyMs": 64,
+      "durationMs": 577,
+      "timeToReadyMs": 66,
       "notes": [
         "4 capture dates visible",
         "light paper rgb(246, 241, 231)",
@@ -38,8 +38,8 @@
       "viewport": "desktop",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 555,
-      "timeToReadyMs": 151,
+      "durationMs": 552,
+      "timeToReadyMs": 66,
       "notes": [
         "4 capture dates visible",
         "dark paper rgb(20, 18, 15)",
@@ -53,8 +53,8 @@
       "viewport": "mobile",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 537,
-      "timeToReadyMs": 61,
+      "durationMs": 544,
+      "timeToReadyMs": 64,
       "notes": [
         "4 capture dates visible",
         "dark paper rgb(20, 18, 15)",
@@ -68,7 +68,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 390,
+      "durationMs": 428,
       "notes": [
         "8 animated elements (a.skip-link, a.home-link, button.chip, article.sheet, a.mono, a., a.licence-link) all 0s under reduce",
         "axe: 0 serious/critical"
@@ -80,7 +80,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 403,
+      "durationMs": 417,
       "notes": [
         "8 animated elements (a.skip-link, a.home-link, button.chip, article.sheet, a.mono, a., a.licence-link) all 0s under reduce",
         "axe: 0 serious/critical"
@@ -92,7 +92,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 571,
+      "durationMs": 563,
       "notes": [
         "7 stops: header:Skip to content | header:wayback±diffwayback-diff | chips:Community garden (demo) | main:https://example.org/garden | footer:Internet Archive's Wayback Machine | footer:CC0-1.0 | footer:Source on GitHub",
         "announced: Showing: Illustrative demo: Example Community Garden, 4 captures",
@@ -105,7 +105,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 542,
+      "durationMs": 556,
       "notes": [
         "7 stops: header:Skip to content | header:wayback±diffwayback-diff | chips:Community garden (demo) | main:https://example.org/garden | footer:Internet Archive's Wayback Machine | footer:CC0-1.0 | footer:Source on GitHub",
         "announced: Showing: Illustrative demo: Example Community Garden, 4 captures",
