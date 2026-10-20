@@ -1,0 +1,126 @@
+/* Fraunces (OFL, public/fonts/OFL.txt): static instances of the google/fonts variable font made with
+   fonttools varLib.instancer (wght 600 opsz 72 SOFT 50 WONK 0; italic wght 400 WONK 1), Latin-1 subset. */
+@font-face {
+  font-family: Fraunces;
+  src: url("/fonts/Fraunces-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: Fraunces;
+  src: url("/fonts/Fraunces-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+h1, h2, h3, p, ol { margin: 0; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.55 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+#root { display: contents; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+a { color: inherit; text-decoration-color: var(--rule-strong); text-underline-offset: 0.2em; transition: text-decoration-color 150ms var(--ease); }
+a:hover { text-decoration-color: currentColor; }
+/* Colour-agnostic double ring: a card-coloured gap, then a 2 px ink ring. */
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--card); border-radius: 2px; }
+main:focus { outline: none; }
+
+.site-header, main, .site-footer { width: min(100% - 2.5rem, 64rem); margin-inline: auto; }
+.skip-link { position: absolute; left: 1rem; top: -4rem; padding: 0.5rem 0.75rem; background: var(--card); border: 1px solid var(--ink); z-index: 1; }
+.skip-link:focus { top: 1rem; }
+
+/* Masthead: wordmark, tagline, and the sample tabs below a hairline. */
+.site-header { padding-block: 2.25rem 1.5rem; display: grid; gap: 1.5rem; }
+.masthead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.75rem; }
+.home-link { text-decoration: none; display: inline-block; }
+.wordmark { display: inline-flex; align-items: center; gap: 0.75rem; }
+.wm-text { position: relative; display: inline-flex; align-items: baseline; gap: 0.1em; padding-bottom: 0.7rem; line-height: 1; }
+.wm-wayback { font: italic 400 2.4rem / 1 var(--font-display); letter-spacing: -0.015em; }
+.wm-pm { color: var(--ink-2); font: 600 1.3rem / 1 var(--font-mono); }
+.wm-diff { font: 600 1.7rem / 1 var(--font-mono); letter-spacing: -0.04em; }
+/* Seismograph baseline: a hairline with three tremors under "diff". */
+.wm-ticks { position: absolute; left: 0; bottom: 0; stroke: var(--ink-2); stroke-width: 1.25; stroke-linecap: round; overflow: visible; }
+.tagline { color: var(--ink-2); font: italic 400 1.15rem / 1.35 var(--font-read); max-width: 36ch; }
+@media (min-width: 40rem) {
+  .tagline { padding-left: 1.75rem; border-left: 1px solid var(--rule); }
+}
+
+.logo-tile { fill: var(--ink); }
+.logo-arc { stroke: var(--card); }
+.logo-plus { stroke: var(--mark-plus); }
+.logo-minus { stroke: var(--mark-minus); }
+
+.picker { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin: 0; padding: 1rem 0 0; border: 0; border-top: 1px solid var(--rule); min-inline-size: 0; }
+/* Floated so the legend sits inline with the chips instead of on the border. */
+.picker-label { float: left; padding: 0; margin-right: 0.25rem; line-height: 2.5rem; font: 600 var(--step--1) / 1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); }
+.chip {
+  min-height: 2.5rem; padding: 0.4rem 0.9rem; border: 1px solid var(--rule-strong); border-radius: 999px;
+  background: var(--card); color: var(--ink); font: 500 0.95rem/1 var(--font-ui); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  transition: background-color 150ms var(--ease), color 150ms var(--ease), border-color 150ms var(--ease);
+}
+.chip::before { content: "○" / ""; font-size: 0.8em; }
+.chip:hover { border-color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.chip[aria-pressed="true"]::before { content: "●" / ""; }
+
+/* The sample as an archival index card. */
+main { flex: 1; }
+.sheet {
+  position: relative; background: var(--card); border: 1px solid var(--rule); border-radius: 3px;
+  padding: clamp(1.25rem, 4vw, 2.5rem); padding-left: clamp(1.25rem, 6vw, 4rem);
+  box-shadow: 0 1px 0 var(--rule), 0 12px 32px -24px rgb(31 27 22 / 0.35);
+  animation: settle 320ms var(--ease) both;
+}
+/* The proofreader's margin rule. */
+.sheet::before { content: ""; position: absolute; inset-block: 0; left: clamp(0.75rem, 4vw, 2.75rem); border-left: 1px solid var(--rule); }
+.sheet-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; font-size: var(--step--1); color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.08em; }
+.sheet h2 { margin-top: 0.75rem; font: 600 var(--step-3) / 1.15 var(--font-display); letter-spacing: -0.015em; max-width: 24ch; text-wrap: balance; }
+.sheet-url { margin-top: 0.5rem; font-size: 0.95rem; overflow-wrap: anywhere; }
+.sheet-url a { color: var(--ink-2); }
+.sheet-desc { margin-top: 1rem; font: var(--step-1) / 1.5 var(--font-read); max-width: 60ch; }
+.sheet h3 { margin-top: 2rem; font: 600 var(--step--1) / 1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); }
+.captures { list-style: none; padding: 0; margin-top: 0.75rem; border-bottom: 1px solid var(--rule); }
+.captures li { display: grid; grid-template-columns: 2.5ch 11ch 1fr; gap: 0 1rem; align-items: baseline; padding-block: 0.7rem; border-top: 1px solid var(--rule); }
+.cap-no { color: var(--ink-2); font-size: var(--step--1); }
+.cap-title { font-family: var(--font-read); font-size: 1.05rem; }
+@media (max-width: 30rem) {
+  .captures li { grid-template-columns: 2.5ch 1fr; }
+  .cap-title { grid-column: 2; }
+}
+
+.site-footer { padding-block: 2rem 3rem; margin-top: 2.5rem; border-top: 1px solid var(--rule); display: grid; gap: 0.6rem; color: var(--ink-2); font-size: 0.9rem; max-width: 64rem; }
+.site-footer a { color: var(--ink); }
+
+@keyframes settle { from { opacity: 0; transform: translateY(6px); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0s !important; animation-delay: 0s !important;
+    transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+  .logo-tile { fill: CanvasText; }
+  .logo-arc, .logo-plus, .logo-minus { stroke: Canvas; }
+  .wm-ticks { stroke: CanvasText; }
+  .chip[aria-pressed="true"] { border-width: 3px; }
+}

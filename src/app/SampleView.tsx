@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react';
 import type { SampleFixture } from '../core/types.ts';
 import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../core/timestamp.ts';
 
-/** Minimal sample renderer: label, URL and the ordered list of captures. */
+/** The sample as an index card: catalogue line, title, URL, description and the list of captures. */
 export function SampleView({ fixture }: { fixture: SampleFixture }) {
   const root = useRef<HTMLElement>(null);
+  const { snapshots } = fixture;
+  const years = `${snapshots[0]?.ts.slice(0, 4)}–${snapshots.at(-1)?.ts.slice(0, 4)}`;
 
   // Signal "rendered" to the smoke check once the captures are in the DOM.
   useEffect(() => {
@@ -14,28 +16,34 @@ export function SampleView({ fixture }: { fixture: SampleFixture }) {
   }, []);
 
   return (
-    <section aria-labelledby="sample-label" ref={root}>
-      <h2 id="sample-label">{fixture.label}</h2>
-      <p>
-        <code>{fixture.url}</code>
+    <article className="sheet" aria-labelledby="sample-label" ref={root}>
+      <p className="sheet-meta mono">
+        <span>Cat. {fixture.id}</span>
+        <span>{snapshots.length} captures</span>
+        <span>{years}</span>
       </p>
-      <p>{fixture.description}</p>
-      <h3 id="captures-heading">Captures ({fixture.snapshots.length})</h3>
-      <ol aria-labelledby="captures-heading">
-        {fixture.snapshots.map((s) => (
+      <h2 id="sample-label">{fixture.label}</h2>
+      <p className="sheet-url">
+        <a className="mono" href={fixture.url}>
+          {fixture.url}
+        </a>
+      </p>
+      <p className="sheet-desc">{fixture.description}</p>
+      <h3 id="captures-heading">Captures</h3>
+      <ol className="captures" aria-labelledby="captures-heading">
+        {snapshots.map((s, i) => (
           <li key={s.ts}>
-            <time dateTime={timestampToIso(s.ts)} aria-label={formatTimestampLong(s.ts)}>
-              {formatTimestampShort(s.ts)}
-            </time>{' '}
-            {s.title}
+            <span className="cap-no mono" aria-hidden="true">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <time className="mono" dateTime={timestampToIso(s.ts)}>
+              <span aria-hidden="true">{formatTimestampShort(s.ts)}</span>
+              <span className="sr-only">{formatTimestampLong(s.ts)}</span>
+            </time>
+            <span className="cap-title">{s.title}</span>
           </li>
         ))}
       </ol>
-      <footer>
-        <p>
-          Source: {fixture.source.attribution} Licence: {fixture.source.license}.
-        </p>
-      </footer>
-    </section>
+    </article>
   );
 }
