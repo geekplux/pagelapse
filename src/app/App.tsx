@@ -1,37 +1,69 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { SampleFixture } from '../core/types.ts';
 import { defaultSample, type SampleEntry, samples } from '../samples/index.ts';
 import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
-import { SampleView } from './SampleView.tsx';
+import { TimelineView } from './TimelineView.tsx';
+import { parseUrlState, writeUrlState } from './urlState.ts';
+
+interface Current {
+  id: string;
+  fixture: SampleFixture;
+  change?: string | undefined;
+}
 
 export function App() {
-  const [current, setCurrent] = useState({ id: defaultSample.id, fixture: defaultSample });
+  const [current, setCurrent] = useState<Current | null>(() => {
+    const { sample, change } = parseUrlState(location.search);
+    // A deep link to a lazily loaded sample renders once it has loaded; unknown ids fall back to the default.
+    const lazy = samples.some((s) => s.id === sample && s.id !== defaultSample.id);
+    return lazy ? null : { id: defaultSample.id, fixture: defaultSample, change };
+  });
   // Polite announcement on sample switch; focus stays on the chip. Empty on first load.
   const [announcement, setAnnouncement] = useState('');
-  const wanted = useRef(current.id);
+  const wanted = useRef(current?.id);
 
-  const select = (entry: SampleEntry) => {
+  const load = (entry: SampleEntry, change?: string, announce = true) => {
     wanted.current = entry.id;
     void entry.load().then((fixture) => {
       // Last click wins if loads resolve out of order.
       if (wanted.current !== entry.id) return;
-      setCurrent({ id: entry.id, fixture });
+      setCurrent({ id: entry.id, fixture, change });
+      if (!announce) return;
+      writeUrlState({ sample: entry.id });
       setAnnouncement(`Showing: ${fixture.label}, ${fixture.snapshots.length} captures`);
     });
   };
 
+  useEffect(() => {
+    const { sample, change } = parseUrlState(location.search);
+    const entry = samples.find((s) => s.id === sample);
+    if (!current && entry) load(entry, change, false);
+    // Runs once on mount: only the initial deep link is restored from the URL.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <>
-      <AppHeader samples={samples} selectedId={current.id} onSelect={select} />
+      <AppHeader samples={samples} selectedId={current?.id ?? ''} onSelect={(entry) => load(entry)} />
       <main id="content" tabIndex={-1}>
-        <SampleView key={current.id} fixture={current.fixture} />
+        {current ? (
+          <TimelineView
+            key={current.id}
+            fixture={current.fixture}
+            initialChange={current.change}
+            onChange={(change) => writeUrlState({ sample: current.id, change })}
+          />
+        ) : (
+          <p className="loading mono">Loading sample…</p>
+        )}
       </main>
       {/* An explicit status role is the most widely announced live region; <output> support varies. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}
       </p>
-      <AppFooter source={current.fixture.source} />
+      {current && <AppFooter source={current.fixture.source} />}
     </>
   );
 }
