@@ -2,7 +2,7 @@ STATE: IN-PROGRESS
 
 # Status
 
-- Current phase: 4 verified (PASS, round 1); PR being opened
+- Current phase: 5 (`phase-5-diff-engine`) starting
 - Blockers: none
 
 | Phase | Branch | PR | State | Verify rounds |
@@ -10,7 +10,7 @@ STATE: IN-PROGRESS
 | 1 | phase-1-toolchain-sample | [#1](https://github.com/geekplux/wayback-diff/pull/1) | PR open (PASS) | 1 |
 | 2 | phase-2-design-shell | [#2](https://github.com/geekplux/wayback-diff/pull/2) | PR open (PASS) | 1 |
 | 3 | phase-3-extract | [#4](https://github.com/geekplux/wayback-diff/pull/4) | PR open (PASS) | 2 |
-| 4 | phase-4-recorder-samples | (opening) | verified PASS | 1 |
+| 4 | phase-4-recorder-samples | [#5](https://github.com/geekplux/wayback-diff/pull/5) | PR open (PASS) | 1 |
 | 5 | phase-5-diff-engine | - | not started | 0 |
 | 6 | phase-6-significance | - | not started | 0 |
 | 7 | phase-7-timeline-ui | - | not started | 0 |
@@ -26,4 +26,4 @@ Follow-ups:
 - Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-20 (phase 4 verified)
+Last updated: 2026-10-20 (PR #5 opened)
