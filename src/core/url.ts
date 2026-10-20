@@ -27,11 +27,19 @@ const REPLAY_BASE: Record<ArchiveId, string> = {
   'arquivo-pt': 'https://arquivo.pt/wayback/',
 };
 
-/** Removes tracking query parameters (`utm_*`, `fbclid`, `gclid`, ...) from a URL object in place. */
+const paramKey = (segment: string) => new URLSearchParams(segment).keys().next().value ?? '';
+
+/**
+ * Removes tracking query parameters (`utm_*`, `fbclid`, `gclid`, ...) from a URL object in
+ * place. Every other `key[=value]` segment is kept byte-for-byte, so the archived URL (and the
+ * CDX lookup / cache key built from it) does not change encoding.
+ */
 export function stripTrackingParams(url: URL): URL {
-  const tracked = [...url.searchParams.keys()].filter((k) => TRACKING.test(k));
-  for (const k of tracked) url.searchParams.delete(k);
-  if (!url.search) url.search = '';
+  const kept = url.search
+    .slice(1)
+    .split('&')
+    .filter((segment) => !TRACKING.test(paramKey(segment)));
+  url.search = kept.join('&');
   return url;
 }
 

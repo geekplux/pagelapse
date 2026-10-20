@@ -126,6 +126,19 @@ describe('extractPage', () => {
     expect(extractPage('<p>a</p>'.repeat(10), { maxBlocks: 3 })).toMatchObject({ blocks: { length: 3 }, truncated: true });
   });
 
+  it.each([
+    ['50,000 unclosed <font> tags', `<body>${'<font size=2>word word '.repeat(50_000)}`],
+    ['20,000 nested <div>s', '<div><p>text here</p>'.repeat(20_000)],
+    ['deep inline markup in a table row', `<body><table><tr><td>${'<b>w '.repeat(30_000)}`],
+  ])('extracts %s without throwing in < 200 ms', (_, html) => {
+    const start = performance.now();
+    const page = extractPage(html);
+    expect(performance.now() - start).toBeLessThan(200);
+    expect(page.truncated).toBe(true);
+    expect(page.blocks.length).toBeGreaterThan(0);
+    expect(extractPage(html)).toEqual(page);
+  });
+
   it('extracts a 500 KB page in < 200 ms', () => {
     let html = '<html><head><title>Big</title></head><body><nav>menu</nav>';
     for (let i = 0; html.length < 500_000; i++) {

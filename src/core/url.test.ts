@@ -11,6 +11,10 @@ describe('validateTargetUrl', () => {
     ['https://example.org/?utm_source=a&id=7&fbclid=b&gclid=c&UTM_Medium=d', 'https://example.org/?id=7'],
     ['https://example.org/page?utm_campaign=x&msclkid=y#top', 'https://example.org/page'],
     ['https://example.org/search?q=a+b&ref=home', 'https://example.org/search?q=a+b&ref=home'],
+    ['https://example.org/p?path=/a/b&utm_medium=y', 'https://example.org/p?path=/a/b'],
+    ['https://example.org/p?flag&utm_medium=y', 'https://example.org/p?flag'],
+    ['https://example.org/p?q=a%20b&utm_source=x', 'https://example.org/p?q=a%20b'],
+    ['https://example.org/p?x=a,b&utm_source=z', 'https://example.org/p?x=a,b'],
     ['https://bücher.example/', 'https://xn--bcher-kva.example/'],
   ])('normalises %j', (input, url) => {
     expect(validateTargetUrl(input)).toEqual({ ok: true, url });

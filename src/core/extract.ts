@@ -17,6 +17,10 @@ type Ctx = { kind: BlockKind; level?: HeadingLevel };
 
 /** If the main-content selection has fewer words than this, the whole body is used. */
 const MIN_MAIN_WORDS = 50;
+/** Deeper elements are flattened into their ancestor, so traversals never overflow the stack. */
+const MAX_DEPTH = 256;
+/** htmlparser2's open-element stack costs O(n) per tag, so parsing stops beyond this many open tags. */
+const MAX_OPEN = 4096;
 const SKIP_TAGS = new Set(
   'script style noscript template svg iframe object canvas nav aside footer button select textarea label title'.split(' '),
 );
@@ -29,6 +33,7 @@ const BLOCK_TAGS = new Set(
 /** Elements that mark a table row as page layout rather than data. */
 const LAYOUT_TAGS = new Set('table p div ul ol dl h1 h2 h3 h4 h5 h6 blockquote pre center hr br'.split(' '));
 const TOOLBAR = /<!--\s*BEGIN WAYBACK TOOLBAR INSERT\s*-->[\s\S]*?(?:<!--\s*END WAYBACK TOOLBAR INSERT\s*-->|$)/gi;
+const BR: El = { tag: 'br', children: [] };
 const PARA: Ctx = { kind: 'paragraph' };
 const LIST: Ctx = { kind: 'list-item' };
 const CTX: Record<string, Ctx> = { li: LIST, dt: LIST, dd: LIST, blockquote: { kind: 'quote' }, pre: { kind: 'code' } };
@@ -112,8 +117,10 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
   const root: El = { tag: 'body', children: [] };
   const mains: El[] = [];
   const articles: El[] = [];
-  const stack: { tag: string; parent: El; skips: boolean; main: boolean }[] = [];
+  const stack: { tag: string; parent: El; skips: boolean; main: boolean; deep: boolean }[] = [];
   let cur = root;
+  let depth = 0;
+  let flattened = false;
   let skip = 0;
   let inMain = 0;
   let title: string | undefined;
@@ -127,12 +134,24 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
           inTitle = true;
         }
         const skips = skip > 0 || isBoilerplate(tag, a, inMain > 0);
-        const main = !skips && (tag === 'main' || tag === 'article' || a.role === 'main');
-        stack.push({ tag, parent: cur, skips, main });
+        const deep = !skips && depth >= MAX_DEPTH;
+        const main = !skips && !deep && (tag === 'main' || tag === 'article' || a.role === 'main');
+        stack.push({ tag, parent: cur, skips, main, deep });
+        if (stack.length >= MAX_OPEN) {
+          flattened = true;
+          parser.pause();
+        }
         if (skips) {
           skip++;
           return;
         }
+        if (deep) {
+          // Keep block boundaries as paragraph breaks (`<br><br>`) in the flattened text.
+          if (BLOCK_TAGS.has(tag)) cur.children.push(BR, BR);
+          flattened = true;
+          return;
+        }
+        depth++;
         const el: El = { tag, children: [] };
         cur.children.push(el);
         if (main && !inMain) (tag === 'article' ? articles : mains).push(el);
@@ -148,6 +167,7 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
         const f = stack.pop();
         if (!f) return;
         if (f.skips) skip--;
+        else if (!f.deep) depth--;
         if (f.main) inMain--;
         cur = f.parent;
       },
@@ -162,6 +182,7 @@ export function extractPage(html: string, opts: ExtractOptions = {}): ExtractedP
   if (blocks.reduce((n, b) => n + b.text.split(' ').length, 0) < MIN_MAIN_WORDS) blocks = collect([root]);
 
   const page: ExtractedPage = { title: collapse(title ?? ''), blocks: [] };
+  if (flattened) page.truncated = true;
   let chars = 0;
   for (const b of blocks) {
     const room = maxChars - chars;
