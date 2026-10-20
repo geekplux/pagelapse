@@ -51,6 +51,13 @@ const CASES: [string, string, string, boolean][] = [
   ['counter', '100 people died', '2,000 people died', false],
   ['tracking', 'Watch youtube.com/watch?v=abc123', 'Watch youtube.com/watch?v=xyz789', false],
   ['cache-buster', 'Font a.woff2?t=1&v=2', 'Font a.woff2?t=9', true],
+  // Phase 5 leftovers: ratings, ratios and room names are content.
+  ['rating', 'Rated 2 stars by readers', 'Rated 5 stars by readers', false],
+  ['rating', 'Rating: 2 stars', 'Rating: 4 stars', false],
+  ['counter', 'Repo has 12 stars', 'Repo has 340 stars', true],
+  ['ratio', 'Mix at a ratio 1:30', 'Mix at a ratio 1:45', false],
+  ['room', 'Lecture in Room 10:30A', 'Lecture in Room 10:45A', false],
+  ['time', 'Opens 10:30AM daily', 'Opens 9:15am daily', true],
 ];
 
 describe('normalizeForCompare', () => {

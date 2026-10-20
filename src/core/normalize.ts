@@ -18,11 +18,13 @@ const MASKS: [RegExp, string][] = [
   // d/m/yy(yy), or d.m.yyyy only: "18.17.10" is a version number, not a date.
   [/\b\d{1,2}\/\d{1,2}\/(?:\d{4}|\d{2})\b|\b\d{1,2}\.\d{1,2}\.\d{4}\b/g, '⟨date⟩'],
   [new RegExp(String.raw`\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?${MONTH},?\s+\d{4}|${MONTH}\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{4}|${MONTH}\s+\d{4})\b`, 'gi'), '⟨date⟩'],
-  // Case-sensitive so the zone suffix ("EST") never eats a word ("eastern").
-  [/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?(?:\s*[aApP]\.?[mM]\b\.?)?(?:\s*\(?(?:UTC|GMT|[A-Z][A-Z]?[SD]T)\b\)?)?|\b(?:1[0-2]|0?[1-9])\s*[aApP]\.?[mM]\b\.?/g, '⟨time⟩'],
+  // Case-sensitive so the zone suffix ("EST") never eats a word ("eastern"). Minutes end at a word
+  // boundary ("Room 10:30A" is a name) and ratios or scales ("ratio 1:30") are not times.
+  [/(?<!\b(?:ratios?|scale)\s+(?:of\s+)?)\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?(?:\s*[aApP]\.?[mM]\b\.?|\b)(?:\s*\(?(?:UTC|GMT|[A-Z][A-Z]?[SD]T)\b\)?)?|\b(?:1[0-2]|0?[1-9])\s*[aApP]\.?[mM]\b\.?/g, '⟨time⟩'],
   // Runs after date/time masks, and only when a time phrase follows ("last edited by Alice" is content).
   [new RegExp(String.raw`\blast[ -](?:updated|modified|edited|changed|revised)(?:\s*:|\s+(?:on|at))?\s*(?:⟨date⟩(?:,?\s*(?:at\s+)?⟨time⟩)?|⟨time⟩|(?:today|yesterday|${AGO})\b)`, 'gi'), 'last updated ⟨when⟩'],
-  [new RegExp(String.raw`(?:\b(?:${NUM})\s+${COUNT_NOUN}\b|\b${COUNT_NOUN}:?\s+(?:${NUM}))`, 'gi'), '⟨count⟩'],
+  // A rating ("Rated 2 stars") is content, not a counter.
+  [new RegExp(String.raw`(?:(?<!\b(?:rated|rating:?|scored?)\s+)\b(?:${NUM})\s+${COUNT_NOUN}\b|\b${COUNT_NOUN}:?\s+(?:${NUM}))`, 'gi'), '⟨count⟩'],
 ];
 
 /** Light folding for comparison: NFC, no zero-width chars, ASCII quotes and dashes, collapsed whitespace. */
