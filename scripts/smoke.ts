@@ -2,12 +2,14 @@
 // flows from smoke-flows.ts in system Chrome, writes screenshots and a JSON
 // report, and always tears down the server and browser (even on SIGINT).
 //
-// Usage: pnpm build && pnpm smoke [--out dir] [--flows a,b] [--port 4173]
+// Usage: pnpm build && pnpm smoke [--out dir] [--flows a,b] [--port 4173] [--cvd]
+// --cvd also saves protan/deutan/tritan/gray screenshots for flows marked `cvd`.
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { type Browser, chromium } from 'playwright-core';
+import { CVD_VARIANTS, assertAxeClean, setCvdFilter } from './smoke-a11y.ts';
 import { type FlowResult, flows } from './smoke-flows.ts';
 
 const CHROME = '/usr/bin/google-chrome';
@@ -25,6 +27,7 @@ const { values } = parseArgs({
     out: { type: 'string', default: 'docs/screenshots/latest' },
     flows: { type: 'string' },
     port: { type: 'string', default: '4173' },
+    cvd: { type: 'boolean', default: false },
   },
 });
 const outDir = resolve(root, values.out);
@@ -91,9 +94,10 @@ process.on('unhandledRejection', (err) => {
   exitAfterCleanup(1);
 });
 
-// `pnpm smoke` runs us as pnpm -> sh -c -> node, and pnpm exits on a SIGINT
-// sent to it alone without forwarding it. So watch the launcher chain (Linux
-// /proc) and clean up as soon as it is gone, instead of leaving orphans.
+// `pnpm smoke` runs us as pnpm -> sh -c -> node. A SIGINT sent to pnpm alone
+// is neither forwarded to us nor (on this box) makes pnpm exit, so it cannot
+// be relied on. As a backstop, watch the launcher chain (Linux /proc) and clean
+// up as soon as a launcher is gone (e.g. killed), instead of leaving orphans.
 function parentOf(pid: number): number | undefined {
   try {
     const stat = readFileSync(`/proc/${pid}/stat`, 'utf8');
@@ -153,6 +157,7 @@ async function startServer(): Promise<void> {
 interface FlowReport extends FlowResult {
   flow: string;
   viewport: string;
+  scheme: string;
   ok: boolean;
   durationMs: number;
   error?: string;
@@ -186,10 +191,11 @@ async function main(): Promise<number> {
   const consoleErrors: string[] = [];
   const reports: FlowReport[] = [];
 
-  for (const flow of selected) {
+  const runs = selected.flatMap((flow) => (flow.schemes ?? ['light']).map((scheme) => ({ flow, scheme })));
+  for (const { flow, scheme } of runs) {
     for (const [viewport, size] of Object.entries(VIEWPORTS) as [keyof typeof VIEWPORTS, { width: number; height: number }][]) {
-      // One context at a time; each flow/viewport gets a clean one.
-      const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
+      // One context at a time; each flow/viewport/scheme gets a clean one.
+      const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1, colorScheme: scheme });
       await context.route('**/*', (route) => {
         const url = new URL(route.request().url());
         if (url.protocol === 'data:' || url.protocol === 'blob:' || LOCAL_HOSTS.has(url.hostname)) {
@@ -200,17 +206,24 @@ async function main(): Promise<number> {
       });
       const page = await context.newPage();
       page.on('console', (msg) => {
-        if (msg.type() === 'error') consoleErrors.push(`[${flow.name}/${viewport}] ${msg.text()}`);
+        if (msg.type() === 'error') consoleErrors.push(`[${flow.name}/${viewport}/${scheme}] ${msg.text()}`);
       });
-      page.on('pageerror', (err) => consoleErrors.push(`[${flow.name}/${viewport}] pageerror: ${err.message}`));
+      page.on('pageerror', (err) => consoleErrors.push(`[${flow.name}/${viewport}/${scheme}] pageerror: ${err.message}`));
 
       const started = performance.now();
-      const report: FlowReport = { flow: flow.name, viewport, ok: false, durationMs: 0 };
+      const report: FlowReport = { flow: flow.name, viewport, scheme, ok: false, durationMs: 0 };
       try {
-        Object.assign(report, await flow.run({ page, baseUrl, viewport }));
-        const file = join(outDir, `${flow.name}-${viewport}.png`);
+        Object.assign(report, await flow.run({ page, baseUrl, viewport, scheme }));
+        // Every flow ends with an axe pass on the state it left behind.
+        report.notes = [...(report.notes ?? []), await assertAxeClean(page)];
+        const base = `${flow.name}-${viewport}${scheme === 'dark' ? '-dark' : ''}`;
+        const file = join(outDir, `${base}${flow.suffix ?? ''}.png`);
         await page.screenshot({ path: file, fullPage: true });
         report.screenshot = relative(root, file);
+        for (const variant of values.cvd && flow.cvd ? CVD_VARIANTS : []) {
+          await setCvdFilter(page, variant);
+          await page.screenshot({ path: join(outDir, `${base}-${variant}.png`), fullPage: true });
+        }
         report.ok = true;
       } catch (err) {
         report.error = err instanceof Error ? err.message : String(err);
@@ -219,7 +232,7 @@ async function main(): Promise<number> {
         reports.push(report);
         await context.close();
       }
-      console.error(`smoke: ${report.ok ? 'ok  ' : 'FAIL'} ${flow.name} (${viewport}) ${report.durationMs} ms${report.error ? `: ${report.error}` : ''}`);
+      console.error(`smoke: ${report.ok ? 'ok  ' : 'FAIL'} ${flow.name} (${viewport}, ${scheme}) ${report.durationMs} ms${report.error ? `: ${report.error}` : ''}`);
     }
   }
 
