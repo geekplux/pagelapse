@@ -1,0 +1,122 @@
+{
+  "ok": true,
+  "baseUrl": "http://127.0.0.1:4173/",
+  "outDir": "docs/screenshots/phase-2",
+  "flows": [
+    {
+      "flow": "sample-default",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 922,
+      "timeToReadyMs": 192,
+      "notes": [
+        "4 capture dates visible",
+        "light paper rgb(246, 241, 231)",
+        "fonts: Fraunces normal, Fraunces italic",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "docs/screenshots/phase-2/sample-default-desktop.png"
+    },
+    {
+      "flow": "sample-default",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 781,
+      "timeToReadyMs": 147,
+      "notes": [
+        "4 capture dates visible",
+        "light paper rgb(246, 241, 231)",
+        "fonts: Fraunces normal, Fraunces italic",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "docs/screenshots/phase-2/sample-default-mobile.png"
+    },
+    {
+      "flow": "sample-default",
+      "viewport": "desktop",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 874,
+      "timeToReadyMs": 157,
+      "notes": [
+        "4 capture dates visible",
+        "dark paper rgb(20, 18, 15)",
+        "fonts: Fraunces normal, Fraunces italic",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "docs/screenshots/phase-2/sample-default-desktop-dark.png"
+    },
+    {
+      "flow": "sample-default",
+      "viewport": "mobile",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 821,
+      "timeToReadyMs": 158,
+      "notes": [
+        "4 capture dates visible",
+        "dark paper rgb(20, 18, 15)",
+        "fonts: Fraunces normal, Fraunces italic",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "docs/screenshots/phase-2/sample-default-mobile-dark.png"
+    },
+    {
+      "flow": "reduced-motion",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 419,
+      "notes": [
+        "8 animated elements (a.skip-link, a.home-link, button.chip, article.sheet, a.mono, a., a.licence-link) all 0s under reduce",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "docs/screenshots/phase-2/reduced-motion-desktop-reduced.png"
+    },
+    {
+      "flow": "reduced-motion",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 399,
+      "notes": [
+        "8 animated elements (a.skip-link, a.home-link, button.chip, article.sheet, a.mono, a., a.licence-link) all 0s under reduce",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "docs/screenshots/phase-2/reduced-motion-mobile-reduced.png"
+    },
+    {
+      "flow": "keyboard-tab-order",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 559,
+      "notes": [
+        "7 stops: header:Skip to content | header:wayback±diffwayback-diff | chips:Community garden (demo) | main:https://example.org/garden | footer:Internet Archive's Wayback Machine | footer:CC0-1.0 | footer:Source on GitHub",
+        "announced: Showing: Illustrative demo: Example Community Garden, 4 captures",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "docs/screenshots/phase-2/keyboard-tab-order-desktop-kbd.png"
+    },
+    {
+      "flow": "keyboard-tab-order",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 541,
+      "notes": [
+        "7 stops: header:Skip to content | header:wayback±diffwayback-diff | chips:Community garden (demo) | main:https://example.org/garden | footer:Internet Archive's Wayback Machine | footer:CC0-1.0 | footer:Source on GitHub",
+        "announced: Showing: Illustrative demo: Example Community Garden, 4 captures",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "docs/screenshots/phase-2/keyboard-tab-order-mobile-kbd.png"
+    }
+  ],
+  "blockedRequests": {
+    "count": 0,
+    "urls": []
+  },
+  "consoleErrors": []
+}
