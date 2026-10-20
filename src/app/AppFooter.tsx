@@ -18,7 +18,7 @@ export function AppFooter({ source }: { source: SampleSource }) {
       <p>
         This sample: {ARCHIVE_NAMES[source.archive]} · recorded <span className="mono">{source.recordedAt}</span> ·{' '}
         {source.recorder}. {source.attribution} Licence:{' '}
-        <a href={`https://spdx.org/licenses/${source.license}.html`}>{source.license}</a>.
+        <a className="licence-link" href={`https://spdx.org/licenses/${source.license}.html`}>{source.license}</a>.
       </p>
       <p>
         wayback-diff is open source (MIT). <a href="https://github.com/geekplux/wayback-diff">Source on GitHub</a>

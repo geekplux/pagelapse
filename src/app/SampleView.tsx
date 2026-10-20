@@ -30,7 +30,9 @@ export function SampleView({ fixture }: { fixture: SampleFixture }) {
       </p>
       <p className="sheet-desc">{fixture.description}</p>
       <h3 id="captures-heading">Captures</h3>
-      <ol className="captures" aria-labelledby="captures-heading">
+      {/* Safari drops list semantics when list-style is none, so the role is not redundant here. */}
+      {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles */}
+      <ol className="captures" role="list" aria-labelledby="captures-heading">
         {snapshots.map((s, i) => (
           <li key={s.ts}>
             <span className="cap-no mono" aria-hidden="true">

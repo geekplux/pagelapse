@@ -218,6 +218,13 @@ async function main(): Promise<number> {
         report.notes = [...(report.notes ?? []), await assertAxeClean(page)];
         const base = `${flow.name}-${viewport}${scheme === 'dark' ? '-dark' : ''}`;
         const file = join(outDir, `${base}${flow.suffix ?? ''}.png`);
+        // Let the sheet's `settle` fade (and any transition) finish so images are not mid-animation.
+        await page.evaluate(() =>
+          Promise.race([
+            Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
+            new Promise((resolve) => setTimeout(resolve, 3_000)),
+          ]),
+        );
         await page.screenshot({ path: file, fullPage: true });
         report.screenshot = relative(root, file);
         for (const variant of values.cvd && flow.cvd ? CVD_VARIANTS : []) {

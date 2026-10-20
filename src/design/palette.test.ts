@@ -14,10 +14,10 @@ const PAIRS: [Token, Token, number][] = [
   ['ink', 'added-tint', 4.5], ['ink', 'removed-tint', 4.5], ['added', 'added-tint', 4.5], ['removed', 'removed-tint', 4.5],
   // UI boundaries and graphics (WCAG 1.4.11): >= 3:1. Focus ring = ink ring around a card gap.
   ['rule-strong', 'paper', 3], ['rule-strong', 'card', 3], ['ink', 'paper', 3],
-  ['mag-2', 'card', 3], ['mag-3', 'card', 3], ['mag-4', 'card', 3],
+  // Every magnitude marker step, against both surfaces it can sit on.
+  ['mag-1', 'card', 3], ['mag-2', 'card', 3], ['mag-3', 'card', 3], ['mag-4', 'card', 3],
+  ['mag-1', 'paper', 3], ['mag-2', 'paper', 3], ['mag-3', 'paper', 3], ['mag-4', 'paper', 3],
   ['card', 'ink', 3], ['mark-plus', 'ink', 3], ['mark-minus', 'ink', 3],
-  // Lightest magnitude marker: shape, size and a word carry it too (section 4: >= 2:1).
-  ['mag-1', 'card', 2],
 ];
 
 describe.each(THEMES)('%s theme', (theme) => {

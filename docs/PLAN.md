@@ -128,12 +128,13 @@ The identity mixes two familiar objects: an **archival index card** (warm paper,
 | `--ink` | `#1F1B16` | `#EDE6D9` | primary text: 15.2:1 / 15.1:1 |
 | `--ink-2` | `#5C5346` | `#A89F90` | secondary text: 6.7:1 on paper / 6.6:1 on card |
 | `--rule` | `#D9CFBF` | `#3A342C` | decorative hairlines only |
-| `--rule-strong` | `#8A7F6E` | `#6B6255` | input borders, axis: 3.5:1 / 3.1:1 |
+| `--rule-strong` | `#8A7F6E` | `#71685A` | input borders, chip outlines, axis: 3.5:1 on paper, 3.9:1 on card / 3.4:1 on paper, 3.2:1 on card |
 | `--added` | `#1F5FB0` | `#7FB0EE` | `+` symbol, underline, "added" text: 6.2:1 / 7.7:1 on card |
 | `--added-tint` | `#E3EDFA` | `#1E2A3D` | added block background (ink on tint 14.5:1 / 11.6:1) |
 | `--removed` | `#B4441A` | `#E8895A` | `−` symbol, strike line: 5.5:1 / 6.7:1 on card |
 | `--removed-tint` | `#FBE6DA` | `#3A2318` | removed block background (ink on tint 14.2:1 / 11.8:1; removed on tint 4.6:1) |
-| `--mag-1..4` | `#A8926A #85693F #5E4826 #3A2A14` | `#6E5A3C #957A50 #BFA272 #E6CFA0` | sepia magnitude ramp for markers (single hue, monotone L; light end >= 2:1 vs card, validated) |
+| `--mag-1..4` | `#9C8558 #85693F #5E4826 #3A2A14` | `#7D6946 #957A50 #BFA272 #E6CFA0` | sepia magnitude ramp for markers (single hue, monotone L; every step incl. the light end >= 3:1 vs card and paper, validated: mag-1 3.5:1 card / 3.2:1 paper light, 3.3:1 card / 3.5:1 paper dark) |
+| `--mark-plus` / `--mark-minus` | `#7FB0EE` / `#E8895A` | `#1F5FB0` / `#B4441A` | logo ± on its `--ink` tile only; reuse the opposite theme's added/removed hues: 7.6:1 / 6.7:1 (light), 5.1:1 / 4.5:1 (dark) on ink; ΔE >= 8 under all CVD sims |
 | focus ring | 2 px `--card` gap + 2 px `--ink` ring | same | colour-agnostic double ring, >= 3:1 everywhere |
 
 How it stays CVD-safe and never colour-alone:

@@ -135,7 +135,11 @@ export const flows: readonly Flow[] = [
         if ((await chip.getAttribute('aria-pressed')) !== 'true') throw new Error(`${key} did not press the chip`);
       }
       if ((await page.locator('.chip[aria-pressed="true"]').count()) !== 1) throw new Error('not exactly one pressed chip');
-      return { notes: [`${stops.length} stops: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`] };
+      // The switch is announced politely while focus stays on the chip.
+      const status = (await page.locator('[role="status"]').textContent())?.trim() ?? '';
+      if (!status.startsWith('Showing: ')) throw new Error(`no sample-switch announcement (status: "${status}")`);
+      if (!(await chip.evaluate((el) => el === document.activeElement))) throw new Error('focus left the chip after switching');
+      return { notes: [`${stops.length} stops: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`, `announced: ${status}`] };
     },
   },
   {
