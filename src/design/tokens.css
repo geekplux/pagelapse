@@ -1,0 +1,53 @@
+/* Design tokens. Colours mirror src/design/palette.ts (palette.test.ts keeps them equal). */
+:root {
+  color-scheme: light dark;
+  --paper: #F6F1E7;
+  --card: #FFFDF8;
+  --ink: #1F1B16;
+  --ink-2: #5C5346;
+  --rule: #D9CFBF;
+  --rule-strong: #8A7F6E;
+  --added: #1F5FB0;
+  --added-tint: #E3EDFA;
+  --removed: #B4441A;
+  --removed-tint: #FBE6DA;
+  --mag-1: #A8926A;
+  --mag-2: #85693F;
+  --mag-3: #5E4826;
+  --mag-4: #3A2A14;
+  --mark-plus: #7FB0EE;
+  --mark-minus: #E8895A;
+
+  --font-display: Fraunces, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-read: Charter, "Bitstream Charter", "Iowan Old Style", "Sitka Text", Cambria, Georgia, serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  /* Modular scale, ratio 1.25 from 16 px. */
+  --step--1: 0.8rem;
+  --step-1: 1.25rem;
+  --step-2: 1.5625rem;
+  --step-3: 1.953rem;
+  --step-4: 2.441rem;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #14120F;
+    --card: #1D1A16;
+    --ink: #EDE6D9;
+    --ink-2: #A89F90;
+    --rule: #3A342C;
+    --rule-strong: #71685A;
+    --added: #7FB0EE;
+    --added-tint: #1E2A3D;
+    --removed: #E8895A;
+    --removed-tint: #3A2318;
+    --mag-1: #6E5A3C;
+    --mag-2: #957A50;
+    --mag-3: #BFA272;
+    --mag-4: #E6CFA0;
+    --mark-plus: #1F5FB0;
+    --mark-minus: #B4441A;
+  }
+}
