@@ -1,0 +1,70 @@
+[
+  {
+    "id": "news-article-meta",
+    "label": "trivial",
+    "note": "Publication time, comment and view counters only",
+    "before": { "title": "Town library reopens after renovation", "blocks": [
+      "# Town library reopens after renovation",
+      "Published 12 March 2021, 09:12 UTC",
+      "The town library reopened on Saturday after an eighteen-month renovation that added a children's wing and a quiet study room on the top floor.",
+      "Volunteers moved more than forty thousand books back onto the shelves over three weekends.",
+      "The library is open every day except Monday.",
+      "56 comments",
+      "1.2k views"
+    ] },
+    "after": { "title": "Town library reopens after renovation", "blocks": [
+      "# Town library reopens after renovation",
+      "Published 12 March 2021, 10:45 UTC",
+      "The town library reopened on Saturday after an eighteen-month renovation that added a children's wing and a quiet study room on the top floor.",
+      "Volunteers moved more than forty thousand books back onto the shelves over three weekends.",
+      "The library is open every day except Monday.",
+      "61 comments",
+      "3,410 views"
+    ] }
+  },
+  {
+    "id": "news-correction",
+    "label": "minor",
+    "note": "A correction note appended to the article",
+    "before": { "title": "Town library reopens after renovation", "blocks": [
+      "# Town library reopens after renovation",
+      "The town library reopened on Saturday after an eighteen-month renovation that added a children's wing and a quiet study room on the top floor.",
+      "Volunteers moved more than forty thousand books back onto the shelves over three weekends.",
+      "The head librarian said the new wing would host reading clubs for schools in the area from next term.",
+      "The library is open every day except Monday."
+    ] },
+    "after": { "title": "Town library reopens after renovation", "blocks": [
+      "# Town library reopens after renovation",
+      "The town library reopened on Saturday after an eighteen-month renovation that added a children's wing and a quiet study room on the top floor.",
+      "Volunteers moved more than forty thousand books back onto the shelves over three weekends.",
+      "The head librarian said the new wing would host reading clubs for schools in the area from next term.",
+      "The library is open every day except Monday.",
+      "Correction: the renovation took eighteen months, not two years."
+    ] }
+  },
+  {
+    "id": "news-homepage-turnover",
+    "label": "major",
+    "note": "Every headline on a local news front page replaced",
+    "before": { "title": "Riverside Gazette", "blocks": [
+      "# Riverside Gazette",
+      "## Top stories",
+      "Town library reopens after renovation",
+      "New cycle path links the station and the old mill",
+      "Primary school choir wins regional contest",
+      "## Community",
+      "Allotment society opens waiting list",
+      "Volunteers clear litter from the riverbank"
+    ] },
+    "after": { "title": "Riverside Gazette", "blocks": [
+      "# Riverside Gazette",
+      "## Top stories",
+      "Flood defences finished ahead of winter",
+      "Night bus service extended to the hospital",
+      "Local runner sets course record at the park race",
+      "## Community",
+      "Repair café marks its hundredth session",
+      "Bird survey counts record number of swifts"
+    ] }
+  }
+]

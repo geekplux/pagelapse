@@ -1,0 +1,108 @@
+[
+  {
+    "id": "blog-footer-churn",
+    "label": "trivial",
+    "note": "Copyright range and 'last updated' phrase only",
+    "before": { "title": "Notes from the allotment", "blocks": [
+      "# Growing beans on a north-facing plot",
+      "Last updated 3 days ago",
+      "Runner beans tolerate more shade than most people expect. On our plot they get five hours of direct light and still crop well into September.",
+      "The trick is a tall support so the vines can climb into the light, and a thick mulch to keep the roots cool and damp.",
+      "## What we planted",
+      "- Scarlet Emperor",
+      "- White Lady",
+      "- Painted Lady",
+      "© 2019-2023 Notes from the allotment"
+    ] },
+    "after": { "title": "Notes from the allotment", "blocks": [
+      "# Growing beans on a north-facing plot",
+      "Last updated yesterday",
+      "Runner beans tolerate more shade than most people expect. On our plot they get five hours of direct light and still crop well into September.",
+      "The trick is a tall support so the vines can climb into the light, and a thick mulch to keep the roots cool and damp.",
+      "## What we planted",
+      "- Scarlet Emperor",
+      "- White Lady",
+      "- Painted Lady",
+      "© 2019-2024 Notes from the allotment"
+    ] }
+  },
+  {
+    "id": "blog-typography",
+    "label": "trivial",
+    "note": "Smart quotes, dashes, double spaces and a zero-width space",
+    "before": { "title": "Why I still write in plain text", "blocks": [
+      "# Why I still write in plain text",
+      "Plain text files are the one format I can open on every machine I have owned since 1998 — and they still open today.",
+      "A friend called it “the cockroach of formats”. It’s meant as a compliment.",
+      "Notes, drafts, and lists all live in one folder, synced by a tool that doesn’t care what is inside."
+    ] },
+    "after": { "title": "Why I still write in plain text", "blocks": [
+      "# Why I still write in plain text",
+      "Plain text files are the one format I can open on every machine I have owned since 1998 - and they  still open today.",
+      "A friend called it \"the cockroach of formats\". It's meant as a compliment.​",
+      "Notes, drafts,  and lists all live in one folder, synced by a tool that doesn't care what is inside."
+    ] }
+  },
+  {
+    "id": "blog-new-paragraph",
+    "label": "minor",
+    "note": "One short sentence appended to a ~110-word post",
+    "before": { "title": "Fixing a squeaky door hinge", "blocks": [
+      "# Fixing a squeaky door hinge",
+      "A squeaky hinge almost always means the pin is dry. Lift the pin out with a nail and a hammer, tapping from below.",
+      "Wipe the pin clean with a cloth, then coat it with a thin layer of petroleum jelly or a light machine oil.",
+      "Push the pin back in, swing the door a dozen times and wipe off any excess that squeezes out at the top.",
+      "If the squeak comes back within a week, the hinge itself may be bent and worth replacing."
+    ] },
+    "after": { "title": "Fixing a squeaky door hinge", "blocks": [
+      "# Fixing a squeaky door hinge",
+      "A squeaky hinge almost always means the pin is dry. Lift the pin out with a nail and a hammer, tapping from below.",
+      "Wipe the pin clean with a cloth, then coat it with a thin layer of petroleum jelly or a light machine oil.",
+      "Push the pin back in, swing the door a dozen times and wipe off any excess that squeezes out at the top.",
+      "If the squeak comes back within a week, the hinge itself may be bent and worth replacing. Avoid cooking oil: it turns sticky."
+    ] }
+  },
+  {
+    "id": "blog-intro-rewrite",
+    "label": "moderate",
+    "note": "Intro rewritten and a new tip added",
+    "before": { "title": "Starting seeds indoors", "blocks": [
+      "# Starting seeds indoors",
+      "Starting seeds on a windowsill is cheap and fun, and it gives tomatoes and peppers the head start they need in a short summer.",
+      "## Light",
+      "A south-facing window is enough for most seedlings, but turn the trays every day so the stems grow straight.",
+      "## Water",
+      "Water from below by standing the tray in a dish for ten minutes. The compost should feel like a wrung-out sponge.",
+      "## Hardening off",
+      "Move the plants outside for an hour on the first day and add an hour each day for a week."
+    ] },
+    "after": { "title": "Starting seeds indoors", "blocks": [
+      "# Starting seeds indoors",
+      "After three failed springs, I finally worked out what my seedlings needed: more light than a windowsill gives, and far less water than I thought.",
+      "## Light",
+      "A cheap LED shop light hung ten centimetres above the trays beats any window. Run it for fourteen hours a day on a timer.",
+      "## Water",
+      "Water from below by standing the tray in a dish for ten minutes. The compost should feel like a wrung-out sponge.",
+      "## Hardening off",
+      "Move the plants outside for an hour on the first day and add an hour each day for a week."
+    ] }
+  },
+  {
+    "id": "blog-moved-notice",
+    "label": "major",
+    "note": "Post replaced by a 'this blog has moved' notice",
+    "before": { "title": "Starting seeds indoors", "blocks": [
+      "# Starting seeds indoors",
+      "Starting seeds on a windowsill is cheap and fun, and it gives tomatoes and peppers the head start they need in a short summer.",
+      "## Light",
+      "A south-facing window is enough for most seedlings, but turn the trays every day so the stems grow straight.",
+      "## Water",
+      "Water from below by standing the tray in a dish for ten minutes. The compost should feel like a wrung-out sponge."
+    ] },
+    "after": { "title": "This blog has moved", "blocks": [
+      "# This blog has moved",
+      "All posts now live at the new address. Thank you for reading for all these years.",
+      "You will be redirected in a few seconds."
+    ] }
+  }
+]

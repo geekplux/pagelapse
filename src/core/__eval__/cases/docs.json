@@ -1,0 +1,126 @@
+[
+  {
+    "id": "docs-generated-stamp",
+    "label": "trivial",
+    "note": "Build stamp time and asset cache-busters only",
+    "before": { "title": "Configuration - Lantern docs", "blocks": [
+      "# Configuration",
+      "Lantern reads its settings from lantern.toml in the project root. Every key is optional.",
+      "## Output",
+      "Set out_dir to choose where the generated site is written. The default is public.",
+      "Stylesheet: assets/site.css?v=1712",
+      "Generated at 09:12 UTC from commit a1b2c3d"
+    ] },
+    "after": { "title": "Configuration - Lantern docs", "blocks": [
+      "# Configuration",
+      "Lantern reads its settings from lantern.toml in the project root. Every key is optional.",
+      "## Output",
+      "Set out_dir to choose where the generated site is written. The default is public.",
+      "Stylesheet: assets/site.css?v=1813&_=99",
+      "Generated at 23:59 UTC from commit a1b2c3d"
+    ] }
+  },
+  {
+    "id": "docs-new-option",
+    "label": "minor",
+    "note": "One new list item documenting an option",
+    "before": { "title": "Configuration - Lantern docs", "blocks": [
+      "# Configuration",
+      "Lantern reads its settings from lantern.toml in the project root. Every key is optional, and unknown keys are reported as warnings when the site builds.",
+      "## Output",
+      "Set out_dir to choose where the generated site is written. The default is public, and the folder is emptied before every build.",
+      "- out_dir: output folder",
+      "- base_url: absolute URL of the deployed site",
+      "- minify: shrink HTML and CSS",
+      "## Content",
+      "Pages are Markdown files under content. Front matter sets the title, the date and an optional summary for listings."
+    ] },
+    "after": { "title": "Configuration - Lantern docs", "blocks": [
+      "# Configuration",
+      "Lantern reads its settings from lantern.toml in the project root. Every key is optional, and unknown keys are reported as warnings when the site builds.",
+      "## Output",
+      "Set out_dir to choose where the generated site is written. The default is public, and the folder is emptied before every build.",
+      "- out_dir: output folder",
+      "- base_url: absolute URL of the deployed site",
+      "- minify: shrink HTML and CSS",
+      "- sitemap: write sitemap.xml",
+      "## Content",
+      "Pages are Markdown files under content. Front matter sets the title, the date and an optional summary for listings."
+    ] }
+  },
+  {
+    "id": "docs-new-section",
+    "label": "moderate",
+    "note": "A new section with heading and two paragraphs",
+    "before": { "title": "Configuration - Lantern docs", "blocks": [
+      "# Configuration",
+      "Lantern reads its settings from lantern.toml in the project root. Every key is optional, and unknown keys are reported as warnings when the site builds.",
+      "## Output",
+      "Set out_dir to choose where the generated site is written. The default is public, and the folder is emptied before every build.",
+      "## Content",
+      "Pages are Markdown files under content. Front matter sets the title, the date and an optional summary for listings.",
+      "Drafts are skipped unless you pass the drafts flag, so you can keep work in progress next to finished pages."
+    ] },
+    "after": { "title": "Configuration - Lantern docs", "blocks": [
+      "# Configuration",
+      "Lantern reads its settings from lantern.toml in the project root. Every key is optional, and unknown keys are reported as warnings when the site builds.",
+      "## Output",
+      "Set out_dir to choose where the generated site is written. The default is public, and the folder is emptied before every build.",
+      "## Content",
+      "Pages are Markdown files under content. Front matter sets the title, the date and an optional summary for listings.",
+      "Drafts are skipped unless you pass the drafts flag, so you can keep work in progress next to finished pages.",
+      "## Translations",
+      "Add a languages table to build the site in more than one language. Each language gets its own folder under content.",
+      "Links between translations are added automatically when two pages share the same file name."
+    ] }
+  },
+  {
+    "id": "docs-restructure",
+    "label": "major",
+    "note": "Page rewritten around a new quick start; old sections gone",
+    "before": { "title": "Installing Lantern", "blocks": [
+      "# Installing Lantern",
+      "## From source",
+      "Clone the repository and run make install. You need a C compiler and the zlib headers.",
+      "## Using a package manager",
+      "Lantern is packaged for most Linux distributions. Search for lantern-ssg in your package manager.",
+      "## Verifying the install",
+      "Run lantern --version. It should print the version and the build date."
+    ] },
+    "after": { "title": "Get started with Lantern", "blocks": [
+      "# Get started",
+      "Lantern now ships as a single binary. Download it, put it on your path and you are done.",
+      "## Quick start",
+      "Run lantern new my-site to create a project, then lantern serve to preview it with live reload.",
+      "## Next steps",
+      "Pick a theme from the gallery, or read the guide to writing your own templates."
+    ] }
+  },
+  {
+    "id": "docs-version-bump",
+    "label": "trivial",
+    "note": "Only the release number in the install snippet changed on a long page",
+    "before": { "title": "Installing Lantern", "blocks": [
+      "# Installing Lantern",
+      "Lantern ships as a single binary for Linux, macOS and Windows. Download the archive for your platform, unpack it, and put the binary somewhere on your path.",
+      "Latest release: 2.3.1",
+      "## From source",
+      "Clone the repository and run make install. You need a C compiler and the zlib headers. Building takes about two minutes on a laptop.",
+      "## Using a package manager",
+      "Lantern is packaged for most Linux distributions. Search for lantern-ssg in your package manager, or use the community tap on macOS.",
+      "## Verifying the install",
+      "Run lantern --version. It should print the version and the build date. If the command is not found, check that the folder is on your path."
+    ] },
+    "after": { "title": "Installing Lantern", "blocks": [
+      "# Installing Lantern",
+      "Lantern ships as a single binary for Linux, macOS and Windows. Download the archive for your platform, unpack it, and put the binary somewhere on your path.",
+      "Latest release: 2.4.0",
+      "## From source",
+      "Clone the repository and run make install. You need a C compiler and the zlib headers. Building takes about two minutes on a laptop.",
+      "## Using a package manager",
+      "Lantern is packaged for most Linux distributions. Search for lantern-ssg in your package manager, or use the community tap on macOS.",
+      "## Verifying the install",
+      "Run lantern --version. It should print the version and the build date. If the command is not found, check that the folder is on your path."
+    ] }
+  }
+]
