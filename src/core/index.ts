@@ -13,3 +13,5 @@ export * from './fixture.ts';
 export * from './timestamp.ts';
 export * from './url.ts';
 export * from './outline.ts';
+export * from './cdx.ts';
+export * from './sampling.ts';

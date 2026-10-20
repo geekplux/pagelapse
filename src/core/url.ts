@@ -1,3 +1,4 @@
+import { ARCHIVES } from '../archive/archives.ts';
 import { isValidTimestamp } from './timestamp.ts';
 import type { ArchiveId } from './types.ts';
 
@@ -21,11 +22,6 @@ const MESSAGES: Record<UrlErrorCode, string> = {
 };
 const TRACKING = /^(?:utm_.*|fbclid|gclid|dclid|gbraid|wbraid|msclkid|yclid|igshid|twclid|mc_cid|mc_eid|_ga|_gl)$/i;
 const LOCAL_HOST = /(?:^|\.)(?:localhost|local|internal)$/;
-/** Base URLs of each archive's Wayback-style replay endpoint. */
-const REPLAY_BASE: Record<ArchiveId, string> = {
-  'internet-archive': 'https://web.archive.org/web/',
-  'arquivo-pt': 'https://arquivo.pt/wayback/',
-};
 
 const paramKey = (segment: string) => new URLSearchParams(segment).keys().next().value ?? '';
 
@@ -76,7 +72,7 @@ export function validateTargetUrl(input: string): UrlCheck {
 
 function replayUrl(archive: ArchiveId, ts: string, suffix: string, url: string): string {
   if (!isValidTimestamp(ts)) throw new RangeError(`invalid capture timestamp: ${ts}`);
-  return `${REPLAY_BASE[archive]}${ts}${suffix}/${url}`;
+  return `${ARCHIVES[archive].replay}${ts}${suffix}/${url}`;
 }
 
 /** URL of a capture's original bytes, without archive rewriting (the `id_` form). */

@@ -1,21 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import demo from '../samples/illustrative-demo.json';
 import { FixtureError, fixtureToSnapshots, parseSampleFixture } from './fixture.ts';
 import { formatTimestampLong, formatTimestampShort, isValidTimestamp, timestampToIso } from './timestamp.ts';
 
-/** Deep-clones the committed fixture so each test can break it freely. */
+/** Minimal valid fixture: two blocks, four captures. */
+const demo = {
+  schema: 1,
+  id: 'tiny',
+  label: 'Tiny page',
+  url: 'https://example.org/',
+  description: 'A minimal fixture for parser tests.',
+  source: { archive: 'arquivo-pt', recordedAt: '2026-10-20', recorder: 'test', license: 'CC0-1.0', attribution: 'Test data.' },
+  blocks: [
+    { k: 'heading', t: 'Example', l: 1 },
+    { k: 'paragraph', t: 'Hello.' },
+  ],
+  snapshots: ['20140317091200', '20160602143000', '20180101000000', '20200101000000'].map((ts, i) => ({
+    ts,
+    digest: `D${i}`,
+    title: 'Example',
+    blockIds: i % 2 ? [0, 1] : [0],
+  })),
+};
+
+/** Deep-clones the minimal fixture so each test can break it freely. */
 function clone(): Record<string, unknown> & { snapshots: Record<string, unknown>[] } {
   return structuredClone(demo) as never;
 }
 
 describe('parseSampleFixture', () => {
-  it('accepts the committed illustrative fixture', () => {
+  it('accepts a minimal valid fixture', () => {
     const f = parseSampleFixture(demo);
-    expect(f.id).toBe('illustrative-demo');
-    expect(f.source.archive).toBe('illustrative');
-    expect(f.label).toContain('Illustrative demo');
+    expect(f.id).toBe('tiny');
+    expect(f.source.archive).toBe('arquivo-pt');
     expect(f.snapshots).toHaveLength(4);
-    expect(f.blocks.length).toBeGreaterThanOrEqual(25);
   });
 
   it('accepts a valid summaries map', () => {
@@ -41,7 +58,7 @@ describe('parseSampleFixture', () => {
     ['duplicate timestamps', (f) => (f.snapshots[1]!.ts = f.snapshots[0]!.ts), '$.snapshots[1].ts'],
     ['bad timestamp format', (f) => (f.snapshots[0]!.ts = '2014-03-17'), '$.snapshots[0].ts'],
     ['impossible timestamp date', (f) => (f.snapshots[0]!.ts = '20140231091200'), '$.snapshots[0].ts'],
-    ['unknown archive', (f) => ((f.source as Record<string, unknown>).archive = 'somewhere'), '$.source.archive'],
+    ['unknown archive', (f) => ((f.source as Record<string, unknown>).archive = 'illustrative'), '$.source.archive'],
     ['missing label', (f) => (f.label = ''), '$.label'],
     ['no snapshots', (f) => (f.snapshots = []), '$.snapshots'],
     ['bad summary key', (f) => (f.summaries = { nope: { text: 'x', source: 'rule' } }), '$.summaries["nope"]'],
@@ -72,9 +89,11 @@ describe('fixtureToSnapshots', () => {
     const f = parseSampleFixture(demo);
     const pages = fixtureToSnapshots(f);
     expect(pages.map((p) => p.ts)).toEqual(f.snapshots.map((s) => s.ts));
-    expect(pages[0]!.blocks[0]).toEqual({ kind: 'heading', text: 'Example Community Garden', level: 1 });
-    expect(pages[0]!.blocks[1]).toEqual({ kind: 'paragraph', text: f.blocks[1]!.t });
-    expect(pages[3]!.blocks).toHaveLength(f.snapshots[3]!.blockIds.length);
+    expect(pages[1]!.blocks).toEqual([
+      { kind: 'heading', text: 'Example', level: 1 },
+      { kind: 'paragraph', text: 'Hello.' },
+    ]);
+    expect(pages[2]!.blocks).toHaveLength(1);
     // Blocks are copies, so callers cannot mutate shared fixture data.
     expect(pages[0]!.blocks[0]).not.toBe(pages[1]!.blocks[0]);
   });

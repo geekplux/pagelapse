@@ -1,13 +1,9 @@
-import type { SampleArchive, SampleSource } from '../core/types.ts';
-
-const ARCHIVE_NAMES: Record<SampleArchive, string> = {
-  'internet-archive': 'Internet Archive Wayback Machine',
-  'arquivo-pt': 'Arquivo.pt',
-  illustrative: 'illustrative, not an archive capture',
-};
+import { ARCHIVES } from '../archive/archives.ts';
+import type { SampleSource } from '../core/types.ts';
 
 /** Credits: where live captures come from, the current sample's provenance and licence, the source code. */
 export function AppFooter({ source }: { source: SampleSource }) {
+  const archive = ARCHIVES[source.archive];
   return (
     <footer className="site-footer">
       <p>
@@ -16,8 +12,8 @@ export function AppFooter({ source }: { source: SampleSource }) {
         everything to be kind to it.
       </p>
       <p>
-        This sample: {ARCHIVE_NAMES[source.archive]} · recorded <span className="mono">{source.recordedAt}</span> ·{' '}
-        {source.recorder}. {source.attribution} Licence:{' '}
+        This sample: captures from <a href={archive.home}>{archive.name}</a>, recorded{' '}
+        <span className="mono">{source.recordedAt}</span> with {source.recorder}. {source.attribution} Licence:{' '}
         <a className="licence-link" href={`https://spdx.org/licenses/${source.license}.html`}>{source.license}</a>.
       </p>
       <p>

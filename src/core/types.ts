@@ -46,12 +46,18 @@ export interface SnapshotPage extends ExtractedPage {
 /** A web archive we can query and fetch captures from. */
 export type ArchiveId = 'internet-archive' | 'arquivo-pt';
 
-/** Where a sample fixture's data came from. */
-export type SampleArchive = ArchiveId | 'illustrative';
+/** One row of a CDX listing: a capture of the target URL. */
+export interface Capture {
+  /** 14-digit CDX timestamp, `YYYYMMDDhhmmss` (UTC). */
+  ts: string;
+  digest: string;
+  /** Stored (usually compressed) record length in bytes; 0 when unknown. */
+  length: number;
+}
 
 /** Provenance of a sample fixture, shown in the UI. */
 export interface SampleSource {
-  archive: SampleArchive;
+  archive: ArchiveId;
   recordedAt: string;
   recorder: string;
   license: string;

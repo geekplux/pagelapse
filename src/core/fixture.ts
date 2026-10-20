@@ -1,3 +1,4 @@
+import { ARCHIVE_IDS } from '../archive/archives.ts';
 import { isValidTimestamp } from './timestamp.ts';
 import {
   BLOCK_KINDS,
@@ -7,7 +8,6 @@ import {
   type FixtureSnapshot,
   type FixtureSummary,
   type HeadingLevel,
-  type SampleArchive,
   type SampleFixture,
   type SnapshotPage,
 } from './types.ts';
@@ -22,7 +22,6 @@ export class FixtureError extends Error {
   }
 }
 
-const ARCHIVES: readonly SampleArchive[] = ['internet-archive', 'arquivo-pt', 'illustrative'];
 const PAIR_KEY_RE = /^(\d{14})-(\d{14})$/;
 
 type Obj = Record<string, unknown>;
@@ -124,7 +123,7 @@ export function parseSampleFixture(json: unknown): SampleFixture {
     url: str(o.url, '$.url'),
     description: str(o.description, '$.description'),
     source: {
-      archive: oneOf(src.archive, ARCHIVES, '$.source.archive'),
+      archive: oneOf(src.archive, ARCHIVE_IDS, '$.source.archive'),
       recordedAt: str(src.recordedAt, '$.source.recordedAt'),
       recorder: str(src.recorder, '$.source.recorder'),
       license: str(src.license, '$.source.license'),
