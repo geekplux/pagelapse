@@ -16,6 +16,7 @@ export function SamplePicker({ samples, selectedId, onSelect }: Props) {
           key={s.id}
           type="button"
           className="chip"
+          data-sample={s.id}
           aria-pressed={s.id === selectedId}
           onClick={() => onSelect(s)}
         >

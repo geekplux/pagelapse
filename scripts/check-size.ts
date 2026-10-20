@@ -6,7 +6,7 @@ import { gzipSync } from 'node:zlib';
 
 const root = resolve(import.meta.dirname, '..');
 const dist = join(root, 'dist');
-const DEFAULT_SAMPLE = 'src/samples/illustrative-demo.json';
+const DEFAULT_SAMPLE = 'src/samples/wikipedia-internet-archive.json';
 /** Packages allowed in the browser bundle (scheduler is react-dom's own dependency). */
 const CLIENT_PACKAGES = new Set(['react', 'react-dom', 'scheduler']);
 const KB = 1000;

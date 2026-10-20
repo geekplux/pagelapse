@@ -96,6 +96,7 @@ main { flex: 1; }
 .sheet h3 { margin-top: 2rem; font: 600 var(--step--1) / 1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); }
 .captures { list-style: none; padding: 0; margin-top: 0.75rem; border-bottom: 1px solid var(--rule); }
 .captures li { display: grid; grid-template-columns: 2.5ch 11ch 1fr; gap: 0 1rem; align-items: baseline; padding-block: 0.7rem; border-top: 1px solid var(--rule); }
+.captures-source { margin-top: 0.5rem; color: var(--ink-2); font-size: 0.9rem; }
 .cap-no { color: var(--ink-2); font-size: var(--step--1); }
 .cap-title { font-family: var(--font-read); font-size: 1.05rem; }
 @media (max-width: 30rem) {

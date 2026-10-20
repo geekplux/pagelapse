@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { SampleFixture } from '../core/types.ts';
+import { ARCHIVES } from '../archive/archives.ts';
+import { viewCaptureUrl } from '../core/url.ts';
 import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../core/timestamp.ts';
 
 /** The sample as an index card: catalogue line, title, URL, description and the list of captures. */
@@ -30,6 +32,9 @@ export function SampleView({ fixture }: { fixture: SampleFixture }) {
       </p>
       <p className="sheet-desc">{fixture.description}</p>
       <h3 id="captures-heading">Captures</h3>
+      <p className="captures-source">
+        Captures from {ARCHIVES[fixture.source.archive].name}. Each date opens that capture in the archive.
+      </p>
       {/* Safari drops list semantics when list-style is none, so the role is not redundant here. */}
       {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles */}
       <ol className="captures" role="list" aria-labelledby="captures-heading">
@@ -38,10 +43,14 @@ export function SampleView({ fixture }: { fixture: SampleFixture }) {
             <span className="cap-no mono" aria-hidden="true">
               {String(i + 1).padStart(2, '0')}
             </span>
-            <time className="mono" dateTime={timestampToIso(s.ts)}>
-              <span aria-hidden="true">{formatTimestampShort(s.ts)}</span>
-              <span className="sr-only">{formatTimestampLong(s.ts)}</span>
-            </time>
+            {/* Named by the long date inside <time>; the linter cannot see through the nested spans. */}
+            {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label */}
+            <a className="cap-link" href={viewCaptureUrl(fixture.source.archive, s.ts, fixture.url)}>
+              <time className="mono" dateTime={timestampToIso(s.ts)}>
+                <span aria-hidden="true">{formatTimestampShort(s.ts)}</span>
+                <span className="sr-only">{formatTimestampLong(s.ts)}</span>
+              </time>
+            </a>
             <span className="cap-title">{s.title}</span>
           </li>
         ))}

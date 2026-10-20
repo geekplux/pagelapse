@@ -2,6 +2,7 @@
 // fresh browser context; the runner takes the screenshot after `run` resolves.
 import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
+import { ARCHIVES } from '../src/archive/archives.ts';
 import { parseSampleFixture } from '../src/core/fixture.ts';
 import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
@@ -43,9 +44,38 @@ export async function openReady(page: Page, baseUrl: string, path = '/'): Promis
   });
 }
 
-const defaultFixture = parseSampleFixture(
-  JSON.parse(readFileSync(new URL('../src/samples/illustrative-demo.json', import.meta.url), 'utf8')),
-);
+const readJson = (rel: string) => JSON.parse(readFileSync(new URL(`../src/samples/${rel}`, import.meta.url), 'utf8'));
+/** Committed samples in registry order (samples.config.json); the first is the default. */
+const fixtures = (readJson('samples.config.json') as { id: string }[]).map((c) => parseSampleFixture(readJson(`${c.id}.json`)));
+const defaultFixture = fixtures[0]!;
+
+/** Presses a currently non-pressed chip and checks the pressed state, heading and capture links all follow. */
+async function switchTo(page: Page, f: (typeof fixtures)[number]): Promise<string> {
+  const chip = page.locator(`.chip[data-sample="${f.id}"]`);
+  if ((await chip.getAttribute('aria-pressed')) !== 'false') throw new Error(`${f.id}: chip was already pressed`);
+  await chip.click();
+  await page.locator('#sample-label', { hasText: f.label }).waitFor({ timeout: 2_000 });
+  await page.waitForSelector('[data-ready="true"]');
+  if ((await chip.getAttribute('aria-pressed')) !== 'true') throw new Error(`${f.id}: chip not pressed after click`);
+  // Let the sheet's entry fade finish so axe measures settled colours.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  return checkSample(page, f);
+}
+
+/** The shown sample's heading, capture count, archive links and provenance match its fixture. */
+async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<string> {
+  if ((await page.locator('.chip[aria-pressed="true"]').count()) !== 1) throw new Error('not exactly one pressed chip');
+  const heading = (await page.locator('#sample-label').textContent())?.trim();
+  if (heading !== f.label) throw new Error(`heading "${heading}", expected "${f.label}"`);
+  const links = await page.locator('.cap-link').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+  const replay = ARCHIVES[f.source.archive].replay;
+  if (links.length !== f.snapshots.length || links.some((h) => !h.startsWith(replay))) {
+    throw new Error(`${f.id}: ${links.length} capture links, expected ${f.snapshots.length} into ${replay}`);
+  }
+  const footer = (await page.locator('.site-footer').textContent()) ?? '';
+  if (!footer.includes(f.source.license) || !footer.includes(f.source.recordedAt)) throw new Error(`${f.id}: footer lacks provenance`);
+  return `${f.id}: ${f.snapshots.length} captures linked to ${replay}`;
+}
 
 export const flows: readonly Flow[] = [
   {
@@ -75,6 +105,27 @@ export const flows: readonly Flow[] = [
       return { timeToReadyMs, notes: [`${defaultFixture.snapshots.length} capture dates visible`, `${scheme} paper ${bg}`, `fonts: ${fonts.join(', ')}`] };
     },
   },
+  {
+    name: 'samples-switch',
+    description: 'Each chip, pressed while not pressed, switches the pressed state, heading, capture links and footer',
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const notes = [await checkSample(page, defaultFixture)];
+      // Visit every other sample, then come back to the default: every click is on a non-pressed chip.
+      for (const f of [...fixtures.slice(1), defaultFixture]) notes.push(await switchTo(page, f));
+      return { notes };
+    },
+  },
+  ...fixtures.map(
+    (f): Flow => ({
+      name: `sample-${f.id}`,
+      description: `The ${f.id} sample renders from its bundled fixture`,
+      async run({ page, baseUrl }) {
+        const timeToReadyMs = await openReady(page, baseUrl);
+        return { timeToReadyMs, notes: [f === defaultFixture ? await checkSample(page, f) : await switchTo(page, f)] };
+      },
+    }),
+  ),
   {
     name: 'reduced-motion',
     description: 'Under prefers-reduced-motion: reduce, every transition and animation computes to 0s',
