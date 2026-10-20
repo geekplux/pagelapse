@@ -46,3 +46,7 @@ pnpm-debug.log*
 # claude code local state
 .claude/settings.local.json
 .claude/agent-memory-local/
+
+# local caches and ad-hoc smoke output
+.cache/
+docs/screenshots/latest/
