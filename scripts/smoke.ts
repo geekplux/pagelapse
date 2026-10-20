@@ -216,7 +216,7 @@ async function main(): Promise<number> {
         Object.assign(report, await flow.run({ page, baseUrl, viewport, scheme }));
         // Every flow ends with an axe pass on the state it left behind.
         report.notes = [...(report.notes ?? []), await assertAxeClean(page)];
-        const base = `${flow.name}-${viewport}${scheme === 'dark' ? '-dark' : ''}`;
+        const base = `${flow.shot ?? flow.name}-${viewport}${scheme === 'dark' ? '-dark' : ''}`;
         const file = join(outDir, `${base}${flow.suffix ?? ''}.png`);
         // Let the sheet's `settle` fade (and any transition) finish so images are not mid-animation.
         await page.evaluate(() =>
