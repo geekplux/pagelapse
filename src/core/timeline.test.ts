@@ -52,14 +52,11 @@ describe('ruleSummary', () => {
     expect(ruleSummary(toChangeRecord(diffPages(a, d), a, d))).toBe('Reworded 1 passage (+1 / −1 words)');
   });
 
-  it('stays within budget for long names', () => {
-    const r: ChangeRecord = {
-      pair: '20200101000000-20210101000000', title: 'x'.repeat(100), titleChanged: true,
-      headingsAdded: ['y'.repeat(80), 'z'], headingsRemoved: ['w'.repeat(80)], added: [], removed: [], modified: [],
-      stats: { wordsAdded: 12345, wordsRemoved: 6789, blocksAdded: 3, blocksRemoved: 1, blocksModified: 0 },
-    };
+  it('stays within budget for long names, and falls back for moves only', () => {
+    const stats = { wordsAdded: 12345, wordsRemoved: 6789, blocksAdded: 3, blocksRemoved: 1, blocksModified: 0 };
+    const r: ChangeRecord = { pair: 'p', title: 'x'.repeat(100), titleChanged: true, headingsAdded: ['y'.repeat(80), 'z'], headingsRemoved: ['w'.repeat(80)], added: [], removed: [], modified: [], stats };
     expect(ruleSummary(r).length).toBeLessThanOrEqual(MAX_RULE_SUMMARY_CHARS);
-    expect(ruleSummary({ ...r, titleChanged: undefined, headingsAdded: [], headingsRemoved: [], stats: { ...r.stats, blocksAdded: 0, blocksRemoved: 0, wordsAdded: 0, wordsRemoved: 0 } })).toBe('Moved content around');
+    expect(ruleSummary({ ...r, titleChanged: undefined, headingsAdded: [], headingsRemoved: [], stats: { ...stats, wordsAdded: 0, wordsRemoved: 0, blocksAdded: 0, blocksRemoved: 0 } })).toBe('Moved content around');
   });
 });
 
@@ -91,9 +88,7 @@ describe('buildTimeline', () => {
 
   it('each committed sample yields 4-15 meaningful changes', () => {
     const counts = Object.fromEntries(samples.map((f) => [f.id, buildTimeline(f.url, fixtureToSnapshots(f)).entries.length]));
-    // Recorded counts (phase 6): wikipedia 13, git-scm 9, rust-lang 5.
-    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, 'git-scm': 9, 'rust-lang': 5 });
-    for (const n of Object.values(counts)) expect(n).toBeGreaterThanOrEqual(4);
-    for (const n of Object.values(counts)) expect(n).toBeLessThanOrEqual(15);
+    expect(Object.values(counts).every((n) => n >= 4 && n <= 15)).toBe(true);
+    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, 'git-scm': 9, 'rust-lang': 5 }); // recorded in phase 6
   });
 });
