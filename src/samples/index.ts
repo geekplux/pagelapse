@@ -1,6 +1,6 @@
 import { parseSampleFixture } from '../core/fixture.ts';
 import type { SampleFixture } from '../core/types.ts';
-import illustrativeDemo from './illustrative-demo.json';
+import wikipedia from './wikipedia-internet-archive.json';
 
 /** A built-in sample: metadata for the picker plus a loader for its fixture. */
 export interface SampleEntry {
@@ -11,9 +11,13 @@ export interface SampleEntry {
 }
 
 /** The sample shown on first load; statically bundled so it renders offline, instantly. */
-export const defaultSample: SampleFixture = parseSampleFixture(illustrativeDemo);
+export const defaultSample: SampleFixture = parseSampleFixture(wikipedia);
 
-/** Registry of built-in samples. Non-default samples will be lazy `import()`s. */
+const lazy = (load: () => Promise<{ default: unknown }>) => () => load().then((m) => parseSampleFixture(m.default));
+
+/** Registry of built-in samples (ids match samples.config.json); non-default ones load lazily. */
 export const samples: readonly SampleEntry[] = [
-  { id: defaultSample.id, chip: 'Community garden (demo)', load: () => Promise.resolve(defaultSample) },
+  { id: defaultSample.id, chip: 'Wikipedia: Internet Archive', load: () => Promise.resolve(defaultSample) },
+  { id: 'git-scm', chip: 'git-scm.com', load: lazy(() => import('./git-scm.json')) },
+  { id: 'rust-lang', chip: 'rust-lang.org', load: lazy(() => import('./rust-lang.json')) },
 ];
