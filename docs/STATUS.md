@@ -2,12 +2,12 @@ STATE: IN-PROGRESS
 
 # Status
 
-- Current phase: plan committed to main; starting phase 1 (`phase-1-toolchain-sample`)
+- Current phase: 1 verified (PASS, round 1); PR being opened
 - Blockers: none
 
 | Phase | Branch | PR | State | Verify rounds |
 |---|---|---|---|---|
-| 1 | phase-1-toolchain-sample | - | not started | 0 |
+| 1 | phase-1-toolchain-sample | (opening) | verified PASS | 1 |
 | 2 | phase-2-design-shell | - | not started | 0 |
 | 3 | phase-3-extract | - | not started | 0 |
 | 4 | phase-4-recorder-samples | - | not started | 0 |
@@ -26,4 +26,4 @@ Follow-ups:
 - Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-19 (plan committed)
+Last updated: 2026-10-19 (phase 1 verified)

@@ -23,3 +23,6 @@ Record every non-trivial decision here: date, decision, alternatives considered,
 | 2026-10-19 | D15: Worker tests as plain Vitest with fake Env | vitest-pool-workers | RAM |
 | 2026-10-19 | D16: no agent skill / CLI shipped | Claude skill; npm CLI | Anatomy bar not worth meeting before the web app proves itself; roadmap item |
 | 2026-10-19 | D17: 400-line budget excludes lockfile, fixtures, eval cases, screenshots, fonts, generated images, verbatim licence texts | Count everything | Matches CLAUDE.md intent |
+| 2026-10-19 | Accept phase 1 at ~954 changed lines (excl. lockfile/fixture/LICENSE) over the ~400 budget | Split toolchain into two PRs | Smoke harness (kill-safe cleanup, request blocking) and strict fixture parser are foundations for every phase; splitting would leave a phase without its verification tool. Flagged in the PR |
+| 2026-10-19 | Smoke script launches `vite preview` via node directly (same flags as `pnpm preview`) instead of `pnpm preview` | `pnpm preview` | Avoids duplicate `--port` and an extra pnpm process in the killable process group |
+| 2026-10-19 | Smoke writes `smoke-report.json` next to screenshots and it is committed with them | Keep report out of git | Gives reviewers machine-readable evidence (time-to-ready, blocked requests, console errors) |
