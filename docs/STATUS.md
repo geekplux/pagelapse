@@ -1,11 +1,29 @@
-STATE: PLANNING
+STATE: IN-PROGRESS
 
 # Status
 
-- Current phase: planning (docs/PLAN.md not written yet)
+- Current phase: plan committed to main; starting phase 1 (`phase-1-toolchain-sample`)
 - Blockers: none
 
 | Phase | Branch | PR | State | Verify rounds |
 |---|---|---|---|---|
+| 1 | phase-1-toolchain-sample | - | not started | 0 |
+| 2 | phase-2-design-shell | - | not started | 0 |
+| 3 | phase-3-extract | - | not started | 0 |
+| 4 | phase-4-recorder-samples | - | not started | 0 |
+| 5 | phase-5-diff-engine | - | not started | 0 |
+| 6 | phase-6-significance | - | not started | 0 |
+| 7 | phase-7-timeline-ui | - | not started | 0 |
+| 8 | phase-8-diff-view | - | not started | 0 |
+| 9 | phase-9-worker-archive-api | - | not started | 0 |
+| 10 | phase-10-live-mode | - | not started | 0 |
+| 11 | phase-11-ai-summaries | - | not started | 0 |
+| 12 | phase-12-oss-packaging | - | not started | 0 |
+| 13 | phase-13-showcase-launch | - | not started | 0 |
+| 14 | phase-14-deploy | - | not started | 0 |
 
-Last updated: scaffold commit
+Follow-ups:
+- Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
+- Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
+
+Last updated: 2026-10-19 (plan committed)
