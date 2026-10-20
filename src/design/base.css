@@ -99,8 +99,13 @@ main { flex: 1; }
 .captures-source { margin-top: 0.5rem; color: var(--ink-2); font-size: 0.9rem; }
 .cap-no { color: var(--ink-2); font-size: var(--step--1); }
 .cap-title { font-family: var(--font-read); font-size: 1.05rem; }
+.changes li { grid-template-columns: 11ch 9ch 1fr; }
+.change-mag { color: var(--ink-2); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.08em; }
+.change-mag[data-magnitude="major"] { color: var(--ink); font-weight: 600; }
 @media (max-width: 30rem) {
   .captures li { grid-template-columns: 2.5ch 1fr; }
+  .changes li { grid-template-columns: 11ch 1fr; }
+  .changes .cap-title { grid-column: 1 / -1; }
   .cap-title { grid-column: 2; }
 }
 

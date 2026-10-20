@@ -1,13 +1,16 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { SampleFixture } from '../core/types.ts';
 import { ARCHIVES } from '../archive/archives.ts';
 import { viewCaptureUrl } from '../core/url.ts';
+import { fixtureToSnapshots } from '../core/fixture.ts';
+import { buildTimeline } from '../core/timeline.ts';
 import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../core/timestamp.ts';
 
 /** The sample as an index card: catalogue line, title, URL, description and the list of captures. */
 export function SampleView({ fixture }: { fixture: SampleFixture }) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
+  const timeline = useMemo(() => buildTimeline(fixture.url, fixtureToSnapshots(fixture)), [fixture]);
   const years = `${snapshots[0]?.ts.slice(0, 4)}–${snapshots.at(-1)?.ts.slice(0, 4)}`;
 
   // Signal "rendered" to the smoke check once the captures are in the DOM.
@@ -31,6 +34,26 @@ export function SampleView({ fixture }: { fixture: SampleFixture }) {
         </a>
       </p>
       <p className="sheet-desc">{fixture.description}</p>
+      {/* Temporary list (phase 6); phase 7 replaces it with the timeline. */}
+      <h3 id="changes-heading">Meaningful changes</h3>
+      <p className="captures-source">
+        {timeline.entries.length} changes; {timeline.trivialCaptures.length} trivial captures hidden. Summaries are auto summaries.
+      </p>
+      {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles */}
+      <ol className="captures changes" role="list" aria-labelledby="changes-heading">
+        {timeline.entries.map((e) => (
+          <li key={e.to}>
+            <time className="mono" dateTime={timestampToIso(e.to)}>
+              <span aria-hidden="true">{formatTimestampShort(e.to)}</span>
+              <span className="sr-only">{formatTimestampLong(e.to)}</span>
+            </time>
+            <span className="change-mag mono" data-magnitude={e.significance.magnitude}>
+              {e.significance.magnitude}
+            </span>
+            <span className="cap-title">{e.ruleSummary}</span>
+          </li>
+        ))}
+      </ol>
       <h3 id="captures-heading">Captures</h3>
       <p className="captures-source">
         Captures from {ARCHIVES[fixture.source.archive].name}. Each date opens that capture in the archive.

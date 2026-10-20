@@ -72,6 +72,7 @@ async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<st
   if (links.length !== f.snapshots.length || links.some((h) => !h.startsWith(replay))) {
     throw new Error(`${f.id}: ${links.length} capture links, expected ${f.snapshots.length} into ${replay}`);
   }
+  if ((await page.locator('.changes li').count()) < 4) throw new Error(`${f.id}: fewer than 4 meaningful changes listed`);
   const footer = (await page.locator('.site-footer').textContent()) ?? '';
   if (!footer.includes(f.source.license) || !footer.includes(f.source.recordedAt)) throw new Error(`${f.id}: footer lacks provenance`);
   return `${f.id}: ${f.snapshots.length} captures linked to ${replay}`;
@@ -86,7 +87,7 @@ export const flows: readonly Flow[] = [
     async run({ page, baseUrl, scheme }) {
       const timeToReadyMs = await openReady(page, baseUrl);
       for (const s of defaultFixture.snapshots) {
-        const time = page.locator(`time[datetime="${timestampToIso(s.ts)}"]`);
+        const time = page.locator(`.captures:not(.changes) time[datetime="${timestampToIso(s.ts)}"]`);
         await time.waitFor({ state: 'visible', timeout: 2_000 });
         const shown = (await time.locator('[aria-hidden="true"]').textContent())?.trim();
         const spoken = (await time.locator('.sr-only').textContent())?.trim();
