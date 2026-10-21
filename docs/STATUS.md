@@ -1,6 +1,6 @@
 STATE: IN-PROGRESS
 
-# Status (Pagelapse, formerly wayback-diff)
+# Status: Pagelapse
 
 - Current phase: 9 (`phase-9-rename-pagelapse`); Sean's 2026-10-20 change request applied to PLAN.md (rename + visual pane, phases renumbered to 19)
 - Blockers: none

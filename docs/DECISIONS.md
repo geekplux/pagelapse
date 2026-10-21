@@ -60,3 +60,4 @@ Record every non-trivial decision here: date, decision, alternatives considered,
 | 2026-10-20 | D24-D25: live pictures from IA `if_` iframe replay directly (sandboxed, load after 400 ms rest, ≤ 3 frames, neighbours preloaded one at a time); live thumbnails are text outlines; Browser Rendering designed as optional only | Proxy via Worker; paid screenshots | Politeness, no paid services; IA framing allowance verified post-deploy |
 | 2026-10-20 | D26: Wikipedia infobox money rows hidden before screenshotting, caption says so | Show page as-is | CLAUDE.md finance rule applies to sample images too |
 | 2026-10-20 | `.claude/agents/*.md` keep the old name | Rename them too | Sean's scaffold files, not user-facing; not edited by the main agent |
+| 2026-10-20 | Phase 9: a11y check of the new logo/wordmark folded into the verifier instead of a separate a11y-reviewer run | Separate review | UI change is limited to the mark/wordmark; saves shared quota |
