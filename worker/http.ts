@@ -1,11 +1,11 @@
 /** Machine-readable API error codes; the UI maps each to a specific, actionable message (AC 14). */
 export type ErrorCode =
   | 'invalid_url' | 'no_captures' | 'excluded' | 'archive_rate_limited'
-  | 'archive_unavailable' | 'too_large' | 'rate_limited' | 'not_found';
+  | 'archive_unavailable' | 'too_large' | 'rate_limited' | 'not_found' | 'bad_request';
 
 const STATUS: Record<ErrorCode, number> = {
   invalid_url: 400, no_captures: 404, excluded: 403, archive_rate_limited: 503,
-  archive_unavailable: 502, too_large: 422, rate_limited: 429, not_found: 404,
+  archive_unavailable: 502, too_large: 422, rate_limited: 429, not_found: 404, bad_request: 400,
 };
 
 /** Headers on every API response: JSON is never sniffed, framed, or read cross-origin. */

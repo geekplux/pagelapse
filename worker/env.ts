@@ -1,7 +1,12 @@
-/** Bindings from wrangler.jsonc. `UPSTREAM_LIMIT` is optional so local runs and tests work without it. */
+/**
+ * Bindings from wrangler.jsonc. Only `CACHE` is required, so local runs and tests work without the rest;
+ * `AI` exists in production only (D11) and is read only by `summarise.ts`.
+ */
 export interface Env {
   CACHE: KVNamespace;
   UPSTREAM_LIMIT?: RateLimit;
+  AI?: Ai;
+  AI_LIMIT?: RateLimit;
 }
 
 /** Injectable IO, so tests run the real handlers with a recorded fake fetch and no waiting. */

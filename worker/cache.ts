@@ -3,7 +3,7 @@ import { EXTRACTOR_VERSION } from '../src/core/extract.ts';
 /** CDX listings are cached for a day: new captures appear daily at most (PLAN 5.7). */
 export const CDX_TTL_S = 86_400;
 
-async function sha256(text: string): Promise<string> {
+export async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }

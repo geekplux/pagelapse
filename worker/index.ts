@@ -3,9 +3,12 @@ import { apiError } from './http.ts';
 import { captures } from './routes/captures.ts';
 import { health } from './routes/health.ts';
 import { snapshot } from './routes/snapshot.ts';
+import { summaries } from './routes/summaries.ts';
 
 type Route = (req: Request, url: URL, env: Env, io: Io) => Promise<Response>;
-const ROUTES: Record<string, Route> = { '/api/health': health, '/api/captures': captures, '/api/snapshot': snapshot };
+const ROUTES: Record<string, Route> = {
+  'GET /api/health': health, 'GET /api/captures': captures, 'GET /api/snapshot': snapshot, 'POST /api/summaries': summaries,
+};
 // Workers' fetch must be called unbound from globalThis, so wrap it.
 const defaultIo: Io = { fetch: (input, init) => fetch(input, init) };
 
@@ -15,7 +18,7 @@ const defaultIo: Io = { fetch: (input, init) => fetch(input, init) };
  */
 export async function handle(req: Request, env: Env, io: Io = defaultIo): Promise<Response> {
   const url = new URL(req.url);
-  const route = req.method === 'GET' ? ROUTES[url.pathname] : undefined;
+  const route = ROUTES[`${req.method} ${url.pathname}`];
   if (!route) return apiError('not_found', `No API endpoint at ${req.method} ${url.pathname}.`);
   try {
     return await route(req, url, env, io);
