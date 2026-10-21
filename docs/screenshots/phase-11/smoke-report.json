@@ -1,0 +1,738 @@
+{
+  "ok": true,
+  "baseUrl": "http://127.0.0.1:4391/",
+  "outDir": "../../../tmp/p11shots",
+  "flows": [
+    {
+      "flow": "sample-default",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 4421,
+      "timeToReadyMs": 371,
+      "notes": [
+        "9 change dates visible",
+        "light paper rgb(246, 241, 231)",
+        "fonts: Fraunces normal, Fraunces italic",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-default-desktop.webp"
+    },
+    {
+      "flow": "sample-default",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 3126,
+      "timeToReadyMs": 264,
+      "notes": [
+        "9 change dates visible",
+        "light paper rgb(246, 241, 231)",
+        "fonts: Fraunces normal, Fraunces italic",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-default-mobile.webp"
+    },
+    {
+      "flow": "sample-default",
+      "viewport": "desktop",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 3888,
+      "timeToReadyMs": 243,
+      "notes": [
+        "9 change dates visible",
+        "dark paper rgb(20, 18, 15)",
+        "fonts: Fraunces normal, Fraunces italic",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-default-desktop-dark.webp"
+    },
+    {
+      "flow": "sample-default",
+      "viewport": "mobile",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 3022,
+      "timeToReadyMs": 225,
+      "notes": [
+        "9 change dates visible",
+        "dark paper rgb(20, 18, 15)",
+        "fonts: Fraunces normal, Fraunces italic",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-default-mobile-dark.webp"
+    },
+    {
+      "flow": "samples-switch",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 3245,
+      "notes": [
+        "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
+        "wikipedia-internet-archive: 14 captures linked to https://arquivo.pt/wayback/",
+        "rust-lang: 13 captures linked to https://arquivo.pt/wayback/",
+        "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/samples-switch-desktop.webp"
+    },
+    {
+      "flow": "samples-switch",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2857,
+      "notes": [
+        "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
+        "wikipedia-internet-archive: 14 captures linked to https://arquivo.pt/wayback/",
+        "rust-lang: 13 captures linked to https://arquivo.pt/wayback/",
+        "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/samples-switch-mobile.webp"
+    },
+    {
+      "flow": "sample-git-scm",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1421,
+      "timeToReadyMs": 246,
+      "notes": [
+        "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-git-scm-desktop.webp"
+    },
+    {
+      "flow": "sample-git-scm",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1166,
+      "timeToReadyMs": 233,
+      "notes": [
+        "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-git-scm-mobile.webp"
+    },
+    {
+      "flow": "sample-wikipedia-internet-archive",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2094,
+      "timeToReadyMs": 252,
+      "notes": [
+        "wikipedia-internet-archive: 14 captures linked to https://arquivo.pt/wayback/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-wikipedia-internet-archive-desktop.webp"
+    },
+    {
+      "flow": "sample-wikipedia-internet-archive",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1811,
+      "timeToReadyMs": 234,
+      "notes": [
+        "wikipedia-internet-archive: 14 captures linked to https://arquivo.pt/wayback/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-wikipedia-internet-archive-mobile.webp"
+    },
+    {
+      "flow": "sample-rust-lang",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1596,
+      "timeToReadyMs": 263,
+      "notes": [
+        "rust-lang: 13 captures linked to https://arquivo.pt/wayback/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-rust-lang-desktop.webp"
+    },
+    {
+      "flow": "sample-rust-lang",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1439,
+      "timeToReadyMs": 239,
+      "notes": [
+        "rust-lang: 13 captures linked to https://arquivo.pt/wayback/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/sample-rust-lang-mobile.webp"
+    },
+    {
+      "flow": "reduced-motion",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1186,
+      "notes": [
+        "42 animated elements (a.skip-link, a.home-link, button.chip, article.sheet, a.mono, a.cap-out, circle.tl-marker, circle.tl-marker-ring, g.tl-move, div.diff-body, a.cap-link, a., a.licence-link) all 0s under reduce",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/hero-desktop-reduced.webp"
+    },
+    {
+      "flow": "reduced-motion",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 944,
+      "notes": [
+        "42 animated elements (a.skip-link, a.home-link, button.chip, article.sheet, a.mono, a.cap-out, circle.tl-marker, circle.tl-marker-ring, g.tl-move, div.diff-body, a.cap-link, a., a.licence-link) all 0s under reduce",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/hero-mobile-reduced.webp"
+    },
+    {
+      "flow": "keyboard-tab-order",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1480,
+      "notes": [
+        "33 stops: header:Skip to content | header:Skip to diff | header:pagelapsePagelapse | chips:git-scm.com | chips:Wikipedia: Internet Archive | chips:rust-lang.org | main:https://git-scm.com/ | main:− Before 2025·04·044 April 2025 | main:+ After 2025·12·1818 December 2025 | main:Open capture (opens in a new tab) | main:View capture 2025·04·044 April 2025 (ope | main:View capture 2025·12·1818 December 2025  | main:Copy link | main:‹ Previous | main:Next › | main:All changes (9) | main:2014·09·088 September 2014minorAdded sec | main:2014·12·044 December 2014minorReworded 2 | main:2016·01·1414 January 2016minorReworded 2 | main:2017·06·077 June 2017minorReworded 1 pas | main:2019·02·2525 February 2019minorReworded  | main:2019·12·1818 December 2019minorReworded  | main:2021·01·1414 January 2021minorReworded 1 | main:2025·04·044 April 2025moderateAdded sect | main:2025·12·1818 December 2025majorAdded 5 s | main: | main:2025·12·18201420152016201720182019202020 | main:Frame #14 2025·12·1818 December 2025 | main:All 14 captures | footer:Internet Archive's Wayback Machine | footer:Arquivo.pt | footer:MIT | footer:Source on GitHub",
+        "announced: Showing: git-scm.com home page, 14 captures",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/keyboard-tab-order-desktop-kbd.webp"
+    },
+    {
+      "flow": "keyboard-tab-order",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1215,
+      "notes": [
+        "24 stops: header:Skip to content | header:Skip to diff | header:pagelapsePagelapse | chips:git-scm.com | chips:Wikipedia: Internet Archive | chips:rust-lang.org | main:https://git-scm.com/ | main:− Before 2025·04·044 April 2025 | main:+ After 2025·12·1818 December 2025 | main:Open capture (opens in a new tab) | main:View capture 2025·04·044 April 2025 (ope | main:View capture 2025·12·1818 December 2025  | main:Copy link | main:‹ Previous | main:Next › | main:All changes (9) | main: | main:2025·12·1820142016201820202022 | main:Frame #14 2025·12·1818 December 2025 | main:All 14 captures | footer:Internet Archive's Wayback Machine | footer:Arquivo.pt | footer:MIT | footer:Source on GitHub",
+        "announced: Showing: git-scm.com home page, 14 captures",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/keyboard-tab-order-mobile-kbd.webp"
+    },
+    {
+      "flow": "timeline",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 4013,
+      "timeToReadyMs": 292,
+      "notes": [
+        "9 markers, r by magnitude minor 6 / moderate 9.5 / major 13.5 px, 1 ringed",
+        "Change 9 of 9: 4 April 2025 to 18 December 2025, major: Added 5 sections incl. \"Learn\"; removed 4 sections incl. \"Documentation\" (+54 / −87 words)",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-desktop.webp"
+    },
+    {
+      "flow": "timeline",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2661,
+      "timeToReadyMs": 273,
+      "notes": [
+        "9 markers, r by magnitude minor 6 / moderate 9.5 / major 13.5 px, 1 ringed",
+        "Change 9 of 9: 4 April 2025 to 18 December 2025, major: Added 5 sections incl. \"Learn\"; removed 4 sections incl. \"Documentation\" (+54 / −87 words)",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-mobile.webp"
+    },
+    {
+      "flow": "timeline",
+      "viewport": "desktop",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 4068,
+      "timeToReadyMs": 276,
+      "notes": [
+        "9 markers, r by magnitude minor 6 / moderate 9.5 / major 13.5 px, 1 ringed",
+        "Change 9 of 9: 4 April 2025 to 18 December 2025, major: Added 5 sections incl. \"Learn\"; removed 4 sections incl. \"Documentation\" (+54 / −87 words)",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-desktop-dark.webp"
+    },
+    {
+      "flow": "timeline",
+      "viewport": "mobile",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 2597,
+      "timeToReadyMs": 249,
+      "notes": [
+        "9 markers, r by magnitude minor 6 / moderate 9.5 / major 13.5 px, 1 ringed",
+        "Change 9 of 9: 4 April 2025 to 18 December 2025, major: Added 5 sections incl. \"Learn\"; removed 4 sections incl. \"Documentation\" (+54 / −87 words)",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-mobile-dark.webp"
+    },
+    {
+      "flow": "timeline-keyboard",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1344,
+      "notes": [
+        "Home->1, ArrowRight->2, ArrowRight->3, ArrowRight->4, End->9, Home->1, PageUp->3; 5 distinct valuetexts",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-desktop-kbd.webp"
+    },
+    {
+      "flow": "timeline-keyboard",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1091,
+      "notes": [
+        "Home->1, ArrowRight->2, ArrowRight->3, ArrowRight->4, End->9, Home->1, PageUp->3; 5 distinct valuetexts",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-mobile-kbd.webp"
+    },
+    {
+      "flow": "timeline-pointer",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2434,
+      "notes": [
+        "click -> 2, drag -> 5, hover tooltip on 3, hoverable, Escape hides it",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-desktop-tooltip.webp"
+    },
+    {
+      "flow": "timeline-pointer",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2209,
+      "notes": [
+        "click -> 2, drag -> 5, hover tooltip on 3, hoverable, Escape hides it",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-mobile-tooltip.webp"
+    },
+    {
+      "flow": "timeline-deeplink",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1759,
+      "timeToReadyMs": 277,
+      "notes": [
+        "Change 3 of 9: 4 December 2014 to 14 January 2016, minor: Reworded 2 passages, added 1 passage (+36 / −3 words)",
+        "4 hollow ticks; bogus change -> latest; no page overflow at 320 px",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-deeplink-desktop.webp"
+    },
+    {
+      "flow": "timeline-deeplink",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1715,
+      "timeToReadyMs": 252,
+      "notes": [
+        "Change 3 of 9: 4 December 2014 to 14 January 2016, minor: Reworded 2 passages, added 1 passage (+36 / −3 words)",
+        "4 hollow ticks; bogus change -> latest; no page overflow at 320 px",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/timeline-deeplink-mobile.webp"
+    },
+    {
+      "flow": "diff-default",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 4262,
+      "timeToReadyMs": 55,
+      "notes": [
+        "22 marked blocks in order; a11y dump: Removed: Git is easy to learn and has a tiny footprint with  | Added: Git is lightning fast and has a huge ecosystem of GUI | Removed: The advantages of Git compared to other source cont | Removed: Documentation | Removed: Command reference pages, Pro Git book content, vide | Removed: Downloads | Removed: GUI clients and binary releases for all major platf | Added: Git's performance and ecosystem | Added: Learn | Added: Pro Git book, videos, tutorials, and cheat sheet | Added: Tools | Added: Command line tools, GUIs, and hosting services | Added: Reference | Added: Git's reference documentation | Added: Install | Added: Binary releases for all major platforms. | Changed: Latest source | Changed: | Removed: Graphical UIs | Tarballs | Removed: Windows Build | Source Code | Removed: Products providing Git hosting | Added: Install GitHub Repository",
+        "largest change wikipedia-internet-archive #2 (69 ops): 229 nodes",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-desktop.webp"
+    },
+    {
+      "flow": "diff-default",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2841,
+      "timeToReadyMs": 55,
+      "notes": [
+        "22 marked blocks in order; a11y dump: Removed: Git is easy to learn and has a tiny footprint with  | Added: Git is lightning fast and has a huge ecosystem of GUI | Removed: The advantages of Git compared to other source cont | Removed: Documentation | Removed: Command reference pages, Pro Git book content, vide | Removed: Downloads | Removed: GUI clients and binary releases for all major platf | Added: Git's performance and ecosystem | Added: Learn | Added: Pro Git book, videos, tutorials, and cheat sheet | Added: Tools | Added: Command line tools, GUIs, and hosting services | Added: Reference | Added: Git's reference documentation | Added: Install | Added: Binary releases for all major platforms. | Changed: Latest source | Changed: | Removed: Graphical UIs | Tarballs | Removed: Windows Build | Source Code | Removed: Products providing Git hosting | Added: Install GitHub Repository",
+        "largest change wikipedia-internet-archive #2 (69 ops): 229 nodes",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-mobile.webp"
+    },
+    {
+      "flow": "diff-default",
+      "viewport": "desktop",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 4338,
+      "timeToReadyMs": 59,
+      "notes": [
+        "22 marked blocks in order; a11y dump: Removed: Git is easy to learn and has a tiny footprint with  | Added: Git is lightning fast and has a huge ecosystem of GUI | Removed: The advantages of Git compared to other source cont | Removed: Documentation | Removed: Command reference pages, Pro Git book content, vide | Removed: Downloads | Removed: GUI clients and binary releases for all major platf | Added: Git's performance and ecosystem | Added: Learn | Added: Pro Git book, videos, tutorials, and cheat sheet | Added: Tools | Added: Command line tools, GUIs, and hosting services | Added: Reference | Added: Git's reference documentation | Added: Install | Added: Binary releases for all major platforms. | Changed: Latest source | Changed: | Removed: Graphical UIs | Tarballs | Removed: Windows Build | Source Code | Removed: Products providing Git hosting | Added: Install GitHub Repository",
+        "largest change wikipedia-internet-archive #2 (69 ops): 229 nodes",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-desktop-dark.webp"
+    },
+    {
+      "flow": "diff-default",
+      "viewport": "mobile",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 2933,
+      "timeToReadyMs": 84,
+      "notes": [
+        "22 marked blocks in order; a11y dump: Removed: Git is easy to learn and has a tiny footprint with  | Added: Git is lightning fast and has a huge ecosystem of GUI | Removed: The advantages of Git compared to other source cont | Removed: Documentation | Removed: Command reference pages, Pro Git book content, vide | Removed: Downloads | Removed: GUI clients and binary releases for all major platf | Added: Git's performance and ecosystem | Added: Learn | Added: Pro Git book, videos, tutorials, and cheat sheet | Added: Tools | Added: Command line tools, GUIs, and hosting services | Added: Reference | Added: Git's reference documentation | Added: Install | Added: Binary releases for all major platforms. | Changed: Latest source | Changed: | Removed: Graphical UIs | Tarballs | Removed: Windows Build | Source Code | Removed: Products providing Git hosting | Added: Install GitHub Repository",
+        "largest change wikipedia-internet-archive #2 (69 ops): 229 nodes",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-mobile-dark.webp"
+    },
+    {
+      "flow": "diff-keyboard",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1546,
+      "notes": [
+        "skip link -> #diff; expanded 1 of 3 runs; Previous -> 12, Next x2 -> 13 (stays)",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-desktop-kbd.webp"
+    },
+    {
+      "flow": "diff-keyboard",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1311,
+      "notes": [
+        "skip link -> #diff; expanded 1 of 3 runs; Previous -> 12, Next x2 -> 13 (stays)",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-mobile-kbd.webp"
+    },
+    {
+      "flow": "diff-expanded",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1626,
+      "notes": [
+        "structure: Removed heading “Companies & Projects Using Git” | Added heading “Products providing Git hosting”",
+        "33 blocks shown, none clamped",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-expanded-desktop.webp"
+    },
+    {
+      "flow": "diff-expanded",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1379,
+      "notes": [
+        "structure: Removed heading “Companies & Projects Using Git” | Added heading “Products providing Git hosting”",
+        "33 blocks shown, none clamped",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-expanded-mobile.webp"
+    },
+    {
+      "flow": "diff-copy-link",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2333,
+      "notes": [
+        "copied ?sample=git-scm&change=20210114012400-20250404010448, reopened it; 4 trivial entries shown and selectable",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-copy-link-desktop.webp"
+    },
+    {
+      "flow": "diff-copy-link",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2239,
+      "notes": [
+        "copied ?sample=git-scm&change=20210114012400-20250404010448, reopened it; 4 trivial entries shown and selectable",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/diff-copy-link-mobile.webp"
+    },
+    {
+      "flow": "header",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1219,
+      "timeToReadyMs": 270,
+      "notes": [
+        "title \"Pagelapse: see how any web page changed over the years\"",
+        "h1 link name \"Pagelapse\"",
+        "meta: Pagelapse | Pagelapse | Pagelapse: see how any web page changed over the years | /favicon.svg",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/header-desktop.webp"
+    },
+    {
+      "flow": "header",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1081,
+      "timeToReadyMs": 228,
+      "notes": [
+        "title \"Pagelapse: see how any web page changed over the years\"",
+        "h1 link name \"Pagelapse\"",
+        "meta: Pagelapse | Pagelapse | Pagelapse: see how any web page changed over the years | /favicon.svg",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/header-mobile.webp"
+    },
+    {
+      "flow": "header",
+      "viewport": "desktop",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 1242,
+      "timeToReadyMs": 261,
+      "notes": [
+        "title \"Pagelapse: see how any web page changed over the years\"",
+        "h1 link name \"Pagelapse\"",
+        "meta: Pagelapse | Pagelapse | Pagelapse: see how any web page changed over the years | /favicon.svg",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/header-desktop-dark.webp"
+    },
+    {
+      "flow": "header",
+      "viewport": "mobile",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 1119,
+      "timeToReadyMs": 245,
+      "notes": [
+        "title \"Pagelapse: see how any web page changed over the years\"",
+        "h1 link name \"Pagelapse\"",
+        "meta: Pagelapse | Pagelapse | Pagelapse: see how any web page changed over the years | /favicon.svg",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/header-mobile-dark.webp"
+    },
+    {
+      "flow": "brand",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 541,
+      "notes": [
+        "favicon.svg rendered at 16, 32, 64 px on paper and ink",
+        "axe: 0 serious/critical; minor/moderate: landmark-one-main, page-has-heading-one, region"
+      ],
+      "screenshot": "../../../tmp/p11shots/brand-favicon-desktop.webp"
+    },
+    {
+      "flow": "visual-default",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 4213,
+      "timeToReadyMs": 263,
+      "notes": [
+        "featured 20250404010448-20251218145830",
+        "visual-ready 290 ms, CLS 0.0000",
+        "first-view pictures: 16 files, 127748 B",
+        "fold (mat, summary, timeline): 730, 386, 754",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/hero-desktop.webp"
+    },
+    {
+      "flow": "visual-default",
+      "viewport": "mobile",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 2802,
+      "timeToReadyMs": 236,
+      "notes": [
+        "featured 20250404010448-20251218145830",
+        "visual-ready 256 ms, CLS 0.0001",
+        "first-view pictures: 16 files, 127748 B",
+        "fold (mat, summary, timeline): 812, 1041, 1257",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/hero-mobile.webp"
+    },
+    {
+      "flow": "visual-default",
+      "viewport": "desktop",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 4174,
+      "timeToReadyMs": 253,
+      "notes": [
+        "featured 20250404010448-20251218145830",
+        "visual-ready 278 ms, CLS 0.0000",
+        "first-view pictures: 16 files, 127748 B",
+        "fold (mat, summary, timeline): 730, 386, 754",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/hero-desktop-dark.webp"
+    },
+    {
+      "flow": "visual-default",
+      "viewport": "mobile",
+      "scheme": "dark",
+      "ok": true,
+      "durationMs": 2802,
+      "timeToReadyMs": 230,
+      "notes": [
+        "featured 20250404010448-20251218145830",
+        "visual-ready 254 ms, CLS 0.0001",
+        "first-view pictures: 16 files, 127748 B",
+        "fold (mat, summary, timeline): 812, 1041, 1257",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/hero-mobile-dark.webp"
+    },
+    {
+      "flow": "visual-filmstrip-keyboard",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1283,
+      "notes": [
+        "frame #04 shown (20160114164816); Change 3 of 9: 4 December 2014 to 14 January 2016, minor: Reworded 2 passages, added 1 passage (+36 / −3 words)",
+        "tab stops before the strip: skip-link | home-link | chip | mono | vp-side | cap-out | btn |  | change | tl-slider | frame",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/filmstrip-desktop-kbd.webp"
+    },
+    {
+      "flow": "visual-timeline-sync",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1959,
+      "notes": [
+        "Home, Right swap pictures; Before kept on Right; ?at= restores it",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/visual-timeline-sync-desktop.webp"
+    },
+    {
+      "flow": "visual-tab-order",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1435,
+      "notes": [
+        "stage: vpane -> side -> tl-area -> film",
+        "after \"Open capture\": side: View capture 2025·04·044 April",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/visual-tab-order-desktop.webp"
+    },
+    {
+      "flow": "visual-zoom-spacing",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1875,
+      "notes": [
+        "side ends 985 <= timeline 1011; list 160px; side scrolls: true",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/visual-zoom-spacing-desktop.webp"
+    },
+    {
+      "flow": "visual-partial",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1249,
+      "notes": [
+        "20170607181950: partial badge in the caption, 2 frames labelled \"◐ partial\"",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/visual-partial-desktop.webp"
+    },
+    {
+      "flow": "visual-failed",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 1366,
+      "notes": [
+        "20200621153000: hatched card (unstyled: the archive's copy lacks the main stylesheet), link https://arquivo.pt/wayback/20200621153000/https://www.rust-lang.org/",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/visual-failed-desktop.webp"
+    },
+    {
+      "flow": "shots-contact-sheet-git-scm",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 827,
+      "notes": [
+        "git-scm: 14 thumbnails, 0 without a picture",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/shots-contact-sheet-git-scm-desktop.webp"
+    },
+    {
+      "flow": "shots-contact-sheet-wikipedia-internet-archive",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 911,
+      "notes": [
+        "wikipedia-internet-archive: 14 thumbnails, 0 without a picture",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/shots-contact-sheet-wikipedia-internet-archive-desktop.webp"
+    },
+    {
+      "flow": "shots-contact-sheet-rust-lang",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 754,
+      "notes": [
+        "rust-lang: 11 thumbnails, 2 without a picture",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/shots-contact-sheet-rust-lang-desktop.webp"
+    }
+  ],
+  "blockedRequests": {
+    "count": 0,
+    "urls": []
+  },
+  "consoleErrors": []
+}
