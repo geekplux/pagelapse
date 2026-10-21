@@ -1,13 +1,13 @@
 # Pagelapse: plan
 
-Planner: `planner` sub-agent. First written 2026-10-19 under the working name wayback-diff; revised 2026-10-20 for Sean's change request (rename to **Pagelapse**, repo `geekplux/pagelapse`, and a visual pane that shows what the page looked like at each capture). This plan follows `CLAUDE.md`, which takes precedence wherever the two disagree. Open technical decisions are collected in section 5.9, each with a recommendation, for the main agent to record in `docs/DECISIONS.md`. The local folder stays `/workspace/gx-projects/wayback-diff`.
+Planner: `planner` sub-agent. First written 2026-10-19 under the working name wayback-diff; revised 2026-10-20 for Sean's change request (rename to **Pagelapse**, repo `geekplux/pagelapse`, and a visual pane that shows what the page looked like at each capture); revised again 2026-10-21 for Sean's design direction (a calmer layout with one focal point per view: the "Calm layout" rules in section 4, AC 49, and a dedicated polish phase 17 that moves OSS packaging, showcase and deploy to phases 18-20). This plan follows `CLAUDE.md`, which takes precedence wherever the two disagree. Open technical decisions are collected in section 5.9, each with a recommendation, for the main agent to record in `docs/DECISIONS.md`. The local folder stays `/workspace/gx-projects/wayback-diff`.
 
 Environment facts checked while planning. Several phases depend on them:
 
 - The box has Node **20.19.2** and pnpm 9.15.9. Current Vitest (5.x) needs Node >= 22.12, and wrangler (4.151) needs Node >= 22. Phase 1 therefore pins the Node version through pnpm (`use-node-version`, see D2). nodejs.org is reachable.
 - Current versions: vite 8.3 (Rolldown-based), vitest 5.0, oxlint 1.89, typescript 7.0 (native `tsc`), react 19.3, @vitejs/plugin-react 6.1, @cloudflare/vite-plugin 1.64 (peer: vite ^6/^7/^8 and wrangler ^4.151), wrangler 4.151, playwright-core 1.64, axe-core 4.14, htmlparser2 12.
 - **`web.archive.org` cannot be reached from this box.** The TLS handshake through the egress proxy fails, and WebFetch is blocked too. `archive.org` is reachable, and so is **arquivo.pt**, a pywb-based public web archive with a compatible CDX API, `id_` raw replay and full `mp_` page replay. This is why samples (text and pictures) are recorded from arquivo.pt (D12, D20). The live product still targets the Internet Archive. It runs on Cloudflare and in the user's browser, where the IA is reachable.
-- `/usr/bin/google-chrome` (155) exists. `ffmpeg` exists (used for the README hero GIF, phase 18). Python Pillow has WebP and AVIF codecs, but the plan does not depend on it (D21).
+- `/usr/bin/google-chrome` (155) exists. `ffmpeg` exists (used for the README hero GIF, phase 19). Python Pillow has WebP and AVIF codecs, but the plan does not depend on it (D21).
 - **Visual feasibility test (2026-10-20, two polite loads of one capture, `git-scm.com` 2018-07-16, files deleted afterwards):**
   - System Chrome via playwright-core can render an arquivo.pt replay and take a screenshot.
   - The document committed in 0.66 s. Subresources (CSS, images, JS) are served by arquivo.pt. About 80 requests went to arquivo.pt for this one page, and 11 stylesheets applied.
@@ -69,7 +69,7 @@ Pagelapse turns the Internet Archive's raw captures of any web page into a short
 
 ## 3. Product acceptance criteria
 
-Each criterion is testable. "Verified by" names the mechanism (U = Vitest unit test, S = headless-browser smoke flow, M = manual or verifier inspection, C = command output). Numbers 1-37 are unchanged in meaning except where marked *(rev)*. Numbers 38-48 are new.
+Each criterion is testable. "Verified by" names the mechanism (U = Vitest unit test, S = headless-browser smoke flow, M = manual or verifier inspection, C = command output). Numbers 1-37 are unchanged in meaning except where marked *(rev)*. Numbers 38-48 were added on 2026-10-20 and 49 on 2026-10-21.
 
 ### Functional
 
@@ -187,6 +187,17 @@ Each criterion is testable. "Verified by" names the mechanism (U = Vitest unit t
     - in compare modes, frames are `inert`, so focus never gets trapped inside an archived page.
 48. Pictures are shown **only** for captures. No AI looks at pictures, and no image leaves the user's browser or the static asset store (U: grep `env.AI` limited to `worker/summarise.ts`; M).
 
+### Calm layout: new (2026-10-21)
+
+49. Every view follows the "Calm layout" rules in section 4 (from phase 17 on):
+    - each view has exactly one focal point, as listed in the per-view table;
+    - on first load, the first viewport stays within the caps (regions, tab stops, framed boxes, eyebrow labels, solid accent fills) at 1440×900 and 390×844;
+    - spacing in CSS uses only the six `--space-*` tokens;
+    - there is one accent;
+    - everything folded behind a disclosure stays reachable by keyboard and screen reader, and no feature is removed.
+
+    (S: `calm-audit` and `calm-inventory` smoke flows; U: `spacing.test.ts`, `accent.test.ts`; M: verifier and a11y-reviewer judge crowding against the rules.)
+
 ---
 
 ## 4. Design direction: "the archivist's proof sheet"
@@ -233,6 +244,8 @@ How it stays CVD-safe and never colour-alone:
 - `palette.test.ts` re-computes all contrast pairs and CVD separations in CI. The smoke script captures protan, deutan, tritan and greyscale screenshots for every visualisation phase.
 
 ### Layout (the visual scrub is the hero)
+
+*As built through phase 16, with the hero order changed on 2026-10-21: picture and side card, then filmstrip, then timeline. Where this subsection conflicts with "Calm layout" below, Calm layout wins. Phase 17 rewrites this subsection to match what ships.*
 
 - **Desktop (>= 960 px):**
   - **Header row:** wordmark on the left, then the URL input (a wide, inviting field), then sample chips below it ("Try: git-scm.com · Wikipedia · rust-lang.org").
@@ -291,7 +304,7 @@ How it stays CVD-safe and never colour-alone:
   - Under `lapse` the old seismograph baseline becomes a **row of five tiny frames**: hairline rectangles of slowly increasing height, a time-lapse strip. The last frame is filled `--ink`.
   - The accessible name is "Pagelapse" (`sr-only`; the visual text is `aria-hidden`).
   - The product name in prose is always "Pagelapse". Package, Worker and UA identifiers are `pagelapse`.
-- The mark and a before/after split picture are the basis of the social preview image (phase 18).
+- The mark and a before/after split picture are the basis of the social preview image (phase 19).
 
 ### Polished states
 
@@ -310,6 +323,134 @@ How it stays CVD-safe and never colour-alone:
   Errors never show stack traces.
 - **Picture states:** see AC 44. Badges are text on `--card` with an icon glyph (`◐` partial, `▢` no picture, `⧗` slow), never colour alone.
 - Illustrations, if any, are flat 2D line art in the same ink. No decorative 3D.
+
+### Calm layout (Sean's design direction, 2026-10-21; binding from phase 17 on)
+
+The UI shows too much at once. These rules refine the proof-sheet concept above; they don't replace it. The same constraints still apply: CVD-safe palette, never colour alone, keyboard operable, reduced motion respected, no decorative 3D.
+
+The planner drafted these rules. Phase 17 confirms or amends each one against its 1440/390 audit, with review by the a11y-reviewer and the verifier, and keeps this subsection in sync with the code. From phase 17 on, the verifier and the a11y-reviewer judge every UI phase against it, and crowding counts as a design FAIL.
+
+**Product focal point.** The focal point is the **visual scrub**: the page itself, scrubbed along its timeline. The text diff and the compare modes are one step later.
+
+#### 1. One focal point per view
+
+| View | The one focal point | Visible but secondary (smaller, `--ink-2`, quieter) | One step away (disclosure) |
+|---|---|---|---|
+| **Sample hero, desktop** (first load, ≥ 960 px) | The picture in Slider mode on the featured change. It is the largest element on screen, at least 58% of the viewport width at 1440, with its top no more than 220 px from the top of the page | The site title and one mono meta line (`14 captures · 2013–2025`). The change line: dates, magnitude word, summary and its source label. One controls row: Play, `‹ Prev · 9 / 9 · Next ›`, Compare, Change details. A one-line caption under the picture. The scrub strip (filmstrip on top of the timeline) starts in the first viewport | See the disclosure list below |
+| **Sample hero, mobile** (< 640 px) | The same picture at full width (16 px gutters), with its top no more than 280 px from the top | A one-line caption (`#14 · 2025·12·18 · Open capture ↗`), the change line and the controls row. The sample switch is a single row of short text toggles ("git-scm · Wikipedia · Rust"; each accessible name contains its visible label) | The same list |
+| **Other compare modes** (Single, Side by side, Onion skin) | The picture or pictures | As for the hero; the Before/After toggle only in Single, and the opacity range and Swap only in Onion | As for the hero |
+| **Text diff** (scrolled to "What the text says") | The diff body (72ch) | The section heading with both dates, and Prev/Next | The Structure list (its summary gives counts, e.g. "Headings: 4 added, 3 removed, 1 renamed"), the Key, and unchanged runs (already collapsed) |
+| **Live, running** | The scrub strip filling in, with the progress line (counter and determinate bar) as its caption | The pane shows the selected capture's silhouette at reduced emphasis. No frame loads until the user picks a change (existing rule). Cancel is a quiet button | As for the hero |
+| **Live, done** | The replay pane (Single mode) | As for the hero (no Play in live mode) | As for the hero |
+| **Empty and error states** | The message: heading, one sentence and **one** primary action | The secondary action as a text link ("Open a sample"). For "no meaningful changes", the filmstrip stays visible so the looks can still be flipped through | Nothing else is drawn: no empty stage, timeline frame or filmstrip frame |
+| **Invalid URL** | The inline field error | | |
+| **Mobile live first view** | The pane or the progress | The sticky `‹ Prev · n / N · Next ›` bar appears only after the in-flow controls row has scrolled out of view, and it never covers the pane caption | |
+
+#### 2. What moves behind disclosure
+
+All of these use native `<details>`/`<summary>` and are **closed by default at every width**, except the compare picker (D34).
+
+- **Header:**
+  - The tagline moves to the footer's about line and the meta description; it is no longer in the header.
+  - The "Try a sample" eyebrow becomes visually hidden (it stays the group's accessible label).
+  - The chips lose their pill borders and become quiet text toggles with `aria-pressed`. The pressed one gets an ink underline plus weight.
+- **Pane toolbar:**
+  - The compare-mode radio group goes behind a **"Compare: Slider"** button (`aria-expanded`, `aria-controls`; the button names the current mode). The group keeps its fieldset and its "Compare" legend.
+  - The "How it looked" eyebrow becomes visually hidden (it stays a heading).
+- **Caption:**
+  - It shrinks to frame number, date and "Open capture ↗".
+  - The archive name, the "may lack some styles or images" note, redaction notes and "top of page" move into **"About these captures"** in the footer.
+  - The alt text keeps the long form.
+  - Honest-state badges (partial, no picture, slow) **stay visible**: honesty is not optional.
+- **Side card → "Change details"**, which holds:
+  - the stats sentence (`+54 / −87 words · 11 added · 9 removed · 2 reworded`);
+  - the two "View capture ↗" links (in compare modes, the Before and After capture links live here, so AC 12 holds one step away);
+  - Copy link.
+- **Filmstrip:**
+  - The visible explanation ("14 captures, oldest first… Arrow keys…") becomes the strip's `aria-describedby` text.
+  - A footer disclosure, **"Keyboard shortcuts"**, lists every key for the timeline, filmstrip, slider, onion skin and Play.
+- **Timeline:**
+  - The legend (minor / moderate / major marks, trivial ticks) and "Show trivial edits" go behind **"Key · 4 trivial hidden"**.
+  - The trivial count stays visible in the summary text.
+- **Changes list:**
+  - It sits behind **"All changes (9)"**, closed on every width (it was open on desktop).
+  - When open, it is a **single column** in chronological order, at most 72ch (this fixes the zig-zag).
+  - It carries one list-level summary-source note (AC 9 carry-over).
+- **Text diff:** the Structure list and the Key, as in the table above.
+- **Footer:**
+  - Sample provenance (text and pictures), licence and redaction notes go in **"About these captures"**.
+  - The one-line Internet Archive credit and the GitHub link stay visible.
+
+Rules for every disclosure:
+
+- The summary text says what is inside, with a count where there is one.
+- Folded content stays in the DOM (it is not unmounted), so in-page search can open it and the summary is always in the accessibility tree.
+- Region headings stay real headings (`sr-only` where they are not shown), so heading navigation is unchanged.
+- Opening never moves focus.
+- Disclosures don't animate.
+- The timeline slider's `aria-valuetext` stays the always-available text route. The changes list is one Enter away.
+
+#### 3. First-load caps
+
+These are measured by the smoke flow `calm-audit` at 1440×900 and 390×844. Regions are elements carrying `data-region="header|hero|scrub|text|changes|footer"`. The hero region holds the title, picture, caption, change line and controls row.
+
+| Measure (first viewport, after `data-visual-ready`) | 1440×900 | 390×844 |
+|---|---|---|
+| Regions intersecting the viewport | ≤ 3 | ≤ 3 |
+| Visible tab stops (roving groups count once; the skip link excluded). The budget is the input, Show changes, 3 samples, slider handle, Open capture, Play, Prev, Next, Compare, Change details and the filmstrip | ≤ 13 | ≤ 12 |
+| Framed boxes outside form controls and the picture mat (a border on 3 or more sides, a box-shadow, or a background other than `--paper`) | ≤ 2 | ≤ 2 |
+| Visible eyebrow labels (uppercase mono section labels) | ≤ 2 | ≤ 1 |
+| Solid accent fills | ≤ 1 | ≤ 1 |
+
+The same region cap applies to every audited state view.
+
+#### 4. Whitespace and rhythm: one spacing scale
+
+- **Tokens in `tokens.css`:** `--space-1: 4px`, `--space-2: 8px`, `--space-3: 16px`, `--space-4: 24px`, `--space-5: 40px`, `--space-6: 64px`.
+- **Use:**
+  - 4/8 inside controls and between a label and its value;
+  - 16 between items in a group;
+  - 24 between groups in a region;
+  - 40 between regions (24 below 640 px);
+  - 64 around the hero at ≥ 1280 px.
+- **Enforced by `spacing.test.ts`:**
+  - Every `margin*`, `padding*`, `gap`/`row-gap`/`column-gap`, `inset*`/`top`/`right`/`bottom`/`left` and `scroll-padding*`/`scroll-margin*` value in `src/**/*.css` must be one of: `0`, `auto`, a `--space-*` token, a negated token, or a `calc()` of tokens.
+  - At most 6 commented allowlist entries are allowed (for example a 1-2 px hairline offset).
+  - Borders, outline widths and focus-ring offsets are not spacing.
+  - The type scale (1.25) is separate and unchanged.
+- **Fewer borders and cards.** Remove:
+  - the outer stage card and its border;
+  - the side card's top rule;
+  - the timeline's tinted box;
+  - list-row dividers;
+  - pill borders on sample toggles, the summary-source label and the magnitude chip.
+
+  Group with space and alignment instead.
+- **Borders that stay:**
+  - form-control borders (3:1, AC 25);
+  - the picture mat (1 px `--rule-strong`: the mounted print);
+  - selected-state outlines and carets;
+  - the hatched "no picture" card;
+  - the message card of an error or empty state (it is that view's focal point).
+- **Desktop stage:**
+  - The picture column is about two thirds of the width.
+  - In the right column, the change line is top-aligned with the picture, and the controls row's bottom edge sits within 8 px of the picture's bottom edge. That fixes the empty space under Prev/Next.
+  - The scrub strip spans the full width below.
+
+#### 5. Clear hierarchy, one accent
+
+- **Order in every view:** title, then hero, then supporting text, then controls. The DOM order and the tab order follow it.
+- **Sizes:**
+  - site title: Fraunces 25 px;
+  - summary: Charter 20 px;
+  - meta and controls: 14-16 px system or mono in `--ink-2`.
+- **Quiet chips:** the magnitude word and the "AI summary" / "auto summary" label are small mono text in `--ink-2`, with no border or fill. The magnitude glyph stays, so the meaning never rests on colour.
+- **One accent: `--accent`, which is `--ink` (D33).**
+  - A solid accent fill is reserved for one primary action per view ("Show changes").
+  - Every selected state (mode, Before/After, sample, filmstrip frame, changes-list item) uses an ink outline, underline or caret, plus weight and the right ARIA state, **not** a solid fill.
+  - The only hues are data encodings, each paired with a symbol or a word:
+    - `--added`/`--removed` and their tints only in the diff and the Before/After labels;
+    - `--mag-*` only on timeline marks and their key.
 
 ---
 
@@ -438,8 +579,8 @@ interface ShotRef {
 - **Rate Limiting binding**: `UPSTREAM_LIMIT` (20/min/IP uncached upstream fetches) and `AI_LIMIT` (10/min/IP summary batches).
 - **Workers AI** (`AI` binding): text summaries only.
 - **Not used by default:** R2, D1, **Browser Rendering**. Browser Rendering + R2 is the designed optional provider for live screenshots (D25). It is not built in this plan and not required; the iframe is the default.
-- **Static asset headers** (`public/_headers`, phase 19): `/samples/*` → `Cache-Control: public, max-age=31536000, immutable` (file names are content-hashed); `/assets/*` the same.
-- **CSP and framing (phase 19):**
+- **Static asset headers** (`public/_headers`, phase 20): `/samples/*` → `Cache-Control: public, max-age=31536000, immutable` (file names are content-hashed); `/assets/*` the same.
+- **CSP and framing (phase 20):**
   - `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self';`
   - **`frame-src https://web.archive.org; child-src https://web.archive.org;`**
   - `object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`
@@ -526,36 +667,59 @@ D1-D17 were recorded on 2026-10-19 and stand as recorded in DECISIONS.md, includ
 | D28 | Time-lapse Play | Include a user-started, pausable Play that steps one capture per 1.2 s in Single mode (phase 12) | no Play (scrub only) | it is the product's name made literal and the most shareable interaction; small (about 40 lines) |
 | D29 | Name and identity | Product name "Pagelapse". Identifiers `pagelapse` (package, Worker, UA, recorder). Mark: offset pages + before/after divider. Wordmark: *page* (Fraunces Italic) + **lapse** (Fraunces SemiBold) over a five-frame strip. Existing palette and type are kept | keep the ± rewind mark | the old mark spoke "diff"; the new one speaks "pages over time, compared", matching the new hero |
 
+**New decisions (2026-10-21, Sean's design direction), for DECISIONS.md:**
+
+| ID | Decision | Recommendation | Alternatives | Why |
+|---|---|---|---|---|
+| D30 | Polish phase and renumbering | Insert **phase 17 `phase-17-calm-polish`** right before open-source packaging. Renumber OSS packaging 17 → **18** (`phase-18-oss-packaging`), showcase and launch 18 → **19** (`phase-19-showcase-launch`), and deploy 19 → **20** (`phase-20-deploy`). Carry-overs addressed to "phase 17/18/19" in DECISIONS.md and PR bodies follow their phase. Carry-overs addressed to "the polish phase" or "the next UI phase" go to 17 | fold the polish into OSS packaging; polish after the showcase | Sean asked for a dedicated phase before packaging; the README hero, GIF and social preview (18-19) must show the calm layout, so the polish comes first |
+| D31 | Where the Calm layout rules live | PLAN.md section 4, "Calm layout": drafted by the planner, then confirmed or amended by the phase 17 implementer with review by the a11y-reviewer and the verifier. Phase 18 copies it to `docs/DESIGN.md` for contributors | a new `docs/DESIGN.md` now | one source of truth while building; the rules are concrete before phase 17 starts, so its ACs are testable |
+| D32 | Spacing scale and how it is enforced | `--space-1..6` = 4/8/16/24/40/64 px in `tokens.css`. `src/design/spacing.test.ts` (Vitest, plain-text CSS scan, no new dependency) fails on any non-token spacing value outside an allowlist of at most 6 commented entries | stylelint plus a plugin (new dependencies, outside the VoidZero toolchain); review by eye only | deterministic, zero dependencies, runs in CI |
+| D33 | The one accent | `--accent` = `--ink`. A solid ink fill is used for one primary action per view. Selection is shown with ink outline, underline or caret, plus weight and ARIA state. Chromatic colour is left to the data encodings (added/removed, the magnitude ramp), which are always paired with symbols or words | a new chromatic accent (for example a darkroom amber), which needs new CVD separations from added/removed and adds a third hue competing with the data; using `--added` blue as the accent, which confuses "selected" with "added" | no new CVD risk; ink on paper fits the proof-sheet identity; the change itself becomes the only colour that pops |
+| D34 | Disclosure mechanism | Native `<details>`/`<summary>` for legends, details, the changes list, Structure, Key, provenance and keyboard help, closed by default at every width. The compare-mode picker sits behind a "Compare: <mode>" button with `aria-expanded`. No modals and no side panel. `?view=` still applies the mode without opening the picker | a side panel or drawer; tabs; a "More options" menu | zero JS for most disclosures and native keyboard and screen-reader semantics; Chrome's find-in-page auto-expands `<details>`; nothing gets trapped |
+| D35 | How "calm" is measured | The smoke flows `calm-audit` (caps from section 4 §3, at 1440×900 and 390×844, first viewport) and `calm-inventory` (every feature reachable by keyboard with at most one disclosure opened). From phase 17 on, crowding is a design FAIL in the verify loop. Desktop SV screenshots stay at 1280×800; the audit adds 1440×900 | subjective review only | Sean's direction makes crowding a FAIL; numbers make it reviewable and stop regressions |
+| D36 | Carry-overs into phase 17 and the deferral order | Into 17: a list-level summary-source note; the summaries route caps body size before reading; ask for pending summaries on cancel/error; the mobile sticky bar covering the caption; zig-zag changes list; empty space under Prev/Next; the Wikipedia header wrap; the 320 px loading tag covering the outline; and the dark-theme selected-frame outline contrast (moved from the showcase). The showcase (19) keeps the "decade" hero compare and the "Open Before/After capture" link names. If phase 17 runs over about 500 lines, defer in this order: the two summaries carry-overs (to phase 20, as hardening), then the 320 px tag (to GOOD_FIRST_ISSUES). The calm rules, caps, spacing test, inventory, screenshots and layout fixes are never deferred | everything to the showcase phase | carry-overs land in the phase that touches the code; contrast and layout bugs are polish, not showcase |
+
 ---
 ## 6. Phases
 
-19 phases. Phases 1-8 are done (PRs open, stacked). Phase 9 is the rename. Phases 10-12 and 15 deliver the visual pane (D19). The remaining phases are the original 9-14, renumbered. Every phase leaves the app working: the sample view renders after every phase.
+20 phases. Phases 1-16 are done (PRs open, stacked). Phase 9 was the rename, and phases 10-12 and 15 delivered the visual pane (D19). Phase 17 is the calm-layout polish (D30). Phases 18-20 are packaging, showcase and deploy. Every phase leaves the app working: the sample view renders after every phase.
 
-Renumbering map (for STATUS.md and DECISIONS.md carry-over notes):
+Renumbering map (for STATUS.md and DECISIONS.md carry-over notes). Read a phase number in an older note by the plan that was current on its date:
 
-| Old | New | Branch |
-|---|---|---|
-| - | 9 | `phase-9-rename-pagelapse` |
-| - | 10 | `phase-10-sample-pictures` |
-| - | 11 | `phase-11-visual-pane` |
-| - | 12 | `phase-12-compare-play` |
-| 9 | 13 | `phase-13-worker-archive-api` |
-| 10 | 14 | `phase-14-live-mode` |
-| - | 15 | `phase-15-live-visual` |
-| 11 | 16 | `phase-16-ai-summaries` |
-| 12 | 17 | `phase-17-oss-packaging` |
-| 13 | 18 | `phase-18-showcase-launch` |
-| 14 | 19 | `phase-19-deploy` |
+| Plan of 2026-10-19 | Plan of 2026-10-20 | Now (2026-10-21) | Branch |
+|---|---|---|---|
+| - | 9 | 9 | `phase-9-rename-pagelapse` |
+| - | 10 | 10 | `phase-10-sample-pictures` |
+| - | 11 | 11 | `phase-11-visual-pane` |
+| - | 12 | 12 | `phase-12-compare-play` |
+| 9 | 13 | 13 | `phase-13-worker-archive-api` |
+| 10 | 14 | 14 | `phase-14-live-mode` |
+| - | 15 | 15 | `phase-15-live-visual` |
+| 11 | 16 | 16 | `phase-16-ai-summaries` |
+| - | - | **17** | **`phase-17-calm-polish`** (new) |
+| 12 | 17 | **18** | `phase-18-oss-packaging` |
+| 13 | 18 | **19** | `phase-19-showcase-launch` |
+| 14 | 19 | **20** | `phase-20-deploy` |
 
-Carry-overs recorded in DECISIONS.md move with their phases:
+Carry-overs recorded in DECISIONS.md and PR bodies move with their phases:
 
-- "phase 9" politeFetch `Retry-After: 0` floor and `readCapped` boundary go to **13**.
-- The "phase 9" recorder fix for the truncated "Text co" heading, with an offline re-record, goes to **10**, which touches the recorder.
-- The "phase 10" footer copy goes to **14**.
-- The "phase 11" rule-summary quality goes to **16**.
-- The "phase 12" GOOD_FIRST_ISSUES go to **17**.
-- The "phase 14" exclusion of `dist/.vite/chunk-modules.json` from deploy assets goes to **19**.
-- The design polish carry-over (tints, disabled Next, space between `del` and `ins`) goes to **12**.
+- "phase 9" politeFetch `Retry-After: 0` floor and `readCapped` boundary went to **13** (done).
+- The "phase 9" recorder fix for the truncated "Text co" heading, with an offline re-record, went to **10** (done).
+- The "phase 10" footer copy went to **14** (done).
+- The "phase 11" rule-summary quality went to **16** (done).
+- The design polish carry-over (tints, disabled Next, space between `del` and `ins`) went to **12** (done).
+- The "phase 12" GOOD_FIRST_ISSUES (opening-hours masking and others) go to **18**.
+- The "phase 18 (showcase)" carry-overs from 2026-10-21 go to **19**: the hero "decade" compare (first ↔ latest) and the "Open Before/After capture" link names. The dark-theme selected-frame outline contrast from the same entry goes to **17** (D36).
+- The "phase 14" (2026-10-20 numbering: deploy) exclusion of `dist/.vite/chunk-modules.json` from deploy assets goes to **20**.
+- "Phase 19 DEPLOY docs recommend Workers Paid" (extraction CPU) and "deploy must build with `CLOUDFLARE_ENV=production`" (D11, already written as phase 20) go to **20**.
+- The **polish phase** carry-overs go to **17** (D36):
+  - the list-level "AI summary" note (phase 16);
+  - the summaries route capping body size before reading (phase 16);
+  - asking for pending summaries on cancel or error (phase 16);
+  - the mobile live first view, where the sticky bar covers the pane caption (phase 15);
+  - the 320 px loading tag covering the outline (phase 15);
+  - the zig-zag 2-column changes list and the empty space under Prev/Next (phase 11);
+  - the Wikipedia header wrap (phase 11).
 
 ### Standard verification (SV), run by the verifier in every phase
 
@@ -571,7 +735,8 @@ Carry-overs recorded in DECISIONS.md move with their phases:
    - nothing deployed.
 5. Cleanup: `ps -ef | grep -E "vite|workerd|chrome|wrangler"` shows nothing the verifier started.
 6. Screenshot naming: `docs/screenshots/phase-<n>/<flow>-<desktop|mobile>[-dark|-reduced|-protan|-deutan|-tritan|-gray|-kbd].webp`. Desktop is 1280×800, mobile 390×844. Commit **only** the files the phase lists (D27).
-7. **UI phases (2, 7, 8, 9, 11, 12, 14, 15, 16):** the main agent runs `a11y-reviewer` before the verifier signs off; its findings are fixed in the same verify loop.
+7. **UI phases (2, 7, 8, 9, 11, 12, 14, 15, 16, 17, and 19 for its first-view change):** the main agent runs `a11y-reviewer` before the verifier signs off; its findings are fixed in the same verify loop.
+8. **From phase 17 on, crowding counts as a design FAIL**, judged against the "Calm layout" rules in section 4: one focal point per view, the first-load caps, the spacing tokens, one accent, and folded content reachable. For any phase that changes UI, the verifier runs `pnpm smoke --flows calm-audit,calm-inventory` and pastes the audit table. A cap exceeded, or a new always-visible element that competes with the view's focal point, is a FAIL item, even when every functional AC passes.
 
 Phases 1-8 below are kept as specified, as history. Product identifiers in them are updated to the new name; the code is renamed in phase 9.
 
@@ -726,7 +891,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
   - `scripts/record-samples.ts`: recorder string `pagelapse record-samples …`. The `samples.test.ts` regex changes to match. The `source.recorder` field of the 3 committed fixtures is updated by a string edit only, with no re-record (same tool, renamed).
   - Doc comments in `src/core/index.ts` and `src/archive/archives.ts`.
   - `LICENSE` copyright line ("geekplux and Pagelapse contributors").
-  - `README.md`: title and pitch only; the full rewrite is in phase 17.
+  - `README.md`: title and pitch only; the full rewrite is in phase 18 (numbered 17 when this phase ran).
   - `ci/github-workflow.yml` comment.
   - `docs/STATUS.md` links → `https://github.com/geekplux/pagelapse/...`.
   - Smoke flow `brand` renders `favicon.svg` at 16, 32 and 64 px on `--paper` and `--ink`.
@@ -862,7 +1027,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 - **Verifier:** SV + the health `curl` output + regression screenshots `hero-desktop.webp`. Confirm `workerd` is not left running.
 - **Risks:**
   - The plugin preview's RAM use alongside Chrome.
-  - Workers free-plan CPU versus extraction of large pages: measure it, and if extraction exceeds about 8 ms, note "Workers Paid recommended" in DEPLOY docs (phase 19).
+  - Workers free-plan CPU versus extraction of large pages: measure it, and if extraction exceeds about 8 ms, note "Workers Paid recommended" in DEPLOY docs (phase 20).
   - Rate-limit binding simulation (optional in code).
 
   About 400 lines.
@@ -887,7 +1052,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
   4. Every state screenshot is polished: correct copy, no layout jump larger than the status line, and axe clean.
   5. Samples remain the default first view. Visiting `/` never calls `/api/*` and never requests `web.archive.org`.
 - **Verifier:** SV + `live-loading-desktop`, `live-loading-mobile`, `live-success-desktop`, `live-empty-desktop`, `live-no-meaningful-desktop`, `live-error-ratelimited-desktop`, `live-error-excluded-desktop`, `live-partial-desktop`, `live-invalid-url-desktop`, `live-loading-desktop-reduced`.
-- **Risks:** live behaviour against the real IA can only be checked after deploy (phase 19 post-deploy checks); progressive-update races (reducer + run id guard). About 400 lines.
+- **Risks:** live behaviour against the real IA can only be checked after deploy (phase 20 post-deploy checks); progressive-update races (reducer + run id guard). About 400 lines.
 
 ### Phase 15: live visual pane (sandboxed Wayback replay + silhouettes)
 
@@ -922,7 +1087,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
   4. Memory sanity: after scrubbing across 16 changes, the DOM has <= 3 iframes.
 - **Verifier:** SV + `live-visual-desktop`, `live-visual-mobile`, `live-visual-slow-desktop`, `live-visual-compare-desktop`, `live-filmstrip-desktop`, `live-visual-desktop-gray`. Paste the stubbed request log for `live-visual-scrub` and `live-visual-preload`.
 - **Risks:**
-  - IA framing headers or `if_` behaviour can't be observed from this box. The honest slow state and link-out cover it, and phase 19 adds a post-deploy check.
+  - IA framing headers or `if_` behaviour can't be observed from this box. The honest slow state and link-out cover it, and phase 20 adds a post-deploy check.
   - Archived pages with heavy scripts or audio (`allow=""` blocks autoplay-with-sound permissions and the sandbox blocks popups).
   - Cross-origin frames can't report errors (the copy never claims a cause it can't observe).
 
@@ -949,15 +1114,148 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 - **Verifier:** SV + `summary-ai-desktop`, `summary-fallback-desktop`, `summary-label-mobile`, plus `/api/health` from `pnpm preview` showing `ai: "unavailable"` without login.
 - **Risks:** small-model drift (strict validation + fallback); the AI binding forcing remote mode in dev (D11); cost abuse (server-side records, limits, daily cap, cache). About 380 lines.
 
-### Phase 17: open-source packaging (docs, community, quality signals)
+### Phase 17: calm layout polish (one focal point per view)
 
-- **Branch:** `phase-17-oss-packaging`
+- **Branch:** `phase-17-calm-polish`
+- **Specialist:** `implementer`; `a11y-reviewer` reviews (before the verifier signs off); the verifier checks. Small Worker and summaries carry-overs may be done by the implementer directly (they are a few lines each); `diff-analyst` is not needed.
+- **Goal:** apply Sean's 2026-10-21 design direction to every existing view without removing any feature:
+  - the visual scrub is the one focal point;
+  - fewer elements are visible at once (progressive disclosure);
+  - one spacing scale, more whitespace, fewer borders and cards;
+  - a clear hierarchy with one accent.
+
+  The same CVD, never-colour-alone, keyboard, reduced-motion and no-3D constraints apply. Ship it with before/after evidence at 1440 and 390 px.
+- **Order of work:**
+  1. **Baseline first (first commit).** Add the smoke flows `calm-audit` and `calm-shots`. Both tolerate a missing `data-region` and report "n/a". Run them on the **unmodified** phase-16 UI and commit `docs/screenshots/phase-17/before/` together with the baseline audit numbers, which go in the PR.
+  2. **Rules.** Confirm or amend the "Calm layout" subsection of section 4 (focal point table, disclosure list, caps, spacing and accent rules), and rewrite the older "Layout" subsection to match. Amendments are allowed only if the audit shows a rule can't be met without removing a feature. Each amendment is recorded in DECISIONS.md.
+  3. **Implement** (scope below), then commit `after/`.
+- **Scope:**
+  - **Tokens and checks:**
+    - `src/design/tokens.css`: `--space-1..6` and `--accent: var(--ink)`.
+    - `src/design/spacing.test.ts` (D32).
+    - `src/design/accent.test.ts`, a CSS scan:
+      - `--added`/`--removed` and their tints appear only in diff, compare-label and logo selectors;
+      - `--mag-*` appears only in timeline and key selectors;
+      - `background` of `--ink`/`--accent` appears only on the allowlisted primary-action selector and the logo tile.
+    - `palette.test.ts` gains the dark-theme selected-frame outline pair, ≥ 3:1 against both the dark paper and a white thumbnail edge (carry-over).
+  - **CSS** (`base.css`, `visual.css`, `live.css`): convert all spacing to tokens; remove the outer stage card, the side-card rule, the timeline's tinted box, list dividers and pill borders (section 4 "Calm layout" §4); quiet chips; selected states become outline, underline or caret plus weight instead of solid fills.
+  - **Components** (each top-level block gets a `data-region`):
+    - `AppHeader.tsx`: one row with the wordmark, the input and "Show changes"; the tagline moves to the footer. This also fixes the Wikipedia header wrap.
+    - `SamplePicker.tsx`: quiet text toggles, a visually hidden group label, short visible labels on phones.
+    - `TimelineView.tsx`: region structure; the desktop stage grid with the controls row bottom-aligned to the picture (the Prev/Next space carry-over); the scrub strip as one region (filmstrip over timeline).
+    - `VisualPane.tsx` and `ModePicker.tsx`: one controls row (Play, Prev/Next, "Compare: <mode>" disclosure button, "Change details"); the caption shrunk to frame number, date and link; honest badges kept.
+    - `Filmstrip.tsx`: the help text moves to `aria-describedby`.
+    - `timeline/Legend.tsx`: behind "Key · N trivial hidden", with "Show trivial edits" inside.
+    - `ChangesList.tsx`:
+      - closed by default;
+      - a single column in chronological order (the zig-zag carry-over);
+      - a **list-level summary-source note** (carry-over): "Summaries: AI summary (Workers AI)", "auto summary (rules)" or "mixed: items marked AI are by Workers AI". In the mixed case, each AI item carries a short text "AI".
+      - The timeline tooltip shows the same source word.
+    - `diff/DiffView.tsx`: Structure and Key behind disclosures.
+    - `AppFooter.tsx`: "About these captures" (provenance, licence, archive notes, redaction) and "Keyboard shortcuts" disclosures; the tagline goes here.
+    - `live/LiveView.tsx` and `states/*`:
+      - the running-state focal point (the progress line captions the scrub strip);
+      - no empty stage in states;
+      - the sticky Prev/Next bar is shown only when the in-flow controls row is out of view (IntersectionObserver), with `scroll-padding-bottom` equal to the bar height (the mobile live first-view carry-over);
+      - the 320 px loading tag no longer covers the silhouette (it wraps below or truncates with a full accessible name).
+  - **Summaries carry-overs:**
+    - `worker/routes/summaries.ts` rejects a body over 16 KiB **before reading it**. It checks `Content-Length` first, then reads with a byte cap so it never buffers more than cap + 1 bytes, and answers `bad_request` (unit test with a counting stream).
+    - `src/app/live/useSummaries.ts`: when a run is cancelled or errors, it asks once for the meaningful changes that were never requested. It keeps ≤ 8 pairs per call and once per pair (unit test).
+  - **Smoke** (`scripts/smoke-flows.ts`):
+    - `calm-audit` measures the caps in section 4 §3 per view and width, plus the picture's size and top, the controls-row alignment, the sticky-bar overlap and the changes-list order. It prints a table and fails on a cap.
+    - `calm-shots` takes screenshots of the audited views.
+    - `calm-inventory` is described in AC 5.
+    - Update existing flows' selectors where a control moved behind a disclosure: open it first, but keep their assertions unchanged.
+  - **Audited views** (each at 1440×900 and 390×844):
+    1. `hero` (git-scm, Slider);
+    2. `hero-wikipedia`;
+    3. `compare-side`;
+    4. `single`;
+    5. `text-diff` (scrolled to the diff, with the changes list opened);
+    6. `live-running`;
+    7. `live-done` (stub frame);
+    8. `live-empty`;
+    9. `live-no-meaningful`;
+    10. `live-error-ratelimited`;
+    11. `live-invalid-url`.
+- **Acceptance criteria:**
+  1. **Rules written.** Section 4 "Calm layout" matches what ships: the focal point table covers every audited view, and the disclosure list names every folded item. The a11y-reviewer signs off on it, and any amendment is in DECISIONS.md.
+  2. **First-load caps** (`calm-audit`, first viewport after `data-visual-ready`) hold for `/` and for every audited view:
+     - at 1440×900: ≤ 3 regions, ≤ 13 visible tab stops, ≤ 2 framed boxes outside form controls and the mat, ≤ 2 eyebrow labels, ≤ 1 solid accent fill;
+     - at 390×844: ≤ 3 regions, ≤ 12 tab stops, ≤ 2 framed boxes, ≤ 1 eyebrow label, ≤ 1 accent fill.
+
+     Every number is ≤ its baseline, and the PR shows the baseline next to the result.
+  3. **One focal point.** On the hero, the picture is the largest visible element of the first viewport:
+     - at 1440×900: width ≥ 58% of the viewport, top ≤ 220 px;
+     - at 390×844: width ≥ viewport − 32 px, top ≤ 280 px.
+
+     The DOM order of the hero region is title → picture → change line → controls (checked by the smoke flow).
+  4. **Spacing and accent.**
+     - `spacing.test.ts` passes. The tokens are exactly 4/8/16/24/40/64, and the allowlist has ≤ 6 commented entries.
+     - `accent.test.ts` passes.
+     - No raw colour literals exist outside `tokens.css` (grep).
+  5. **No feature removed** (`calm-inventory`). Each item in a fixed inventory is reachable with Tab, Enter and Space only, opening at most one disclosure, and its accessible name is in the tree. The inventory:
+     - URL input, Show changes, the 3 sample toggles;
+     - Compare picker with all 4 modes, Play, Before/After toggle, slider handle, onion range, Swap, Prev, Next;
+     - Copy link, both View capture links, Open capture;
+     - filmstrip, timeline slider, Show trivial edits, the key items;
+     - the changes list items, Structure, the diff Key, Show unchanged blocks;
+     - Skip to diff, About these captures, Keyboard shortcuts, the GitHub link.
+
+     All existing smoke flows pass. Their assertions are unchanged, and only their selectors or a disclosure-opening step are added.
+  6. **Accessibility.**
+     - axe reports 0 serious or critical issues on every audited view, with disclosures both closed and all open.
+     - Keyboard-only screenshots show focus on a folded item after opening its disclosure.
+     - Heading navigation lists the same region headings as before (compare the a11y snapshot with the baseline).
+     - AC 21-29 and 47 still hold.
+  7. **CVD, contrast and motion.**
+     - `palette.test.ts` passes, including the dark-theme selected-frame outline at ≥ 3:1 (carry-over).
+     - Greyscale and deuteranopia screenshots of the hero are unambiguous (selected states are visible without colour).
+     - The reduced-motion flow computes 0 s transitions, including on disclosures and the sticky bar.
+  8. **Budgets.**
+     - AC 30 (CSS ≤ 15 KB gzip, JS ≤ 100 KB gzip), 31 (≤ 1,000 ms) and 31b (`data-visual-ready` ≤ 1,500 ms, CLS < 0.02) hold at 1280×800 and 1440×900.
+     - The first-view image bytes (AC 40) are unchanged or lower.
+  9. **Carry-overs**, each with evidence:
+     - (a) the list-level summary-source note, in all three variants (smoke with mocked summaries);
+     - (b) an oversized summaries body is rejected before reading (unit test);
+     - (c) pending summaries are requested on cancel and on error (unit test);
+     - (d) at 390×844, for both sample and live first views, the pane caption's rectangle never intersects the sticky bar's rectangle, and the bar is hidden while the in-flow controls are visible;
+     - (e) when the changes list is open, item tops increase strictly in DOM order;
+     - (f) at 1280 and 1440, the bottom of the controls row is within 8 px of the picture's bottom;
+     - (g) for all 3 samples at 1280×800, the scrub strip's top is in the first viewport (the Wikipedia wrap);
+     - (h) at 320 px, the loading tag covers ≤ 10% of the silhouette.
+  10. **Before/after evidence.** `docs/screenshots/phase-17/before/` and `after/` hold the listed pairs, and the PR embeds them side by side.
+- **Verifier:** SV (including SV 8) plus:
+  - the `calm-audit` table (baseline vs after, per view and width);
+  - the `calm-inventory` report;
+  - the a11y snapshot heading diff.
+
+  Committed screenshots (WebP, D27):
+  - before/after pairs for `hero`, `hero-wikipedia`, `text-diff`, `live-running`, `live-done` and `live-error-ratelimited`, at `-1440` and `-390` (24 files);
+  - after-only `hero-1440-dark`, `hero-1440-gray`, `hero-1440-deutan`, `hero-1440-reduced`, `hero-1440-kbd-disclosure`, `hero-390-sticky-scrolled` and `live-390-first-view`.
+
+  All other audited views are checked in the report but not committed.
+- **Line budget and deferral:** expected about 450-500 changed lines, excluding screenshots. Roughly: CSS 150, components 160, tests 60, smoke 110, carry-overs 50. If the diff goes over about 500 lines, defer in this order (D36):
+  1. carry-overs 9b and 9c, to phase 20 as hardening;
+  2. 9h, to GOOD_FIRST_ISSUES in phase 18.
+
+  Record each deferral in DECISIONS.md and under "Known gaps". Never defer the rules (AC 1), the caps, the spacing test, the inventory, the before/after shots, or carry-overs 9a, 9d-9g.
+- **Risks:**
+  - Over-folding makes the first view feel empty or hides the "wow". The focal picture must get *bigger*, not just lonelier; the a11y-reviewer and the main agent judge it against the before shots.
+  - A closed `<details>` hides the changes list from screen readers. The timeline slider's `aria-valuetext` stays the full route, and the list is one Enter away; this is checked in AC 6.
+  - Smoke-selector churn across about 40 flows. Add a shared `openDisclosure(name)` helper and don't change any assertion.
+  - Tokenising spacing shifts layouts slightly. CLS and fold assertions catch regressions.
+  - Scope creep into new features. This phase only rearranges, folds and restyles.
+
+### Phase 18: open-source packaging (docs, community, quality signals)
+
+- **Branch:** `phase-18-oss-packaging`
 - **Specialist:** `implementer`
 - **Goal:** make the repo welcoming and credible: a README that sells in 10 seconds with the visual scrub as its hero, plus contribution scaffolding and extension docs.
 - **Scope:**
   - `README.md` rewrite:
     - the pitch "**Pagelapse**: scrub through a decade of any web page. See how it looked and what changed, capture by capture, from the Internet Archive.";
-    - the hero image `docs/hero.webp` (the Slider mode on the featured sample change, re-captured by the smoke flow `hero`; the GIF lands in phase 18);
+    - the hero image `docs/hero.webp` (the Slider mode on the featured sample change, re-captured by the smoke flow `hero` from the calm layout of phase 17; the GIF lands in phase 19);
     - plain-text badges (MIT, "no API key needed", "works offline for samples");
     - a **Live demo: _coming soon_** placeholder;
     - "Try it in 10 seconds";
@@ -970,7 +1268,8 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
   - `.github/ISSUE_TEMPLATE/{bug_report.yml, feature_request.yml, sample_suggestion.yml, config.yml}` and `.github/pull_request_template.md`. Nothing under `.github/workflows/`.
   - `CHANGELOG.md`.
   - `docs/EXTENDING.md`: add a sample (text and pictures), the summariser interface, significance tuning, archive sources, theme tokens, and the optional screenshot provider design.
-  - `docs/GOOD_FIRST_ISSUES.md`: 8-10 candidates, e.g. Markdown export, side-by-side *text* diff, "jump to year", opening-hours masking, a sample suggestion, UI string table, print stylesheet, `?n=`, and zoom in the picture pane.
+  - `docs/GOOD_FIRST_ISSUES.md`: 8-10 candidates, e.g. Markdown export, side-by-side *text* diff, "jump to year", opening-hours masking (carry-over), a sample suggestion, UI string table, print stylesheet, `?n=`, and zoom in the picture pane, plus anything phase 17 deferred (D36).
+  - `docs/DESIGN.md`: a copy of section 4, including "Calm layout" (D31). `CONTRIBUTING.md` says UI changes are reviewed against it and that crowding is a FAIL.
   - `ci/github-workflow.yml` gains `pnpm size` and an optional smoke job.
 - **Acceptance criteria:**
   1. The README's first screen has the pitch, the hero picture and the "try it" path. Every link resolves (`scripts/check-docs.ts`, run in tests).
@@ -980,9 +1279,9 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 - **Verifier:** SV + `readme-preview.webp`. Cross-check every README claim against behaviour.
 - **Risks:** the README overclaiming (for example, live pictures depend on the IA's replay). About 400 lines, excluding the verbatim Code of Conduct.
 
-### Phase 18: showcase and launch kit
+### Phase 19: showcase and launch kit
 
-- **Branch:** `phase-18-showcase-launch`
+- **Branch:** `phase-19-showcase-launch`
 - **Specialist:** `implementer`
 - **Goal:** the assets that make people share it, built around the visual scrub. Nothing is posted anywhere.
 - **Scope:**
@@ -995,27 +1294,43 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
     - 3 demo scenarios, each starting from the visual scrub: the fact-checker, the retrospective, and "watch a redesign happen";
     - a comparison table (the Wayback Machine's own Changes feature, Visualping / changedetection.io, manual tab-by-tab diffing, Wikipedia history);
     - a "what we deliberately don't do" list.
+  - **Carry-overs from phase 12** (recorded as "carry to phase 18 (showcase)" under the 2026-10-20 numbering):
+    - **Hero "decade" compare.** The default sample's first view opens the Slider on the **first ↔ latest** capture (a decade in one drag), or on a featured pair with a bigger visual jump if the verifier's side-by-side review prefers it. The choice and its visual-delta number go in DECISIONS.md. `?change=` deep links and AC 1, 31 and 31b still hold. The hero pictures' pre-render decode follows the new pair.
+    - **Link names.** In Side by side, the two links read "Open Before capture ↗" and "Open After capture ↗", with the dates in their accessible names.
+  - The social preview, the GIF and the gallery are captured from the calm layout (phase 17).
 - **Acceptance criteria:**
   1. The social preview is 1280×640, < 1 MB, legible at 50%, and its text passes AA contrast.
   2. `docs/hero.gif` is <= 3 MB, or a skip note is present.
   3. Every gallery deep link opens the stated change and mode (smoke `examples-deeplinks`).
   4. LAUNCH.md has all parts. The X draft is <= 280 chars (test). No prices, finance or employer.
   5. Smoke regression passes. The render scripts leave no Chrome or ffmpeg running.
-- **Verifier:** SV + `social-preview.webp`, `examples-gallery.webp`, and one frame of the GIF. `ps` after the render scripts.
-- **Risks:** an unfair comparison (keep it factual); GIF weight (cap the frames and the palette). About 320 lines + images.
+  6. Carry-overs:
+     - the first view's Slider shows the decade pair (smoke asserts both `src` timestamps), and `data-visual-ready` ≤ 1,500 ms and CLS < 0.02 still hold;
+     - the side-by-side link names are asserted in the a11y snapshot;
+     - `calm-audit` still passes (SV 8).
+- **Verifier:** SV + `social-preview.webp`, `examples-gallery.webp`, `hero-decade-desktop.webp`, `hero-decade-mobile.webp`, and one frame of the GIF. `ps` after the render scripts. The `a11y-reviewer` reviews the first-view change.
+- **Risks:** an unfair comparison (keep it factual); GIF weight (cap the frames and the palette); the decade pair includes an old capture with `partial` styles (pick the earliest `ok` capture instead, and say so in the caption). About 360 lines + images.
 
-### Phase 19: Cloudflare deployment preparation (STOP for Sean's approval)
+### Phase 20: Cloudflare deployment preparation (STOP for Sean's approval)
 
-- **Branch:** `phase-19-deploy`
+- **Branch:** `phase-20-deploy`
 - **Specialist:** `implementer`
 - **Goal:** everything ready to deploy with one command. Dry run only, **never deploy**.
 - **Scope:**
-  - Finalise `wrangler.jsonc` (`name: "pagelapse"`, `workers_dev: true`, `preview_urls: false`, observability, KV id placeholder comment, AI and rate-limit bindings, refreshed `compatibility_date`). Exclude `dist/.vite/chunk-modules.json` from assets (carry-over).
+  - Finalise `wrangler.jsonc`:
+    - `name: "pagelapse"`, `workers_dev: true`, `preview_urls: false`;
+    - observability;
+    - a KV id placeholder comment;
+    - the rate-limit bindings at the top level, and the AI binding **only in `env.production`** (D11, as built in phase 16);
+    - a refreshed `compatibility_date`.
+  - **Exclude `dist/.vite/chunk-modules.json` from the deployed assets** (carry-over). For example, stop emitting it into the assets directory or list it in an `.assetsignore` there. The dry-run output must not contain it.
+  - **Production build.** Every deploy-bound build runs with **`CLOUDFLARE_ENV=production`**, so `@cloudflare/vite-plugin` writes the production environment, including the `AI` binding, into the output config. Dev, preview and verify keep building without it, so they need no login.
   - `public/_headers` with the CSP from section 5.4 (incl. **`frame-src https://web.archive.org; child-src https://web.archive.org`**, no COEP), `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, and immutable caching for `/assets/*` and `/samples/*`.
-  - `package.json` scripts: **`"check:deploy": "wrangler deploy --dry-run --outdir .wrangler/dry-run"`** (exactly) and `"deploy": "pnpm build && wrangler deploy"` (for Sean; agents never run it).
+  - `package.json` scripts: **`"check:deploy": "wrangler deploy --dry-run --outdir .wrangler/dry-run"`** (exactly) and `"deploy": "CLOUDFLARE_ENV=production pnpm build && wrangler deploy"` (for Sean; agents never run it).
+  - Any phase-17 carry-over deferred here (D36: the summaries body cap and pending summaries on cancel/error), if it was deferred.
   - `docs/DEPLOY.md`:
-    - prerequisites;
-    - the **exact deploy command** `pnpm build && pnpm exec wrangler deploy`;
+    - prerequisites: a Cloudflare account; `wrangler login`; `wrangler kv namespace create CACHE` with the id pasted into `wrangler.jsonc`;
+    - the **exact deploy command** `CLOUDFLARE_ENV=production pnpm build && pnpm exec wrangler deploy`;
     - post-deploy checks:
       - health;
       - a live URL run;
@@ -1023,15 +1338,15 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
       - **`curl -sI "https://web.archive.org/web/<ts>if_/https://git-scm.com/"`** to confirm the IA does not send `X-Frame-Options` or a `frame-ancestors` CSP that blocks embedding;
       - a live visual check that a frame renders under our CSP;
     - rollback;
-    - costs and limits.
+    - costs and limits, including **"Workers Paid recommended"**: extraction measured about 20 ms warm and about 96 ms cold CPU on a 682 KB page (phase 13), which is over the free plan's 10 ms CPU limit for large pages. Also: the Workers AI daily cap, KV usage, and the rate limits.
   - README live-demo instructions. CHANGELOG entry.
 - **Acceptance criteria:**
-  1. `pnpm build && pnpm run check:deploy` succeeds and writes `.wrangler/dry-run/`. The report includes the bundle size and the listed bindings.
+  1. `CLOUDFLARE_ENV=production pnpm build && pnpm run check:deploy` succeeds and writes `.wrangler/dry-run/`. The report includes the bundle size and the listed bindings: `CACHE`, `UPSTREAM_LIMIT`, `AI_LIMIT`, and `AI` in production. `.wrangler/dry-run/` and the assets manifest contain no `chunk-modules.json`. A plain `pnpm build && pnpm preview` still needs no login.
   2. `pnpm preview` serves the app with `_headers` applied (`curl -I` shows the CSP incl. `frame-src`). Samples, pictures, compare modes and Play work with no CSP violations in the console. The stubbed live-visual flow loads its frame under the CSP. (The stub is served for `https://web.archive.org/**`, so the frame-src rule is exercised.)
   3. No deploy command was executed (shell history; `.wrangler/deploy` has no published state; the settings deny-list is unchanged).
   4. The PR has the exact deploy command and an "Awaiting Sean's approval to deploy" section. STATUS.md is `STATE: DONE` with the note "awaiting Sean's approval to deploy".
 - **Verifier:** SV + `check:deploy` output + `curl -I` headers + `final-desktop.webp`, `final-mobile.webp`, `final-desktop-dark.webp`, `final-live-visual-desktop.webp`.
-- **Risks:** the dry run needing a login (record it, don't work around it); KV ids are placeholders; the IA's framing policy can only be confirmed post-deploy (documented check, plus the honest slow state and link-out as fallback).
+- **Risks:** the dry run needing a login, for example because of the production `AI` binding (record it as a STATUS.md note and don't work around it; the dry run without `CLOUDFLARE_ENV` must still pass); KV ids are placeholders; the IA's framing policy can only be confirmed post-deploy (documented check, plus the honest slow state and link-out as fallback).
 
 ---
 
@@ -1054,7 +1369,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| `web.archive.org` unreachable from the build box | can't record from the IA, or test live text and live frames end-to-end here | D12/D20 record via arquivo.pt with honest provenance; all tests offline; stubbed replay in smoke; post-deploy checks in phase 19; STATUS follow-up to re-record from the IA |
+| `web.archive.org` unreachable from the build box | can't record from the IA, or test live text and live frames end-to-end here | D12/D20 record via arquivo.pt with honest provenance; all tests offline; stubbed replay in smoke; post-deploy checks in phase 20; STATUS follow-up to re-record from the IA |
 | arquivo.pt replay quirks (top-frame redirect, never-firing `load`, live-web references, Ruffle injection) | broken or chrome-wrapped pictures, hung recorder, leaked requests | verified on 2026-10-20: harness iframe, quiet-or-cap wait, host allowlist, Ruffle blocked (D20) |
 | Replay fidelity of old captures (missing CSS or images) | ugly or misleading pictures | `partial` status with an honest badge; never "fixed up"; link to the capture |
 | Repository weight (pictures + verifier screenshots; phase 8 alone added 36 MB) | slow clones for an OSS repo | pictures <= 2.2 MB total (D21); verifier screenshots as WebP and only the listed files (D27); the hero GIF is capped at 3 MB |
@@ -1070,4 +1385,5 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 | Small-model summaries inaccurate | misleading one-liners | compact input, validation, "AI summary" label, rule fallback, the diff and the picture are always visible |
 | Trivial-change heuristics wrong for some sites | noisy or empty timelines | eval set, moving baseline, "Show trivial edits", filmstrip still shows every look |
 | Hero performance (pictures on first view) | slower first impression | static same-origin WebP, about 160 KB first-view budget, pre-render decode, explicit sizes, separate `data-visual-ready` budget |
+| Crowding creeping back after the polish phase, or over-folding that hides what users need | a busy first view, or a "where did X go?" experience | Calm layout rules (section 4), `calm-audit` caps and `calm-inventory` in SV 8 for every UI phase from 17 on; crowding is a design FAIL; the focal picture must grow, not just stand alone |
 | Scope creep beyond about 400 lines per phase (phases 1-8 ran at up to 2×) | slow reviews | the visual work is split into four PRs (D19); extras go to GOOD_FIRST_ISSUES.md |

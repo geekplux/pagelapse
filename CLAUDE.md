@@ -93,3 +93,6 @@ This project will be released as open source and is not meant to be commercializ
 
 ## Change request 2026-10-20 (Sean)
 The product is renamed **Pagelapse** (repo geekplux/pagelapse), and a new phase after the diff view adds a visual pane that shows what the page looked like at each capture while scrubbing (iframe replay for live, pre-recorded screenshots for samples, filmstrip, side-by-side / slider / onion-skin compare). Full details: /workspace/gx-projects/logs/wayback-diff.change-request.md
+
+## Design direction 2026-10-21 (Sean)
+Calmer, less cramped layout plus a dedicated polish phase, starting with your next phase (do not redo the current one). Full details: /workspace/gx-projects/logs/wayback-diff.design-direction.md
