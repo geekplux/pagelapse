@@ -185,7 +185,8 @@ async function expectFramesNotTabbable(page: Page): Promise<string> {
       const a = document.activeElement;
       if (!a || a === document.body) return ['body', false];
       if (a.tagName === 'IFRAME') return ['IFRAME', false];
-      return [`${a.tagName}#${a.id}.${a.className}|${(a.textContent ?? '').slice(0, 60)}|${[...document.querySelectorAll('*')].indexOf(a)}`, !!a.closest('.vpane')];
+      // The pane's controls: in the picture, and (since phase 17) in the controls row beside it.
+      return [`${a.tagName}#${a.id}.${a.className}|${(a.textContent ?? '').slice(0, 60)}|${[...document.querySelectorAll('*')].indexOf(a)}`, !!a.closest('.vpane, .controls')];
     });
     if (at === 'IFRAME') throw new Error(`Tab stop ${stops + 1} is inside an archived page`);
     if (at === 'body' || seen.has(at)) break;
@@ -460,6 +461,7 @@ export const liveFlows: readonly Flow[] = [
       if (dashed !== 2) throw new Error(`${dashed} dashed marks, expected 2`);
       const text = await statusLine(page);
       if (!text.endsWith('2 captures could not be fetched (dashed).')) throw new Error(`status "${text}"`);
+      await openDisclosure(page, 'Key');
       return { notes: [text, await expectText(page, '#timeline-legend', /2 could not be fetched/)] };
     },
   },

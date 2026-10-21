@@ -86,8 +86,10 @@ main:focus { outline: none; }
 }
 
 /* The sample or live run: no card, grouped by space and alignment. */
-main { flex: 1; }
-.sheet { animation: settle 320ms var(--ease) both; }
+/* The footer always starts below the first viewport, so a short state view shows only its message. */
+main { flex: 1; min-height: 100vh; }
+/* Backwards fill only: a transform left on after the entry would make it the containing block of the fixed bar. */
+.sheet { animation: settle 320ms var(--ease) backwards; }
 .sheet-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); }
 .sheet h2 { font: 600 var(--step-2) / 1.15 var(--font-display); letter-spacing: -0.015em; }
 .sheet-meta { font-size: var(--step--1); color: var(--ink-2); }
@@ -211,7 +213,8 @@ ins::after, del::after { content: "] "; }
 .db-gap::before { content: "⋯ " / ""; }
 .db-gap:hover { color: var(--ink); border-color: var(--ink); }
 .db-open { display: grid; gap: var(--space-2); }
-.diff-nav { white-space: nowrap; display: flex; align-items: center; gap: var(--space-3); font-size: 0.9rem; }
+.diff-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); font-size: 0.9rem; }
+.diff-nav > * { white-space: nowrap; }
 /* The changes list: one column in time order, no row dividers; the selected one has an ink bar and weight. */
 .changes-note { color: var(--ink-2); font-size: var(--step--1); }
 .changes { list-style: none; padding: 0; margin-top: var(--space-2); max-width: 72ch; }

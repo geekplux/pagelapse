@@ -4,7 +4,7 @@
    row ends at its bottom edge. The scrub strip belongs to the focal point, so it sits closer (24 px) than the rest. */
 .stage { display: grid; gap: var(--space-4); }
 @media (min-width: 60rem) { main { padding-top: var(--space-4); } }
-.stage > *, .hero > * { min-width: 0; }
+.stage > *, .hero > *, .scrub > *, .lists > * { min-width: 0; }
 .lists, .diff-panel { margin-top: var(--space-3); }
 .lists { display: grid; gap: var(--space-3); justify-items: start; }
 .hero { display: grid; gap: var(--space-3) var(--space-5); }
@@ -12,6 +12,8 @@
 @media (min-width: 60rem) {
   .hero { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
   .hero > .sheet-head, .hero > .state-card { grid-column: 1 / -1; }
+  /* Side by side needs the width: the two prints span both columns, the selected change follows below. */
+  .hero:has(> .vpane[data-mode="side"]) { grid-template-columns: minmax(0, 1fr); }
   /* The side column is never a scroll box: longer, enlarged or spaced-out text makes the row taller instead. */
   .side { display: flex; flex-direction: column; }
   .side .change-panel { flex: 1; }
