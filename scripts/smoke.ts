@@ -1,4 +1,5 @@
-// Headless smoke check: serves the built app with `vite preview`, drives the
+// Headless smoke check: serves the built app with `vite preview` (Worker in workerd via the
+// Cloudflare plugin; killed with the process group), drives the
 // flows from smoke-flows.ts in system Chrome, writes screenshots and a JSON
 // report, and always tears down the server and browser (even on SIGINT).
 //
@@ -131,8 +132,8 @@ const watchdog = setInterval(() => {
 watchdog.unref();
 
 async function startServer(): Promise<void> {
-  if (!existsSync(join(root, 'dist', 'index.html'))) {
-    throw new Error('dist/ not found: run `pnpm build` first');
+  if (!existsSync(join(root, 'dist', 'client', 'index.html'))) {
+    throw new Error('dist/client/ not found: run `pnpm build` first');
   }
   const viteBin = join(root, 'node_modules', 'vite', 'bin', 'vite.js');
   // Same flags as `pnpm preview`, with the requested port. Detached = own

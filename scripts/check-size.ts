@@ -6,7 +6,7 @@ import { gzipSync } from 'node:zlib';
 import { PICTURE_BUDGET, checkPictures } from './lib/pictures.ts';
 
 const root = resolve(import.meta.dirname, '..');
-const dist = join(root, 'dist');
+const dist = join(root, 'dist', 'client');
 /** Packages allowed in the browser bundle (scheduler is react-dom's own dependency). */
 const CLIENT_PACKAGES = new Set(['react', 'react-dom', 'scheduler']);
 const KB = 1000;
@@ -16,7 +16,7 @@ const read = (rel: string) => readFileSync(join(dist, rel.replace(/^\//, '')));
 
 const manifestFile = join(dist, '.vite', 'chunk-modules.json');
 if (!existsSync(manifestFile)) {
-  console.error('check-size: dist/.vite/chunk-modules.json missing: run `pnpm build` first');
+  console.error('check-size: dist/client/.vite/chunk-modules.json missing: run `pnpm build` first');
   process.exit(1);
 }
 const chunks = JSON.parse(readFileSync(manifestFile, 'utf8')) as Record<string, string[]>;
@@ -45,7 +45,7 @@ const rows: [string, number, number][] = [
   ['first-view pictures', pictures.firstView, PICTURE_BUDGET.firstView],
 ];
 
-const problems: string[] = [...(initialJs.length ? [] : ['no entry <script> found in dist/index.html']), ...pictures.problems];
+const problems: string[] = [...(initialJs.length ? [] : ['no entry <script> found in dist/client/index.html']), ...pictures.problems];
 console.log(`${'budget'.padEnd(24)}${'actual'.padStart(11)}${'limit'.padStart(11)}  status`);
 for (const [name, bytes, limit] of rows) {
   const ok = bytes <= limit;
