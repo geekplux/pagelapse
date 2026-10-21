@@ -215,6 +215,7 @@ async function main(): Promise<number> {
       });
       const page = await context.newPage();
       page.on('console', (msg) => {
+        if (flow.apiErrors && msg.text().startsWith('Failed to load resource') && new URL(msg.location().url, baseUrl).pathname.startsWith('/api/')) return;
         if (msg.type() === 'error') consoleErrors.push(`[${flow.name}/${viewport}/${scheme}] ${msg.text()}`);
       });
       page.on('pageerror', (err) => consoleErrors.push(`[${flow.name}/${viewport}/${scheme}] pageerror: ${err.message}`));

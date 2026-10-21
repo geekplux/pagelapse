@@ -5,6 +5,7 @@ import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
 import { TimelineView } from './TimelineView.tsx';
 import { validateTargetUrl } from '../core/url.ts';
+import { throttleLatest } from './throttle.ts';
 import { parseUrlState, writeUrlState } from './urlState.ts';
 
 interface Current {
@@ -43,9 +44,13 @@ export function App() {
   // Polite announcement on sample switch; focus stays on the chip. Empty on first load.
   const [announcement, setAnnouncement] = useState('');
   const wanted = useRef(current?.id);
+  // Live-run progress reaches the polite region at most once every 2 s, across runs too (AC 22).
+  const [progress] = useState(() => throttleLatest<string>(2000, setAnnouncement));
+  useEffect(() => () => progress.cancel(), [progress]);
 
   const load = (entry: SampleEntry, change?: string, at?: string, view?: string, announce = true) => {
     setLive(null);
+    progress.cancel();
     wanted.current = entry.id;
     void entry.load().then((fixture) => {
       // Last click wins if loads resolve out of order.
@@ -92,7 +97,7 @@ export function App() {
               url={live.url}
               initialChange={live.change}
               onChange={(change) => writeUrlState({ url: live.url, change })}
-              announce={setAnnouncement}
+              announce={progress.push}
               onRetry={() => startLive(live.url)}
               onSample={openSample}
             />

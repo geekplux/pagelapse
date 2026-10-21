@@ -10,7 +10,7 @@ import { Legend } from '../timeline/Legend.tsx';
 import { Timeline } from '../timeline/Timeline.tsx';
 import { changeIndex } from '../urlState.ts';
 import { pairOf } from '../visual/visualState.ts';
-import { progressText, throttleLatest } from './liveState.ts';
+import { progressText } from './liveState.ts';
 import { useLiveTimeline } from './useLiveTimeline.ts';
 
 interface Props {
@@ -18,7 +18,7 @@ interface Props {
   /** `?change=` to select once it has arrived; until then the latest change is shown. */
   initialChange?: string | undefined;
   onChange: (change: string) => void;
-  /** Polite live region text (throttled here to one update per 2 s). */
+  /** Polite live region text (the caller throttles it, across runs, to one update per 2 s). */
   announce: (text: string) => void;
   onRetry: () => void;
   onSample: () => void;
@@ -59,10 +59,8 @@ export function LiveView({ url, initialChange, onChange, announce, onRetry, onSa
   const text = progressText(state);
   const [listOpen, setListOpen] = useState(() => typeof matchMedia !== 'function' || matchMedia('(min-width: 40rem)').matches);
 
-  // Progress for screen readers: the part before " · ", at most once every 2 s (AC 22).
-  const [say] = useState(() => throttleLatest<string>(2000, announce));
-  useEffect(() => say.push(text.split(' · ')[0]!), [say, text]);
-  useEffect(() => () => say.cancel(), [say]);
+  // Progress for screen readers: the part before " · " (AC 22).
+  useEffect(() => announce(text.split(' · ')[0]!), [announce, text]);
 
   const quiet = status === 'done' && !entries.length && snapshots.length > 0;
   return (

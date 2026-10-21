@@ -171,13 +171,15 @@ export const liveFlows: readonly Flow[] = [
       await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
       await page.waitForFunction(() => document.querySelectorAll('.tl-cap').length >= 2, null, { timeout: 10_000 });
       await page.getByRole('button', { name: 'Cancel' }).click();
+      const cancelledAt = Date.now();
       const at = api.snaps().length;
       await sleep(2000);
       const after = api.snaps().length;
       if (after > at + 1) throw new Error(`${after - at} requests started after Cancel`);
       const text = await statusLine(page);
       if (!/^Stopped after \d+ of 14 captures\.$/.test(text)) throw new Error(`status "${text}"`);
-      const fetched = new Set(api.snaps().filter((l) => l.end).map((l) => l.ts));
+      // Answers that arrived before Cancel are cached; the ones Cancel aborted are fetched again.
+      const fetched = new Set(api.snaps().filter((l) => l.end && l.end < cancelledAt - 100).map((l) => l.ts));
       await page.getByRole('button', { name: 'Start again' }).click();
       await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
       const again = api.snaps().slice(after).filter((l) => fetched.has(l.ts));
@@ -187,6 +189,7 @@ export const liveFlows: readonly Flow[] = [
   },
   {
     name: 'live-no-captures',
+    apiErrors: true,
     description: 'No captures: empty state with Save it now and Open a sample (which opens the default sample)',
     shot: 'live-empty',
     viewports: ['desktop'],
@@ -204,6 +207,7 @@ export const liveFlows: readonly Flow[] = [
   },
   {
     name: 'live-excluded',
+    apiErrors: true,
     description: 'Excluded site: a specific error card with Try again (a new request) and Open a sample',
     shot: 'live-error-excluded',
     viewports: ['desktop'],
@@ -219,6 +223,7 @@ export const liveFlows: readonly Flow[] = [
   },
   {
     name: 'live-rate-limited',
+    apiErrors: true,
     description: 'The Archive rate-limits mid-run: the run stops at once, the card counts down the retry time, the timeline so far stays',
     shot: 'live-error-ratelimited',
     viewports: ['desktop'],
@@ -236,6 +241,7 @@ export const liveFlows: readonly Flow[] = [
   },
   {
     name: 'live-partial-failure',
+    apiErrors: true,
     description: 'Two captures fail: dashed marks, an inline note, and the run completes',
     shot: 'live-partial',
     viewports: ['desktop'],

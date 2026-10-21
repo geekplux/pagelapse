@@ -42,6 +42,8 @@ export interface Flow {
   cvd?: boolean;
   /** Screenshot only this element instead of the full page. */
   clip?: string;
+  /** The flow mocks API error answers: Chrome's "Failed to load resource" console errors for `/api/*` are expected. */
+  apiErrors?: boolean;
   /** Viewports to run in (default: desktop and mobile). */
   viewports?: FlowContext['viewport'][];
   run: (ctx: FlowContext) => Promise<FlowResult>;

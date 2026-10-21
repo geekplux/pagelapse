@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SnapshotPage } from '../../core/types.ts';
 import { ApiError, fetchCaptures, fetchSnapshot } from './api.ts';
-import { initialLive, liveReducer, progressText, throttleLatest } from './liveState.ts';
+import { initialLive, liveReducer, progressText } from './liveState.ts';
+import { throttleLatest } from '../throttle.ts';
 
 const caps = ['20140101000000', '20150101000000', '20160101000000'].map((ts) => ({ ts, digest: ts, length: 0 }));
 const page = (ts: string, text: string): SnapshotPage => ({
@@ -56,6 +57,8 @@ describe('throttleLatest', () => {
     t.cancel();
     vi.advanceTimersByTime(5000);
     expect(out).toEqual(['a', 'c']);
+    t.push('e');
+    expect(out).toEqual(['a', 'c', 'e']);
   });
 });
 
