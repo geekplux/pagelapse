@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { gzipSync } from 'node:zlib';
+import { writeFixture } from './lib/fixtureFile.ts';
 import { ARCHIVE_IDS } from '../src/archive/archives.ts';
 import { APP_VERSION, HttpError, politeFetch } from '../src/archive/politeFetch.ts';
 import { buildCdxUrl, dedupeAdjacentDigests, parseCdx } from '../src/core/cdx.ts';
@@ -17,7 +18,7 @@ import { EXTRACTOR_VERSION, extractPage } from '../src/core/extract.ts';
 import { parseSampleFixture } from '../src/core/fixture.ts';
 import { sampleCaptures } from '../src/core/sampling.ts';
 import { rawCaptureUrl } from '../src/core/url.ts';
-import type { ArchiveId, FixtureBlock, FixtureSnapshot, SampleFixture } from '../src/core/types.ts';
+import type { ArchiveId, FixtureBlock, FixtureSnapshot } from '../src/core/types.ts';
 
 interface SampleConfig {
   id: string;
@@ -75,14 +76,6 @@ async function cachedGet(url: string): Promise<string> {
   }
 }
 
-/** One array item per line: small files with reviewable git diffs. */
-function serialise(fixture: SampleFixture): string {
-  const fields = Object.entries(fixture).map(([k, v]) =>
-    Array.isArray(v) ? `"${k}": [\n${v.map((x) => `  ${JSON.stringify(x)}`).join(',\n')}\n]` : `"${k}": ${JSON.stringify(v)}`,
-  );
-  return `{\n${fields.join(',\n')}\n}\n`;
-}
-
 const rows: string[][] = [['id', 'cdx', 'unique', 'sampled', 'kept', 'first', 'last', 'blocks', 'raw KB', 'gzip KB']];
 for (const cfg of configs) {
   const seen = new Set<string>();
@@ -93,6 +86,9 @@ for (const cfg of configs) {
     rows.push([cfg.id, String(all.length), String(unique.length), String(sampled.length), '-', sampled[0]?.ts ?? '-', sampled.at(-1)?.ts ?? '-', '-', '-', '-']);
     continue;
   }
+  // Pictures (record-visuals.ts) are kept across text re-records.
+  const file = join(root, 'src/samples', `${cfg.id}.json`);
+  const old = existsSync(file) ? parseSampleFixture(JSON.parse(readFileSync(file, 'utf8'))) : undefined;
   const blocks: FixtureBlock[] = [];
   const index = new Map<string, number>();
   const snapshots: FixtureSnapshot[] = [];
@@ -107,7 +103,11 @@ for (const cfg of configs) {
       console.error(`  skipped ${cap.ts}: ${err.message}`);
       continue;
     }
-    const page = extractPage(html, { maxChars: cfg.maxChars });
+    const page = extractPage(html);
+    // Trim at whole blocks, so no heading or paragraph ends mid-word ("Text co").
+    let room = cfg.maxChars;
+    const cut = page.blocks.findIndex((b) => (room -= b.text.length) < 0);
+    if (cut >= 0) [page.blocks, page.truncated] = [page.blocks.slice(0, cut), true];
     if (drop) page.blocks = page.blocks.filter((b) => !drop.test(b.text));
     const content = JSON.stringify([page.title, page.blocks]);
     // Near-empty shells (redirect stubs, script-only pages) and content-identical captures add nothing.
@@ -118,7 +118,8 @@ for (const cfg of configs) {
       if (!index.has(key)) index.set(key, blocks.push(level ? { k: kind, t: text, l: level } : { k: kind, t: text }) - 1);
       return index.get(key)!;
     });
-    snapshots.push({ ts: cap.ts, digest: cap.digest, title: page.title, blockIds, ...(page.truncated ? { truncated: true } : {}) });
+    const shot = old?.snapshots.find((x) => x.ts === cap.ts)?.shot;
+    snapshots.push({ ts: cap.ts, digest: cap.digest, title: page.title, blockIds, ...(page.truncated ? { truncated: true } : {}), ...(shot && { shot }) });
   }
   const fixture = parseSampleFixture({
     schema: 1,
@@ -135,9 +136,10 @@ for (const cfg of configs) {
     },
     blocks,
     snapshots,
+    ...(old?.featured && old.featured.split('-').every((t) => snapshots.some((x) => x.ts === t)) && { featured: old.featured }),
+    ...(old?.visual && { visual: old.visual }),
   });
-  const json = serialise(fixture);
-  writeFileSync(join(root, 'src/samples', `${cfg.id}.json`), json);
+  const json = writeFixture(file, fixture);
   const kb = (n: number) => (n / 1000).toFixed(1);
   rows.push([cfg.id, String(all.length), String(unique.length), String(sampled.length), String(snapshots.length), snapshots[0]!.ts, snapshots.at(-1)!.ts, String(blocks.length), kb(Buffer.byteLength(json)), kb(gzipSync(json).length)]);
 }
