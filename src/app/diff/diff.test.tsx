@@ -42,6 +42,8 @@ describe('DiffBlock', () => {
     const changed = html({ type: 'modified', a: 0, b: 0, kind: 'quote', normalizedEqual: false, words: [{ type: 'del', text: 'Old ' }, { type: 'ins', text: 'New ' }, { type: 'equal', text: 'words here.' }] });
     expect(changed).toContain('<span class="sr-only">Changed: </span><del>Old</del> <ins>New</ins> words here.');
     expect(html({ type: 'equal', a: 0, b: 0 })).not.toContain('sr-only');
+    const glued = html({ type: 'modified', a: 0, b: 0, kind: 'quote', normalizedEqual: false, words: [{ type: 'del', text: 'Old' }, { type: 'ins', text: 'New ' }, { type: 'equal', text: 'words here.' }] });
+    expect(glued).toContain('<del>Old</del> <ins>New</ins> words here.');
   });
 
   it('clamps very long blocks behind "Show full block"', () => {
