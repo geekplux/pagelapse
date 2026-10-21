@@ -165,7 +165,8 @@ export const liveFlows: readonly Flow[] = [
         const w = window as unknown as { tops: number[] };
         w.tops = [];
         setInterval(() => {
-          const t = document.querySelector('.tl-area')?.getBoundingClientRect().top;
+          // During the runs: the sample's own layout before them does not count.
+          const t = document.querySelector('[data-live] .tl-area')?.getBoundingClientRect().top;
           if (t !== undefined) w.tops.push(Math.round(t + scrollY));
         }, 50);
       });
@@ -187,7 +188,7 @@ export const liveFlows: readonly Flow[] = [
       if (late.length) throw new Error(`${late.length} requests for the first run after the second started`);
       const tops = await page.evaluate(() => (window as unknown as { tops: number[] }).tops);
       const jump = Math.max(...tops) - Math.min(...tops);
-      if (jump > 48) throw new Error(`the timeline moved by ${jump}px during the runs`);
+      if (jump > 48) throw new Error(`the timeline moved by ${jump}px during the runs: ${tops.filter((t, i) => t !== tops[i - 1]).join(' ')}`);
       const max = api.maxInFlight(git.url);
       if (max > 2) throw new Error(`${max} snapshot requests in flight at once`);
       const done = await statusLine(page);
@@ -294,7 +295,7 @@ export const liveFlows: readonly Flow[] = [
       const [end, now] = [await values(), await listed()];
       if (end !== `${now}/${now}` || now <= max) throw new Error(`End went to ${end}, expected the newest of ${now} changes`);
       const said = await page
-        .waitForFunction(() => /new changes? since you focused/.exec(document.querySelector('p.sr-only[role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
+        .waitForFunction(() => /new changes? since you focused/.exec(document.querySelector('.tl-area [role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
         .then((h) => h.jsonValue());
       // More changes arrive: the slider stays put again until the next key.
       await page.waitForFunction((n) => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]) > n, now, { timeout: 10_000 });
@@ -635,16 +636,19 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const images: string[] = [];
-      page.on('request', (r) => r.resourceType() === 'image' && images.push(r.url()));
       await mockApi(page);
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      // From the start of the run (the sample first view's own pictures before it do not count).
+      await openLive(page, baseUrl, 'git-scm.com');
+      page.on('request', (r) => r.resourceType() === 'image' && images.push(r.url()));
+      await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
+      if (await page.locator('.film-strip img').count()) throw new Error('<img> thumbnails in the live filmstrip');
       const n = await page.locator('.film-strip .sil').count();
       if (n !== 14) throw new Error(`${n} silhouettes, expected 14`);
       const hint = await expectText(page, '#film-hint', /Thumbnails are text outlines of each capture, not pictures\./);
       await page.locator('.film-strip [aria-current="true"]').focus();
       await page.keyboard.press('Home');
       await page.keyboard.press('Enter');
-      const current = await page.locator('.film-strip [aria-current="true"] .frame-cap').innerText();
+      const current = (await page.locator('.film-strip [aria-current="true"] .frame-cap').innerText()).replace(/\s+/g, ' ');
       if (!current.startsWith('Frame #01')) throw new Error(`after Home + Enter: ${current}`);
       if (images.length) throw new Error(`${images.length} image requests: ${images.join(', ')}`);
       return { notes: [`${n} silhouettes, 0 image requests`, hint, `Home + Enter -> ${current.replace(/\s+/g, ' ')}`] };

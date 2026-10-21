@@ -10,6 +10,8 @@ interface Props {
   /** The capture shown in the pane. */
   at: string;
   trivial: ReadonlySet<string>;
+  /** Live runs: captures still to come keep their place (empty dotted frames), so nothing below moves as they arrive. */
+  pending?: number;
   onSelect: (ts: string) => void;
 }
 
@@ -24,7 +26,7 @@ const STEP: Record<string, (i: number, n: number) => number> = {
  * The contact sheet: one numbered, dated thumbnail per capture. A single tab stop with roving focus
  * (Left/Right/Home/End); Enter or Space shows that capture. The shown frame is `aria-current`, outlined and carets.
  */
-export function Filmstrip({ items: snapshots, at, trivial, onSelect }: Props) {
+export function Filmstrip({ items: snapshots, at, trivial, onSelect, pending = 0 }: Props) {
   const outlines = snapshots.some((s) => s.page);
   const sel = snapshots.findIndex((s) => s.ts === at);
   // The roving tab stop; it snaps back to the shown frame whenever the selection changes.
@@ -95,6 +97,12 @@ export function Filmstrip({ items: snapshots, at, trivial, onSelect }: Props) {
                 )}
               </span>
             </button>
+          </li>
+        ))}
+        {Array.from({ length: pending }, (_, i) => (
+          <li key={`p${i}`} className="frame frame-pending" aria-hidden="true">
+            <span className="frame-none" />
+            <span className="frame-cap mono">&nbsp;</span>
           </li>
         ))}
       </ol>

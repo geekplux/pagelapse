@@ -140,6 +140,8 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const onSliderBlur = (e: FocusEvent) => {
     if (isSlider(e)) setFrozen(null);
   };
+  // Its own polite region: the run's throttled progress would overwrite this news.
+  const [news, setNews] = useState('');
   const selectOnStrip = (i: number) => choose(strip.timeline.entries[i]);
   // A key on the frozen slider first catches up with what arrived meanwhile (so End reaches the newest change) and
   // says how many changes are new: the value and range only ever change on the user's input.
@@ -152,7 +154,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     e.preventDefault();
     e.stopPropagation();
     choose(shown.entries[i]);
-    if (fresh > 0) announce(`${fresh} new change${fresh === 1 ? '' : 's'} since you focused the timeline.`);
+    setNews(fresh > 0 ? `${fresh} new change${fresh === 1 ? '' : 's'} since you focused the timeline.` : '');
   };
 
   const span = years(captures[0]?.ts, captures.at(-1)?.ts);
@@ -211,7 +213,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
             />
           ) : (
             running && (
-              <section className="vpane" aria-labelledby="vpane-heading">
+              <section className="vpane vpane-wait" aria-labelledby="vpane-heading">
                 <div className="vp-bar">
                   <h3 id="vpane-heading">How it looked</h3>
                 </div>
@@ -228,7 +230,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
           ) : (
             running && <p className="side live-wait">The first change shows here as soon as two captures have been compared.</p>
           )}
-          <Filmstrip items={items} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
+          <Filmstrip items={items} pending={captures.length - items.length} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
           <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
             <h3 id="timeline-heading">Timeline</h3>
             <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial}>
@@ -243,6 +245,10 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
                 </span>
               )}
             </Legend>
+            {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+            <span className="sr-only" role="status">
+              {news}
+            </span>
             <Timeline
               timeline={strip.timeline}
               marks={strip.marks}
