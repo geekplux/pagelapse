@@ -3,7 +3,7 @@ import type { ApiError } from '../live/api.ts';
 
 const COPY: Partial<Record<ApiError['code'], [heading: string, cause: string]>> = {
   excluded: ['This site is not in the Archive', 'The site asked the Internet Archive not to show its captures, so there is nothing to compare.'],
-  archive_rate_limited: ['The Archive asked us to slow down', 'The Internet Archive asked us to slow down.'],
+  archive_rate_limited: ['The Archive needs a pause', 'The Internet Archive asked us to slow down.'],
   rate_limited: ['Too many lookups at once', 'You started many new lookups in a short time.'],
   network: ['Pagelapse is unreachable', 'We could not reach the Pagelapse server. Check your connection, then try again.'],
   invalid_url: ['That address cannot be looked up', ''],

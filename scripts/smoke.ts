@@ -14,7 +14,7 @@ import { type Browser, chromium } from 'playwright-core';
 import { encodeWebp } from './lib/webp.ts';
 import { CVD_VARIANTS, assertAxeClean, setCvdFilter } from './smoke-a11y.ts';
 import { type FlowResult, flows as baseFlows } from './smoke-flows.ts';
-import { liveFlows } from './smoke-live.ts';
+import { liveFlows, replayLog } from './smoke-live.ts';
 
 const flows = [...baseFlows, ...liveFlows];
 
@@ -164,6 +164,8 @@ async function startServer(): Promise<void> {
 
 interface FlowReport extends FlowResult {
   flow: string;
+  /** Archive replay frames answered by the local stub (live flows only). */
+  stubbed: number;
   viewport: string;
   scheme: string;
   ok: boolean;
@@ -221,7 +223,8 @@ async function main(): Promise<number> {
       page.on('pageerror', (err) => consoleErrors.push(`[${flow.name}/${viewport}/${scheme}] pageerror: ${err.message}`));
 
       const started = performance.now();
-      const report: FlowReport = { flow: flow.name, viewport, scheme, ok: false, durationMs: 0 };
+      const stubbedBefore = replayLog.length;
+      const report: FlowReport = { flow: flow.name, viewport, scheme, ok: false, durationMs: 0, stubbed: 0 };
       try {
         Object.assign(report, await flow.run({ page, baseUrl, viewport, scheme }));
         // Let the sheet's `settle` fade (and any transition) finish first, so neither the axe contrast check nor the
@@ -254,6 +257,7 @@ async function main(): Promise<number> {
         report.error = err instanceof Error ? err.message : String(err);
       } finally {
         report.durationMs = Math.round(performance.now() - started);
+        report.stubbed = replayLog.length - stubbedBefore;
         reports.push(report);
         await context.close();
       }
@@ -267,7 +271,9 @@ async function main(): Promise<number> {
     baseUrl,
     outDir: relative(root, outDir),
     flows: reports,
+    // Unmocked external requests (must be 0); stubbed replay frames are counted apart (samples: 0, AC 3).
     blockedRequests: { count: blocked.length, urls: blocked },
+    stubbedRequests: { count: replayLog.length, sampleFlows: reports.filter((r) => !r.flow.startsWith('live')).reduce((n, r) => n + r.stubbed, 0), log: replayLog },
     consoleErrors,
   };
   writeFileSync(join(outDir, 'smoke-report.json'), `${JSON.stringify(summary, null, 2)}\n`);

@@ -1,10 +1,13 @@
-// Live-mode smoke flows (phase 14). The Worker API is mocked with page.route('**/api/**') from
-// test/fixtures/api/live.ts, so no flow reaches the Worker or the Internet Archive. Each mock keeps a request log
-// (start/end times per request) that the flows assert on: concurrency, cancel, stale runs, and caching.
+// Live-mode smoke flows (phases 14-15). The Worker API is mocked with page.route('**/api/**') from
+// test/fixtures/api/live.ts, and the Internet Archive's replay frames (https://web.archive.org/web/**) are stubbed with
+// test/fixtures/replay/stub.html, so no flow reaches the Worker or the Archive. Each mock keeps a request log (start/end
+// times per request) that the flows assert on: concurrency, cancel, stale runs, caching, frame dwell, pool and preload.
+import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { API_ERRORS, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
 import { type Flow, openReady } from './smoke-flows.ts';
+import { replayFrameUrl } from '../src/core/url.ts';
 
 const git = mockFromSample('git-scm');
 const rust = mockFromSample('rust-lang');
@@ -21,13 +24,43 @@ interface Logged {
 /** What a snapshot request gets: an answer after `delay` ms (default 150), an error, or (`delay: null`) no answer. */
 type Plan = { delay?: number | null; error?: keyof typeof API_ERRORS };
 
-async function mockApi(page: Page, opts: { data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; snapshot?: (i: number) => Plan } = {}) {
+const STUB = readFileSync(new URL('../test/fixtures/replay/stub.html', import.meta.url), 'utf8');
+/** Every stubbed replay URL, across flows: smoke.ts reports them as `stubbed`, apart from blocked external requests. */
+export const replayLog: { url: string; at: number }[] = [];
+/** Host without `www.`: the app sends the normalised address, the fixture has the canonical one. */
+const host = (u: string) => (URL.canParse(u) ? new URL(u).hostname.replace(/^www\./, '') : u);
+
+/**
+ * Stubs the Archive's replay frames: each answers with the stub page after `delay(ts)` ms (default 0), or never
+ * (`null`, a stand-in for a blocked or stalled frame). Returns the frame request log.
+ */
+async function stubReplay(page: Page, delay: (ts: string) => number | null = () => 0) {
+  const log: { ts: string; url: string; start: number }[] = [];
+  await page.route('https://web.archive.org/web/**', async (route) => {
+    const url = route.request().url();
+    const [, ts = '', target = ''] = /\/web\/(\d{14})if_\/(.*)$/.exec(url) ?? [];
+    log.push({ ts, url, start: Date.now() });
+    replayLog.push({ url, at: Date.now() });
+    const ms = delay(ts);
+    if (ms === null) return;
+    await sleep(ms);
+    const body = STUB.replaceAll('{{ts}}', ts).replaceAll('{{url}}', target);
+    await route.fulfill({ status: 200, contentType: 'text/html', headers: { 'cache-control': 'no-store' }, body }).catch(() => {});
+  });
+  return log;
+}
+
+async function mockApi(
+  page: Page,
+  opts: { data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; snapshot?: (i: number) => Plan; frame?: (ts: string) => number | null } = {},
+) {
+  const frames = await stubReplay(page, opts.frame);
   const log: Logged[] = [];
   const inFlight = new Map<string, number>();
   const maxInFlight = new Map<string, number>();
   await page.route('**/api/**', async (route) => {
     const u = new URL(route.request().url());
-    const target = u.searchParams.get('url') ?? '';
+    const target = host(u.searchParams.get('url') ?? '');
     const entry: Logged = { path: u.pathname, target, ts: u.searchParams.get('ts') ?? undefined, start: Date.now() };
     log.push(entry);
     const api = (opts.data ?? (() => git))(target);
@@ -48,8 +81,10 @@ async function mockApi(page: Page, opts: { data?: (target: string) => MockApi; c
     // The page may have aborted the request meanwhile (Cancel, a new run): nothing left to answer.
     await route.fulfill({ status: reply.status, contentType: 'application/json', body: JSON.stringify(reply.body) }).catch(() => {});
   });
-  const snaps = (target?: string) => log.filter((l) => l.path === '/api/snapshot' && (!target || l.target === target));
-  return { log, snaps, maxInFlight: (target: string) => maxInFlight.get(target) ?? 0 };
+  const snaps = (target?: string) => log.filter((l) => l.path === '/api/snapshot' && (!target || l.target === host(target)));
+  /** Frame requests since `t` (ms epoch). */
+  const framesSince = (t: number) => frames.filter((f) => f.start >= t);
+  return { log, snaps, frames, framesSince, maxInFlight: (target: string) => maxInFlight.get(host(target)) ?? 0 };
 }
 
 const liveUrl = (url: string) => `/?url=${encodeURIComponent(url)}`;
@@ -117,7 +152,7 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { data: (t) => (t.includes('rust') ? rust : git), snapshot: () => ({ delay: 150 }) });
       await openReady(page, baseUrl);
-      if (api.log.length) throw new Error(`the first view called the API: ${api.log.map((l) => l.path).join(', ')}`);
+      if (api.log.length || api.frames.length) throw new Error(`the first view called the API or the Archive: ${[...api.log.map((l) => l.path), ...api.frames.map((f) => f.url)].join(', ')}`);
       // Record what the polite live region says, and when.
       await page.evaluate(() => {
         const w = window as unknown as { said: [number, string][] };
@@ -147,6 +182,7 @@ export const liveFlows: readonly Flow[] = [
       await sleep(600); // any answer still due for the first run lands now
       const markers = await page.locator('.tl-marker').count();
       if (markers !== gitEntries) throw new Error(`${markers} markers, expected ${gitEntries} (stale markers from the first run?)`);
+      if (!api.snaps(rust.url).length) throw new Error('no first-run requests logged: the host matcher is wrong');
       const late = api.snaps(rust.url).filter((l) => l.start > switchedAt);
       if (late.length) throw new Error(`${late.length} requests for the first run after the second started`);
       const tops = await page.evaluate(() => (window as unknown as { tops: number[] }).tops);
@@ -238,7 +274,7 @@ export const liveFlows: readonly Flow[] = [
   },
   {
     name: 'live-slider-focus',
-    description: 'While the timeline slider has focus during a run, its value and range stay put as changes arrive; leaving it catches up',
+    description: 'While the timeline slider has focus during a run, its value and range stay put as changes arrive; a key catches up (End reaches the newest) and says how many are new',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await mockApi(page, { snapshot: (i) => (i < 4 ? {} : i < 11 ? { delay: 500 } : { delay: null }) });
@@ -253,13 +289,18 @@ export const liveFlows: readonly Flow[] = [
       await page.waitForFunction((n) => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]) > n, max, { timeout: 10_000 });
       const during = await values();
       if (during !== before) throw new Error(`slider changed from ${before} to ${during} without input`);
+      const listed = () => page.evaluate(() => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]));
       await page.keyboard.press('End');
-      const end = await values();
-      if (end !== `${max}/${max}`) throw new Error(`End went to ${end}, expected ${max}/${max}`);
-      await page.getByRole('textbox', { name: 'See how any page changed' }).focus();
-      const after = await values();
-      if (Number(after.split('/')[1]) <= max) throw new Error(`after leaving the slider: ${after}`);
-      return { notes: [`slider ${before} on focus, ${during} while changes arrived, ${end} after End, ${after} after leaving it`] };
+      const [end, now] = [await values(), await listed()];
+      if (end !== `${now}/${now}` || now <= max) throw new Error(`End went to ${end}, expected the newest of ${now} changes`);
+      const said = await page
+        .waitForFunction(() => /new changes? since you focused/.exec(document.querySelector('p.sr-only[role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
+        .then((h) => h.jsonValue());
+      // More changes arrive: the slider stays put again until the next key.
+      await page.waitForFunction((n) => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]) > n, now, { timeout: 10_000 });
+      const still = await values();
+      if (still !== end) throw new Error(`slider changed from ${end} to ${still} without input`);
+      return { notes: [`slider ${before} on focus, ${during} while changes arrived, ${end} after End (newest), ${still} while more arrived`, `announced "${said}"`] };
     },
   },
   {
@@ -398,6 +439,215 @@ export const liveFlows: readonly Flow[] = [
       await page.waitForSelector('[data-ready="true"]');
       if (api.log.length) throw new Error(`the API was called: ${api.log.map((l) => l.path).join(', ')}`);
       return { notes: [`error: ${m.described.trim()}`, `repeated submit re-announced (${alerts.length} alert mutations)`, '0 API requests'] };
+    },
+  },
+  {
+    name: 'live-archive-unavailable',
+    apiErrors: true,
+    description: 'The Archive does not answer: a calm card with the cause, Try again and Open a sample, no countdown',
+    shot: 'live-error-unavailable',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await mockApi(page, { captures: 'archive_unavailable' });
+      await openLive(page, baseUrl, 'git-scm.com', 'error');
+      await expectActions(page, ['Try again', 'Open a sample']);
+      if (await page.getByRole('button', { name: 'Try again' }).getAttribute('aria-disabled')) throw new Error('Try again disabled without a wait');
+      return { notes: [await expectText(page, '.state-card', /^⚠ The Archive is not answering The Internet Archive is not responding right now\./)] };
+    },
+  },
+  {
+    name: 'live-own-rate-limit',
+    apiErrors: true,
+    description: 'Our own per-connection limit: a specific card with a 60 s countdown; Try again waits for it',
+    shot: 'live-error-own-limit',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const api = await mockApi(page, { captures: 'rate_limited' });
+      await openLive(page, baseUrl, 'git-scm.com', 'error');
+      const text = await expectText(page, '.state-card', /^⚠ Too many lookups at once You started many new lookups in a short time\. Try again in (60|59) s\./);
+      const retry = page.getByRole('button', { name: 'Try again' });
+      if ((await retry.getAttribute('aria-disabled')) !== 'true') throw new Error('Try again is not aria-disabled during the countdown');
+      await retry.focus();
+      await page.keyboard.press('Enter');
+      await sleep(300);
+      if (api.log.length !== 1) throw new Error(`${api.log.length} API requests, expected 1`);
+      return { notes: [text, 'Try again aria-disabled during the countdown, pressing it made no request'] };
+    },
+  },
+  {
+    name: 'live-visual',
+    description: 'Live pane: no Archive request before a run; after it, selecting a change mounts exactly one sandboxed replay frame, >= 400 ms later',
+    cvd: true,
+    async run({ page, baseUrl }) {
+      if (gitEntries < 3) throw new Error('the flow needs >= 3 changes');
+      const api = await mockApi(page);
+      await openReady(page, baseUrl);
+      await sleep(500);
+      if (api.frames.length) throw new Error(`${api.frames.length} Archive requests on the first view`);
+      const input = page.getByRole('textbox', { name: 'See how any page changed' });
+      await input.fill('git-scm.com');
+      await input.press('Enter');
+      await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
+      await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });
+      // Home: the first change, never the neighbour preloaded beside the latest one.
+      const t0 = Date.now();
+      await page.locator('.tl-slider').focus();
+      await page.keyboard.press('Home');
+      await page.locator('.lf iframe[data-loaded]:not([data-hidden])').first().waitFor({ timeout: 5000 });
+      await sleep(300);
+      const want = replayFrameUrl('internet-archive', git.captures.captures.find((c) => c.ts === buildTimeline(git.url, git.pages).entries[0]!.to)!.ts, 'https://git-scm.com/');
+      const got = api.framesSince(t0);
+      if (got.length !== 1 || got[0]!.url !== want) throw new Error(`frame requests after Home: ${got.map((f) => f.url).join(', ') || 'none'}, expected ${want}`);
+      const dwell = got[0]!.start - t0;
+      if (dwell < 400) throw new Error(`the frame was requested ${dwell} ms after the selection`);
+      const f = await page.locator('.lf iframe:not([data-hidden])').evaluate((el: HTMLIFrameElement) => ({
+        sandbox: el.getAttribute('sandbox'), allow: el.getAttribute('allow'), referrer: el.getAttribute('referrerpolicy'), title: el.title, src: el.src, inert: el.inert,
+      }));
+      if (f.sandbox !== 'allow-scripts allow-same-origin' || f.allow !== '' || f.referrer !== 'strict-origin-when-cross-origin' || !/as captured \d+ \w+ \d{4}/.test(f.title) || f.inert) {
+        throw new Error(`frame attributes ${JSON.stringify(f)}`);
+      }
+      const frames = await page.locator('iframe').count();
+      return { notes: [`first view: 0 Archive requests`, `Home -> 1 frame request after ${dwell} ms: ${got[0]!.url}`, `attributes ${JSON.stringify(f)}`, `${frames} iframes in the DOM`] };
+    },
+  },
+  {
+    name: 'live-visual-scrub',
+    description: 'Five Right presses within 1 s request only the final selection; scrubbing across 16 changes never mounts more than 3 frames',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const api = await mockApi(page);
+      const entries = buildTimeline(git.url, git.pages).entries;
+      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await page.locator('.tl-slider').focus();
+      await page.keyboard.press('Home');
+      await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });
+      await sleep(300);
+      const t0 = Date.now();
+      for (let i = 0; i < 5; i++) {
+        await page.keyboard.press('ArrowRight');
+        await sleep(150);
+      }
+      const pressed = Date.now() - t0;
+      await sleep(1200);
+      const got = api.framesSince(t0);
+      if (pressed > 1000 || got.length !== 1 || got[0]!.ts !== entries[5]!.to) throw new Error(`after 5 presses in ${pressed} ms: ${got.map((f) => f.ts).join(', ') || 'none'}, expected ${entries[5]!.to}`);
+      // Across 16 changes, resting on each: the pool never holds more than 3 frames.
+      let most = 0;
+      const steps = [...Array(entries.length - 1).fill('ArrowRight'), ...Array(16 - (entries.length - 1)).fill('ArrowLeft')] as string[];
+      await page.keyboard.press('Home');
+      for (const key of steps) {
+        await page.keyboard.press(key);
+        await sleep(450);
+        most = Math.max(most, await page.locator('iframe').count());
+      }
+      await sleep(2500);
+      const left = await page.locator('iframe').count();
+      if (most > 3 || left > 3) throw new Error(`${most} iframes at most while scrubbing, ${left} after`);
+      const log = api.frames.map((f) => `${f.ts} +${f.start - api.frames[0]!.start}ms`);
+      return { notes: [`5 Right presses in ${pressed} ms -> 1 frame request (${got[0]!.ts})`, `${steps.length} changes scrubbed: at most ${most} iframes, ${left} after`, `stubbed request log: ${log.join(', ')}`] };
+    },
+  },
+  {
+    name: 'live-visual-preload',
+    description: 'After the shown frame loads and 2 s pass, exactly one neighbour preloads, hidden and inert; none in Slider mode',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const api = await mockApi(page);
+      const entries = buildTimeline(git.url, git.pages).entries;
+      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });
+      const t0 = Date.now();
+      await sleep(1500);
+      const early = api.framesSince(t0).length;
+      await sleep(1300);
+      const got = api.framesSince(t0);
+      const near = entries.at(-2)!.to;
+      if (early || got.length !== 1 || got[0]!.ts !== near) throw new Error(`neighbour requests: ${early} before 2 s, then ${got.map((f) => f.ts).join(', ') || 'none'} (expected ${near})`);
+      const hidden = await page.locator('.lf iframe[data-hidden]').evaluate((el: HTMLIFrameElement) => ({ inert: el.inert, ariaHidden: el.getAttribute('aria-hidden'), visibility: getComputedStyle(el).visibility }));
+      if (!hidden.inert || hidden.ariaHidden !== 'true' || hidden.visibility !== 'hidden') throw new Error(`preloaded frame ${JSON.stringify(hidden)}`);
+      const t1 = Date.now();
+      await page.getByRole('radio', { name: 'Slider' }).check();
+      await page.locator('.vp-cmp iframe[data-loaded]').nth(1).waitFor({ timeout: 5000 });
+      await sleep(3000);
+      const compare = api.framesSince(t1);
+      if (compare.length !== 2) throw new Error(`Slider mode requested ${compare.map((f) => f.ts).join(', ')}, expected its 2 sides only`);
+      const log = api.frames.map((f) => `${f.ts} +${f.start - api.frames[0]!.start}ms`);
+      return { notes: [`1 neighbour (${near}) after load + 2 s: ${JSON.stringify(hidden)}`, `Slider: ${compare.length} requests (the two sides), no preload in 3 s`, `stubbed request log: ${log.join(', ')}`] };
+    },
+  },
+  {
+    name: 'live-visual-slow',
+    description: 'A frame that never loads (a blocked-framing stand-in) shows its silhouette, then at 8 s the honest "still loading" note with a link out; a slow one shows the silhouette until it loads',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const entries = buildTimeline(git.url, git.pages).entries;
+      const latest = entries.at(-1)!.to;
+      await mockApi(page, { frame: (ts) => (ts === latest ? null : 2500) });
+      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await page.locator('.lf iframe').waitFor({ state: 'attached', timeout: 5000 });
+      const t0 = Date.now();
+      if (!(await page.locator('.lf .sil').isVisible()) || (await page.locator('.lf-note p').count())) throw new Error('no silhouette while loading, or a note too early');
+      const note = page.locator('.lf-note p');
+      await note.waitFor({ timeout: 12_000 });
+      const after = Date.now() - t0;
+      const text = await expectText(page, '.lf-note p', /^⧗ Still loading from the Internet Archive\. Archived pages can be slow, and some sites block being shown in a frame\. Open capture/);
+      const href = await note.getByRole('link').getAttribute('href');
+      if (href !== `https://web.archive.org/web/${latest}/https://git-scm.com/`) throw new Error(`link out ${href}`);
+      if (!(await page.locator('.lf .sil').isVisible())) throw new Error('the silhouette went away while still loading');
+      // A slow frame (2.5 s): its silhouette shows until it loads, and no note.
+      await page.locator('.tl-slider').focus();
+      await page.keyboard.press('ArrowLeft');
+      await sleep(1800);
+      const waiting = (await page.locator('.lf .sil').isVisible()) && !(await page.locator('.lf iframe[data-loaded]:not([data-hidden])').count());
+      await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });
+      const gone = !(await page.locator('.lf .sil').count()) && !(await note.count());
+      if (!waiting || !gone) throw new Error(`slow frame: silhouette while loading ${waiting}, gone after ${gone}`);
+      // Back to the stalled capture for the screenshot.
+      await page.keyboard.press('ArrowRight');
+      await note.waitFor({ timeout: 12_000 });
+      return { notes: [`note after ${after} ms: "${text}"`, `link out ${href}`, 'slow (2.5 s) frame: silhouette until load, then the page'] };
+    },
+  },
+  {
+    name: 'live-visual-compare',
+    description: 'Slider compare in a live run: two replay frames, both inert (focus never enters an archived page); the divider works from the keyboard',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await mockApi(page);
+      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await page.getByRole('radio', { name: 'Slider' }).check();
+      await page.locator('.vp-cmp iframe[data-loaded]').nth(1).waitFor({ timeout: 5000 });
+      const frames = await page.locator('iframe').evaluateAll((els) => els.map((el) => (el as HTMLIFrameElement).inert));
+      if (frames.length !== 2 || frames.some((i) => !i)) throw new Error(`iframes inert: ${JSON.stringify(frames)}`);
+      const split = page.getByRole('slider', { name: 'Divider between Before and After' });
+      await split.focus();
+      await page.keyboard.press('ArrowLeft');
+      const v = await split.getAttribute('aria-valuenow');
+      if (v !== '45') throw new Error(`divider at ${v} after ArrowLeft`);
+      if (!page.url().includes('view=slider')) throw new Error(`address bar ${page.url()}`);
+      return { notes: [`${frames.length} frames, all inert`, `divider 45 after ArrowLeft`, `deep link ${page.url()}`] };
+    },
+  },
+  {
+    name: 'live-filmstrip-silhouettes',
+    shot: 'live-filmstrip',
+    description: 'The live filmstrip draws text silhouettes: no image requests; arrows + Enter show a capture',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const images: string[] = [];
+      page.on('request', (r) => r.resourceType() === 'image' && images.push(r.url()));
+      await mockApi(page);
+      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      const n = await page.locator('.film-strip .sil').count();
+      if (n !== 14) throw new Error(`${n} silhouettes, expected 14`);
+      const hint = await expectText(page, '#film-hint', /Thumbnails are text outlines of each capture, not pictures\./);
+      await page.locator('.film-strip [aria-current="true"]').focus();
+      await page.keyboard.press('Home');
+      await page.keyboard.press('Enter');
+      const current = await page.locator('.film-strip [aria-current="true"] .frame-cap').innerText();
+      if (!current.startsWith('Frame #01')) throw new Error(`after Home + Enter: ${current}`);
+      if (images.length) throw new Error(`${images.length} image requests: ${images.join(', ')}`);
+      return { notes: [`${n} silhouettes, 0 image requests`, hint, `Home + Enter -> ${current.replace(/\s+/g, ' ')}`] };
     },
   },
 ];

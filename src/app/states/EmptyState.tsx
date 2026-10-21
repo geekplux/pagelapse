@@ -10,7 +10,8 @@ export function EmptyState({ url, onSample, headingRef }: { url: string; onSampl
       </p>
       <p className="state-actions">
         <a className="btn" href={`https://web.archive.org/save/${url}`} target="_blank" rel="noopener noreferrer">
-          Save it now<span className="sr-only"> in the Internet Archive (opens in a new tab)</span>
+          Save it now<span aria-hidden="true">&nbsp;↗</span>
+          <span className="sr-only"> in the Internet Archive (opens in a new tab)</span>
         </a>
         <button type="button" className="btn" onClick={onSample}>
           Open a sample

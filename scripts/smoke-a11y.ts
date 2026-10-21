@@ -6,12 +6,12 @@ import { GRAY, MACHADO, type Matrix3 } from '../src/design/cvd.ts';
 
 const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8');
 
-/** Runs axe-core on the page; throws on any serious or critical violation, returns a summary note. */
+/** Runs axe-core on the page (not inside archived replay frames: they are not ours); throws on any serious or critical violation, returns a summary note. */
 export async function assertAxeClean(page: Page): Promise<string> {
   await page.addScriptTag({ content: axeSource });
   const violations = await page.evaluate(async () => {
     const { axe } = window as unknown as { axe: { run: (ctx: Document, opts: object) => Promise<{ violations: { id: string; impact: string; nodes: unknown[] }[] }> } };
-    const result = await axe.run(document, { resultTypes: ['violations'] });
+    const result = await axe.run(document, { resultTypes: ['violations'], iframes: false });
     return result.violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length }));
   });
   const bad = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
