@@ -90,3 +90,6 @@ This project will be released as open source and is not meant to be commercializ
 - **Open-source packaging is part of the product,** planned as real phases: README that sells in 10 seconds (one-line pitch, hero GIF or screenshot, live demo link placeholder, quick start, how it works, roadmap), LICENSE (MIT), CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates, a CHANGELOG, good-first-issue candidates listed in docs, a social preview image, and an examples/ gallery.
 - **Quality signals:** tests and CI config (in ci/ until workflow scope is granted), typed public APIs, small dependency footprint, fast load, accessible (keyboard + screen reader), docs for extending it.
 - **Launch-ready:** include a short launch kit in docs/LAUNCH.md (Show HN / X post draft, 3 demo scenarios, comparison with alternatives). Do not post anything anywhere.
+
+## Change request 2026-10-20 (Sean)
+The product is renamed **Pagelapse** (repo geekplux/pagelapse), and a new phase after the diff view adds a visual pane that shows what the page looked like at each capture while scrubbing (iframe replay for live, pre-recorded screenshots for samples, filmstrip, side-by-side / slider / onion-skin compare). Full details: /workspace/gx-projects/logs/wayback-diff.change-request.md
