@@ -2,7 +2,7 @@ import { diffPages } from './diff.ts';
 import { toChangeRecord } from './changeRecord.ts';
 import { ruleSummary } from './ruleSummary.ts';
 import { scoreDiff } from './score.ts';
-import type { SnapshotPage, Timeline } from './types.ts';
+import type { SnapshotPage, Timeline, TimelineEntry } from './types.ts';
 
 /** Options for {@link buildTimeline} and {@link appendSnapshot}, passed on to `diffPages`. */
 export interface TimelineOptions {
@@ -12,6 +12,14 @@ export interface TimelineOptions {
 /** A timeline with no captures yet; grow it with {@link appendSnapshot}. */
 export function emptyTimeline(url: string): Timeline {
   return { url, snapshots: [], entries: [], trivialCaptures: [], baseline: 0 };
+}
+
+/** The entry for the change from `base` to `s`, whatever its magnitude. */
+function compare(base: SnapshotPage, s: SnapshotPage, opts: TimelineOptions): TimelineEntry {
+  const diff = diffPages(base, s, opts);
+  const significance = scoreDiff(diff, base, s);
+  const record = toChangeRecord(diff, base, s);
+  return { from: base.ts, to: s.ts, diff, significance, record, ruleSummary: ruleSummary(record) };
 }
 
 /**
@@ -26,11 +34,8 @@ export function appendSnapshot(t: Timeline, s: SnapshotPage, opts: TimelineOptio
   const snapshots = [...t.snapshots, s];
   const base = t.snapshots[t.baseline];
   if (!base) return { ...t, snapshots };
-  const diff = diffPages(base, s, opts);
-  const significance = scoreDiff(diff, base, s);
-  if (significance.magnitude === 'trivial') return { ...t, snapshots, trivialCaptures: [...t.trivialCaptures, s.ts] };
-  const record = toChangeRecord(diff, base, s);
-  const entry = { from: base.ts, to: s.ts, diff, significance, record, ruleSummary: ruleSummary(record) };
+  const entry = compare(base, s, opts);
+  if (entry.significance.magnitude === 'trivial') return { ...t, snapshots, trivialCaptures: [...t.trivialCaptures, s.ts] };
   return { ...t, snapshots, entries: [...t.entries, entry], baseline: snapshots.length - 1 };
 }
 
@@ -38,4 +43,19 @@ export function appendSnapshot(t: Timeline, s: SnapshotPage, opts: TimelineOptio
 export function buildTimeline(url: string, snapshots: readonly SnapshotPage[], opts: TimelineOptions = {}): Timeline {
   const sorted = [...snapshots].sort((x, y) => (x.ts < y.ts ? -1 : x.ts > y.ts ? 1 : 0));
   return sorted.reduce((t, s) => appendSnapshot(t, s, opts), emptyTimeline(url));
+}
+
+/**
+ * Entries (magnitude `trivial`) for the captures in `t.trivialCaptures`, each diffed against the
+ * baseline it was compared with, in time order: what a "show trivial edits" view lists.
+ */
+export function trivialEntries(t: Timeline, opts: TimelineOptions = {}): TimelineEntry[] {
+  const trivial = new Set(t.trivialCaptures);
+  let base = t.snapshots[0];
+  const out: TimelineEntry[] = [];
+  for (const s of t.snapshots.slice(1)) {
+    if (!trivial.has(s.ts)) base = s;
+    else if (base) out.push(compare(base, s, opts));
+  }
+  return out;
 }

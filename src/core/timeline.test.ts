@@ -7,7 +7,7 @@ import { diffPages } from './diff.ts';
 import { fixtureToSnapshots, parseSampleFixture } from './fixture.ts';
 import { MAX_RULE_SUMMARY_CHARS, ruleSummary } from './ruleSummary.ts';
 import { MAGNITUDE_THRESHOLDS } from './score.ts';
-import { appendSnapshot, buildTimeline, emptyTimeline } from './timeline.ts';
+import { appendSnapshot, buildTimeline, emptyTimeline, trivialEntries } from './timeline.ts';
 import type { ChangeRecord, SnapshotPage } from './types.ts';
 
 const samples = [wiki, git, rust].map((j) => parseSampleFixture(j));
@@ -76,6 +76,10 @@ describe('buildTimeline', () => {
     expect(t.entries.map((e) => [e.from, e.to])).toEqual([[caps[0]!.ts, caps[5]!.ts]]);
     expect(t.trivialCaptures).toEqual([caps[1]!.ts, caps[2]!.ts, caps[3]!.ts, caps[4]!.ts]);
     expect(t.entries[0]!.significance.magnitude).toBe('minor');
+    // Each trivial capture is diffed against the baseline it was compared with (the first capture).
+    const trivial = trivialEntries(t);
+    expect(trivial.map((e) => [e.from, e.to])).toEqual(t.trivialCaptures.map((ts) => [caps[0]!.ts, ts]));
+    expect(trivial.every((e) => e.significance.magnitude === 'trivial' && e.ruleSummary)).toBe(true);
   });
 
   it('equals incremental appendSnapshot, and rejects out-of-order captures', () => {
