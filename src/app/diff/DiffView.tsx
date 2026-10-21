@@ -63,6 +63,15 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
         () => announce('Could not copy: the link is in the address bar'),
       );
 
+  // What Previous / Next's live region says: kept until the change, its place or the shown capture changes, so a live
+  // run's growing total does not re-announce it with every change that arrives.
+  const key = `${pair} ${index} ${showing ?? ''}`;
+  const [said, setSaid] = useState({ key: '', text: '' });
+  if (said.key !== key) {
+    const text = `Change ${index + 1} of ${count}: ${formatTimestampLong(entry.from)} to ${formatTimestampLong(entry.to)}, ${entry.significance.magnitude}`;
+    setSaid({ key, text: showing ? `${text}, showing ${showing}` : text });
+  }
+
   // Previous / Next is a sibling of the panel, so on phones it can stick to the bottom of the whole stage.
   return (
     <>
@@ -105,10 +114,7 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
           <span aria-hidden="true">
             {index + 1} / {count}
           </span>
-          <span className="sr-only">
-            Change {index + 1} of {count}: {formatTimestampLong(entry.from)} to {formatTimestampLong(entry.to)}, {entry.significance.magnitude}
-            {showing && `, showing ${showing}`}
-          </span>
+          <span className="sr-only">{said.text}</span>
         </span>
         <button type="button" className="btn" aria-disabled={index === count - 1} onClick={() => index < count - 1 && onSelect(index + 1)}>
           Next<span aria-hidden="true"> ›</span>

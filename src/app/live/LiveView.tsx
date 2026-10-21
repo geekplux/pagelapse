@@ -14,7 +14,7 @@ import { Timeline } from '../timeline/Timeline.tsx';
 import { type UrlState, changeIndex } from '../urlState.ts';
 import { Filmstrip } from '../visual/Filmstrip.tsx';
 import { VisualPane } from '../visual/VisualPane.tsx';
-import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pairOf, parseMode, sideOf, viewQuery } from '../visual/visualState.ts';
+import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pairOf, parseMode, showingText, sideOf, viewQuery } from '../visual/visualState.ts';
 import { progressText } from './liveState.ts';
 import { useLiveTimeline } from './useLiveTimeline.ts';
 
@@ -138,10 +138,14 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     setFrozen({ timeline: shown, marks });
   };
   const onSliderBlur = (e: FocusEvent) => {
-    if (isSlider(e)) setFrozen(null);
+    if (!isSlider(e)) return;
+    setFrozen(null);
+    cancelAnimationFrame(newsFrame.current);
+    setNews('');
   };
   // Its own polite region: the run's throttled progress would overwrite this news.
   const [news, setNews] = useState('');
+  const newsFrame = useRef(0);
   const selectOnStrip = (i: number) => choose(strip.timeline.entries[i]);
   // A key on the frozen slider first catches up with what arrived meanwhile (so End reaches the newest change) and
   // says how many changes are new: the value and range only ever change on the user's input.
@@ -154,7 +158,10 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     e.preventDefault();
     e.stopPropagation();
     choose(shown.entries[i]);
-    setNews(fresh > 0 ? `${fresh} new change${fresh === 1 ? '' : 's'} since you focused the timeline.` : '');
+    // Cleared first, then set on the next frame, so the same news twice is announced twice.
+    cancelAnimationFrame(newsFrame.current);
+    setNews('');
+    if (fresh > 0) newsFrame.current = requestAnimationFrame(() => setNews(`${fresh} more change${fresh === 1 ? '' : 's'} arrived.`));
   };
 
   const span = years(captures[0]?.ts, captures.at(-1)?.ts);
@@ -225,7 +232,14 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
           )}
           {entry ? (
             <div className="side">
-              <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)} onSelect={select} />
+              <ChangeCard
+                entry={entry}
+                index={selected}
+                count={all.length}
+                captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)}
+                onSelect={select}
+                showing={shownAt && showingText(captures.map((c) => c.ts), entry, shownAt, trivialSet.has(shownAt))}
+              />
             </div>
           ) : (
             running && <p className="side live-wait">The first change shows here as soon as two captures have been compared.</p>

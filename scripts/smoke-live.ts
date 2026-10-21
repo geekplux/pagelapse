@@ -125,6 +125,40 @@ async function expectText(page: Page, sel: string, re: RegExp): Promise<string> 
   if (!re.test(t)) throw new Error(`${sel}: "${t}" does not match ${re}`);
   return t;
 }
+/**
+ * Tabs through the whole page (until focus wraps or leaves it) and fails if focus ever lands on an archive frame: the
+ * frames are always inert, a scaled picture of the page. Returns how many stops it made.
+ */
+async function expectFramesNotTabbable(page: Page): Promise<string> {
+  const frames = await page.locator('iframe').evaluateAll((els) => els.map((el) => (el as HTMLIFrameElement).inert));
+  if (!frames.length || frames.some((i) => !i)) throw new Error(`iframes inert: ${JSON.stringify(frames)}`);
+  // Start from the top of the document (a blur alone resumes from the last focused element).
+  await page.evaluate(() => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    document.body.tabIndex = -1;
+    document.body.focus();
+    document.body.removeAttribute('tabindex');
+  });
+  const seen = new Set<string>();
+  let pane = 0;
+  let stops = 0;
+  for (; stops < 200; stops++) {
+    await page.keyboard.press('Tab');
+    const [at, inPane] = await page.evaluate(() => {
+      const a = document.activeElement;
+      if (!a || a === document.body) return ['body', false];
+      if (a.tagName === 'IFRAME') return ['IFRAME', false];
+      return [`${a.tagName}#${a.id}.${a.className}|${(a.textContent ?? '').slice(0, 60)}|${[...document.querySelectorAll('*')].indexOf(a)}`, !!a.closest('.vpane')];
+    });
+    if (at === 'IFRAME') throw new Error(`Tab stop ${stops + 1} is inside an archived page`);
+    if (at === 'body' || seen.has(at)) break;
+    seen.add(at as string);
+    if (inPane) pane++;
+  }
+  if (pane < 2) throw new Error(`the Tab walk passed only ${pane} stop(s) in the picture pane (${seen.size} in all)`);
+  return `${frames.length} iframe(s), all inert; ${seen.size} Tab stops from the top of the page (${pane} in the pane), none in a frame`;
+}
+
 /** The card's two next actions are there. */
 async function expectActions(page: Page, names: string[]): Promise<void> {
   for (const name of names) {
@@ -295,7 +329,7 @@ export const liveFlows: readonly Flow[] = [
       const [end, now] = [await values(), await listed()];
       if (end !== `${now}/${now}` || now <= max) throw new Error(`End went to ${end}, expected the newest of ${now} changes`);
       const said = await page
-        .waitForFunction(() => /new changes? since you focused/.exec(document.querySelector('.tl-area [role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
+        .waitForFunction(() => /\d+ more changes? arrived\./.exec(document.querySelector('.tl-area [role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
         .then((h) => h.jsonValue());
       // More changes arrive: the slider stays put again until the next key.
       await page.waitForFunction((n) => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]) > n, now, { timeout: 10_000 });
@@ -504,7 +538,7 @@ export const liveFlows: readonly Flow[] = [
       const f = await page.locator('.lf iframe:not([data-hidden])').evaluate((el: HTMLIFrameElement) => ({
         sandbox: el.getAttribute('sandbox'), allow: el.getAttribute('allow'), referrer: el.getAttribute('referrerpolicy'), title: el.title, src: el.src, inert: el.inert,
       }));
-      if (f.sandbox !== 'allow-scripts allow-same-origin' || f.allow !== '' || f.referrer !== 'strict-origin-when-cross-origin' || !/as captured \d+ \w+ \d{4}/.test(f.title) || f.inert) {
+      if (f.sandbox !== 'allow-scripts allow-same-origin' || f.allow !== '' || f.referrer !== 'strict-origin-when-cross-origin' || !/as captured \d+ \w+ \d{4}/.test(f.title) || !f.inert) {
         throw new Error(`frame attributes ${JSON.stringify(f)}`);
       }
       const frames = await page.locator('iframe').count();
@@ -513,10 +547,14 @@ export const liveFlows: readonly Flow[] = [
         const m = el.parentElement!.getBoundingClientRect();
         return `frame ${Math.round(r.width)}×${Math.round(r.height)} in a ${Math.round(m.width)}×${Math.round(m.height)} box (--k ${getComputedStyle(el.parentElement!).getPropertyValue('--k')})`;
       });
+      // The frame keeps its name for screen readers in the box (an inert frame leaves the accessibility tree).
+      const named = await page.locator('.lf .sr-only').first().innerText();
+      if (named !== f.title) throw new Error(`the frame's box is named "${named}", expected "${f.title}"`);
+      const tabbing = await expectFramesNotTabbable(page);
       // Headless Chrome paints an out-of-process frame only while it is in the viewport: scroll it back for the shot.
       await page.evaluate(() => scrollTo(0, 0));
       await sleep(300);
-      return { notes: [box, `first view: 0 Archive requests`, `Home -> 1 frame request after ${dwell} ms: ${got[0]!.url}`, `attributes ${JSON.stringify(f)}`, `${frames} iframes in the DOM`] };
+      return { notes: [box, tabbing, `first view: 0 Archive requests`, `Home -> 1 frame request after ${dwell} ms: ${got[0]!.url}`, `attributes ${JSON.stringify(f)}`, `${frames} iframes in the DOM`] };
     },
   },
   {
@@ -618,6 +656,44 @@ export const liveFlows: readonly Flow[] = [
     },
   },
   {
+    name: 'live-visual-slow-320',
+    shot: 'live-visual-slow',
+    suffix: '-320',
+    description: 'At 320 px, the "still loading" note sits below the picture, fully visible, clear of the Before / After chips, in one note region for the pane',
+    viewports: ['mobile'],
+    async run({ page, baseUrl }) {
+      await page.setViewportSize({ width: 320, height: 640 });
+      const latest = buildTimeline(git.url, git.pages).entries.at(-1)!.to;
+      await mockApi(page, { frame: (ts) => (ts === latest ? null : 0) });
+      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      const note = page.locator('.lf-note p');
+      await note.waitFor({ timeout: 12_000 });
+      await note.scrollIntoViewIfNeeded();
+      const r = await note.evaluate((p) => {
+        const box = (el: Element) => JSON.parse(JSON.stringify(el.getBoundingClientRect())) as DOMRect;
+        const n = box(p);
+        const hit = (x: number, y: number) => p.contains(document.elementFromPoint(x, y));
+        return {
+          note: n,
+          mat: box(p.closest('.vp-mat')!),
+          shot: box(document.querySelector('.lf')!),
+          chips: [...document.querySelectorAll('.vp-label')].map(box),
+          clipped: p.scrollWidth > p.clientWidth || p.scrollHeight > p.clientHeight,
+          // Every corner (2 px in) is the note itself: nothing paints over it.
+          covered: ![[n.left + 2, n.top + 2], [n.right - 2, n.top + 2], [n.left + 2, n.bottom - 2], [n.right - 2, n.bottom - 2]].every(([x, y]) => hit(x!, y!)),
+          notes: document.querySelectorAll('.lf-note').length,
+        };
+      });
+      const meets = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      const inside = (a: DOMRect, b: DOMRect) => a.left >= b.left && a.right <= b.right && a.top >= b.top && a.bottom <= b.bottom;
+      if (r.note.left < 0 || r.note.right > 320 || !inside(r.note, r.mat) || r.clipped || r.covered) throw new Error(`note not fully visible at 320 px: ${JSON.stringify(r)}`);
+      if (r.note.top < r.shot.bottom) throw new Error(`note overlaps the picture: ${JSON.stringify(r)}`);
+      if (r.chips.some((c) => meets(c, r.note))) throw new Error(`a chip covers the note: ${JSON.stringify(r)}`);
+      if (r.notes !== 1) throw new Error(`${r.notes} "still loading" regions, expected 1`);
+      return { notes: [`note ${Math.round(r.note.left)}-${Math.round(r.note.right)} px wide, below the picture (${Math.round(r.note.top)} >= ${Math.round(r.shot.bottom)}), clear of ${r.chips.length} chip(s), 1 region`] };
+    },
+  },
+  {
     name: 'live-visual-compare',
     description: 'Slider compare in a live run: two replay frames, both inert (focus never enters an archived page); the divider works from the keyboard',
     viewports: ['desktop'],
@@ -628,13 +704,14 @@ export const liveFlows: readonly Flow[] = [
       await page.locator('.vp-cmp iframe[data-loaded]').nth(1).waitFor({ timeout: 5000 });
       const frames = await page.locator('iframe').evaluateAll((els) => els.map((el) => (el as HTMLIFrameElement).inert));
       if (frames.length !== 2 || frames.some((i) => !i)) throw new Error(`iframes inert: ${JSON.stringify(frames)}`);
+      const tabbing = await expectFramesNotTabbable(page);
       const split = page.getByRole('slider', { name: 'Divider between Before and After' });
       await split.focus();
       await page.keyboard.press('ArrowLeft');
       const v = await split.getAttribute('aria-valuenow');
       if (v !== '45') throw new Error(`divider at ${v} after ArrowLeft`);
       if (!page.url().includes('view=slider')) throw new Error(`address bar ${page.url()}`);
-      return { notes: [`${frames.length} frames, all inert`, `divider 45 after ArrowLeft`, `deep link ${page.url()}`] };
+      return { notes: [tabbing, `divider 45 after ArrowLeft`, `deep link ${page.url()}`] };
     },
   },
   {

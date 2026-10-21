@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { formatTimestampLong } from '../../core/timestamp.ts';
 import type { TimelineEntry } from '../../core/types.ts';
 import { Ts } from '../Ts.tsx';
 import { CompareSlider } from './CompareSlider.tsx';
-import { LiveFrame } from './LiveFrame.tsx';
+import { LiveFrame, SlowNote } from './LiveFrame.tsx';
 import { ModePicker } from './ModePicker.tsx';
 import { OnionSkin } from './OnionSkin.tsx';
 import { Shot } from './Shot.tsx';
@@ -68,6 +68,19 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
   const side = sideOf(entry, at);
   const want = (shown === 'single' ? [pic(at)] : [pair.before, pair.after]).filter((p) => p.source === 'frame').map((p) => p.ts);
   const pool = useFramePool(want, steps, { scope: shown, compare: shown !== 'single', runActive });
+  // Frames that went 8 s without loading; forgotten once evicted (a frame that comes back loads from scratch).
+  const [slow, setSlow] = useState<string[]>([]);
+  if (slow.some((ts) => !pool.frames.includes(ts))) setSlow(slow.filter((ts) => pool.frames.includes(ts)));
+  const onSlow = useCallback((ts: string) => setSlow((s) => (s.includes(ts) ? s : [...s, ts])), []);
+  const stalled = want.filter((ts) => slow.includes(ts) && pool.frames.includes(ts) && !pool.loaded.has(ts));
+  const note = (
+    <SlowNote
+      links={stalled.map((ts) => {
+        const word = shown === 'single' ? undefined : SIDES.find(([s]) => s === sideOf(entry, ts))?.[2];
+        return { href: link(ts), label: word ? `Open ${word} capture` : 'Open capture' };
+      })}
+    />
+  );
   // Polite news of Play starting and stopping only; the steps themselves are silent.
   const playing = !!play?.playing;
   const [said, setSaid] = useState({ playing: false, text: '' });
@@ -86,8 +99,8 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
         loaded={pool.loaded}
         onLoad={pool.onLoad}
         frame={frame}
-        link={link(p.ts)}
-        inert={shown !== 'single'}
+        slow={slow.includes(p.ts)}
+        onSlow={onSlow}
       />
     ) : p.source === 'shot' ? (
       <Shot src={p.src} thumb={p.thumb ?? ''} alt={shotAlt(label, entry, p.ts)} onError={() => setBroken((b) => [...b, p.src])} />
@@ -164,15 +177,18 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
         )}
       </div>
       {shown === 'side' ? (
-        <div className="vp-pair">
-          {SIDES.map(([s]) => (
-            <figure key={s} className="vp-mat">
-              {shot(pair[s])}
-              <Label side={s} ts={pair[s].ts} />
-              {caption([pair[s]])}
-            </figure>
-          ))}
-        </div>
+        <>
+          <div className="vp-pair">
+            {SIDES.map(([s]) => (
+              <figure key={s} className="vp-mat">
+                {shot(pair[s])}
+                <Label side={s} ts={pair[s].ts} />
+                {caption([pair[s]])}
+              </figure>
+            ))}
+          </div>
+          {note}
+        </>
       ) : (
         <figure className="vp-mat">
           {shown === 'slider' ? (
@@ -182,6 +198,7 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
           ) : (
             shot(pic(at))
           )}
+          {note}
           {shown === 'single' ? side && <Label side={side} ts={at} /> : SIDES.map(([s]) => <Label key={s} side={s} ts={pair[s].ts} />)}
           {caption(shown === 'single' ? [pic(at)] : [pair.before, pair.after])}
         </figure>
