@@ -39,3 +39,16 @@ export const API_ERRORS = {
   archive_unavailable: { status: 502, body: { error: 'archive_unavailable', message: 'The Internet Archive is not responding right now. Try again later.' } },
   rate_limited: { status: 429, body: { error: 'rate_limited', message: 'Too many new lookups from your connection. Try again in a minute.', retryAfter: 60 } },
 } as const;
+
+/** Mock Workers AI lines for the git-scm sample's meaningful changes, in timeline order (the smoke's AI flows). */
+export const GIT_AI_SUMMARIES = [
+  'Announced Git 2.1.0 and renamed the release box to "Latest source Release"',
+  'Credited a second Pro Git author and announced Git 2.2.0',
+  'Added bug reporting to "Get involved" and announced Git 2.7.0',
+  'Announced Git 2.13.1 and dropped a passage from the front page',
+  'Announced Git 2.21.0 and trimmed a passage',
+  'Announced Git 2.24.1 and added a passage',
+  'Announced Git 2.30.0 and removed a passage',
+  'Replaced the list of companies using Git with Git hosting products',
+  'Reorganised the home page into Learn, Tools, Reference and Install',
+];

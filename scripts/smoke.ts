@@ -14,9 +14,9 @@ import { type Browser, chromium } from 'playwright-core';
 import { encodeWebp } from './lib/webp.ts';
 import { CVD_VARIANTS, assertAxeClean, setCvdFilter } from './smoke-a11y.ts';
 import { type FlowResult, flows as baseFlows } from './smoke-flows.ts';
-import { liveFlows, replayLog } from './smoke-live.ts';
+import { liveFlows, replayLog, summaryFlows } from './smoke-live.ts';
 
-const flows = [...baseFlows, ...liveFlows];
+const flows = [...baseFlows, ...liveFlows, ...summaryFlows];
 
 const CHROME = '/usr/bin/google-chrome';
 const VIEWPORTS = {

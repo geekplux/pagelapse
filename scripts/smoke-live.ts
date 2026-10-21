@@ -5,19 +5,22 @@
 import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { buildTimeline } from '../src/core/timeline.ts';
-import { API_ERRORS, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
+import { API_ERRORS, GIT_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
 import { type Flow, openReady } from './smoke-flows.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 
 const git = mockFromSample('git-scm');
 const rust = mockFromSample('rust-lang');
-const gitEntries = buildTimeline(git.url, git.pages).entries.length;
+const gitTimeline = buildTimeline(git.url, git.pages).entries;
+const gitEntries = gitTimeline.length;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface Logged {
   path: string;
   target: string;
   ts: string | undefined;
+  /** `/api/summaries`: the pairs asked for. */
+  pairs?: string[];
   start: number;
   end?: number;
 }
@@ -52,7 +55,11 @@ async function stubReplay(page: Page, delay: (ts: string) => number | null = () 
 
 async function mockApi(
   page: Page,
-  opts: { data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; snapshot?: (i: number) => Plan; frame?: (ts: string) => number | null } = {},
+  opts: {
+    data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; snapshot?: (i: number) => Plan; frame?: (ts: string) => number | null;
+    /** `/api/summaries`: Workers AI lines (git-scm), a 500, or (default) "rule" for every pair, as without a binding. */
+    summaries?: 'ai' | 'error';
+  } = {},
 ) {
   const frames = await stubReplay(page, opts.frame);
   const log: Logged[] = [];
@@ -76,6 +83,14 @@ async function mockApi(
       await sleep(plan.delay ?? 150);
       inFlight.set(target, inFlight.get(target)! - 1);
       reply = plan.error ? API_ERRORS[plan.error] : { status: 200, body: api.snapshot(entry.ts ?? '') };
+    } else if (u.pathname === '/api/summaries') {
+      const { pairs } = route.request().postDataJSON() as { pairs: { from: string; to: string }[] };
+      entry.pairs = pairs.map((p) => `${p.from}-${p.to}`);
+      await sleep(300);
+      const line = (pair: string) => GIT_AI_SUMMARIES[gitTimeline.findIndex((e) => `${e.from}-${e.to}` === pair)];
+      reply = opts.summaries === 'error'
+        ? { status: 500, body: { error: 'archive_unavailable', message: 'Something went wrong.' } }
+        : { status: 200, body: { summaries: entry.pairs.map((pair) => (opts.summaries === 'ai' && line(pair) ? { pair, source: 'ai', text: line(pair) } : { pair, source: 'rule' })) } };
     }
     entry.end = Date.now();
     // The page may have aborted the request meanwhile (Cancel, a new run): nothing left to answer.
@@ -84,7 +99,8 @@ async function mockApi(
   const snaps = (target?: string) => log.filter((l) => l.path === '/api/snapshot' && (!target || l.target === host(target)));
   /** Frame requests since `t` (ms epoch). */
   const framesSince = (t: number) => frames.filter((f) => f.start >= t);
-  return { log, snaps, frames, framesSince, maxInFlight: (target: string) => maxInFlight.get(host(target)) ?? 0 };
+  const sums = () => log.filter((l) => l.path === '/api/summaries');
+  return { log, snaps, sums, frames, framesSince, maxInFlight: (target: string) => maxInFlight.get(host(target)) ?? 0 };
 }
 
 /**
@@ -768,6 +784,65 @@ export const liveFlows: readonly Flow[] = [
       if (!current.startsWith('Frame #01')) throw new Error(`after Home + Enter: ${current}`);
       if (images.length) throw new Error(`${images.length} image requests: ${images.join(', ')}`);
       return { notes: [`${n} silhouettes, 0 image requests`, hint, `Home + Enter -> ${current.replace(/\s+/g, ' ')}`] };
+    },
+  },
+];
+
+/**
+ * A git-scm run with mocked Workers AI lines: asked for every 4 changes and at the end (<= 8 pairs, never twice); the
+ * text swaps in labelled "AI summary", focus stays put, and no live region mentions it.
+ */
+async function aiSummaries({ page, baseUrl }: { page: Page; baseUrl: string }) {
+  const api = await mockApi(page, { summaries: 'ai' });
+  await openLive(page, baseUrl, 'git-scm.com');
+  await page.evaluate(() => {
+    const w = window as unknown as { live: string[] };
+    w.live = [];
+    for (const r of document.querySelectorAll('[aria-live], [role="status"], [role="alert"]')) {
+      new MutationObserver(() => w.live.push(r.textContent ?? '')).observe(r, { childList: true, characterData: true, subtree: true });
+    }
+  });
+  await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
+  const prev = page.getByRole('button', { name: 'Previous' });
+  await prev.focus();
+  // textContent: the label is uppercased by CSS, which innerText would report.
+  const last = `${GIT_AI_SUMMARIES.at(-1)} AI summary`;
+  const read = (want: string) => document.querySelector('.panel-summary')?.textContent?.replace(/\s+/g, ' ').trim() === want;
+  await page.waitForFunction(read, last, { timeout: 10_000 });
+  const listed = await page.locator('.changes .change-sum').evaluateAll((els) => els.map((e) => e.textContent));
+  if (listed.join('|') !== GIT_AI_SUMMARIES.join('|')) throw new Error(`list shows ${listed.join(' | ')}`);
+  if (!(await prev.evaluate((el) => el === document.activeElement))) throw new Error(`focus moved to ${await focusAt(page)}`);
+  await sleep(2500); // past the progress announcer's 2 s throttle, so a late update would be caught
+  const said = await page.evaluate(() => (window as unknown as { live: string[] }).live);
+  if (said.some((t) => GIT_AI_SUMMARIES.some((l) => t.includes(l)))) throw new Error(`a live region read an AI line: ${said.join(' | ')}`);
+  await page.evaluate(() => scrollTo(0, 0)); // the runner's `clip` box is measured from the top of the page
+  const asked = api.sums().map((l) => l.pairs ?? []);
+  const all = asked.flat();
+  if (asked.some((p) => p.length > 8) || new Set(all).size !== all.length || all.length !== gitEntries) throw new Error(`summary requests ${JSON.stringify(asked)}`);
+  return { notes: [`summary requests (pairs each): ${asked.map((p) => p.length).join(', ')}`, `panel: "${last}"`, `focus kept on Previous; ${said.length} live-region updates, none with AI text`] };
+}
+
+export const summaryFlows: readonly Flow[] = [
+  { name: 'live-summary-ai', shot: 'summary-ai', description: 'Mocked /api/summaries: AI lines swap in, labelled, batched, no focus move or chatter', viewports: ['desktop'], run: aiSummaries },
+  { name: 'live-summary-label', shot: 'summary-label', description: 'The "AI summary" text label on a phone', viewports: ['mobile'], clip: '.change-panel', run: aiSummaries },
+  {
+    name: 'live-summary-fallback',
+    shot: 'summary-fallback',
+    apiErrors: true,
+    description: '/api/summaries answers 500: rule summaries stay, labelled "auto summary", and no error shows',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const api = await mockApi(page, { summaries: 'error' });
+      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      for (let i = 0; i < 40 && api.sums().some((l) => !l.end); i++) await sleep(100);
+      await sleep(300);
+      if (!api.sums().length) throw new Error('no /api/summaries request');
+      const want = `${gitTimeline.at(-1)!.ruleSummary} auto summary`;
+      const shown = (await page.locator('.panel-summary').textContent())?.replace(/\s+/g, ' ').trim();
+      if (shown !== want) throw new Error(`panel "${shown}", expected "${want}"`);
+      const alerts = (await page.locator('[role="alert"]').allTextContents()).filter((t) => t.trim());
+      if (alerts.length || (await page.locator('[data-error], [data-live="error"]').count())) throw new Error(`error UI after a failed summaries request ${alerts}`);
+      return { notes: [`${api.sums().length} summary requests answered 500`, `panel: "${want}"`, 'no error UI'] };
     },
   },
 ];
