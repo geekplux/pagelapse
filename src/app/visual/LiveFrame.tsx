@@ -45,7 +45,7 @@ export function LiveFrame({ ts, page, frames, loaded, onLoad, frame, link, inert
   return (
     <div className="vp-shot lf" ref={box} data-state={state}>
       {!done && page && <Silhouette page={page} />}
-      {!done && (
+      {!done && state !== 'slow' && (
         <span className="lf-tag mono" aria-hidden="true">
           text outline · {mounted ? 'loading the capture…' : 'waiting'}
         </span>
@@ -74,7 +74,7 @@ export function LiveFrame({ ts, page, frames, loaded, onLoad, frame, link, inert
       <div className="lf-note" role="status">
         {state === 'slow' && (
           <p>
-            <span aria-hidden="true">⧗ </span>Still loading from the Internet Archive. Archived pages can be slow, and some sites block being shown in a
+            <span aria-hidden="true">◷ </span>Still loading from the Internet Archive. Archived pages can be slow, and some sites block being shown in a
             frame.{' '}
             <a className="cap-out" href={link} target="_blank" rel="noopener noreferrer">
               Open capture<span className="sr-only"> (opens in a new tab)</span>

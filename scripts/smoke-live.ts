@@ -508,7 +508,15 @@ export const liveFlows: readonly Flow[] = [
         throw new Error(`frame attributes ${JSON.stringify(f)}`);
       }
       const frames = await page.locator('iframe').count();
-      return { notes: [`first view: 0 Archive requests`, `Home -> 1 frame request after ${dwell} ms: ${got[0]!.url}`, `attributes ${JSON.stringify(f)}`, `${frames} iframes in the DOM`] };
+      const box = await page.locator('.lf iframe:not([data-hidden])').evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const m = el.parentElement!.getBoundingClientRect();
+        return `frame ${Math.round(r.width)}×${Math.round(r.height)} in a ${Math.round(m.width)}×${Math.round(m.height)} box (--k ${getComputedStyle(el.parentElement!).getPropertyValue('--k')})`;
+      });
+      // Headless Chrome paints an out-of-process frame only while it is in the viewport: scroll it back for the shot.
+      await page.evaluate(() => scrollTo(0, 0));
+      await sleep(300);
+      return { notes: [box, `first view: 0 Archive requests`, `Home -> 1 frame request after ${dwell} ms: ${got[0]!.url}`, `attributes ${JSON.stringify(f)}`, `${frames} iframes in the DOM`] };
     },
   },
   {
@@ -591,7 +599,7 @@ export const liveFlows: readonly Flow[] = [
       const note = page.locator('.lf-note p');
       await note.waitFor({ timeout: 12_000 });
       const after = Date.now() - t0;
-      const text = await expectText(page, '.lf-note p', /^⧗ Still loading from the Internet Archive\. Archived pages can be slow, and some sites block being shown in a frame\. Open capture/);
+      const text = await expectText(page, '.lf-note p', /^◷ Still loading from the Internet Archive\. Archived pages can be slow, and some sites block being shown in a frame\. Open capture/);
       const href = await note.getByRole('link').getAttribute('href');
       if (href !== `https://web.archive.org/web/${latest}/https://git-scm.com/`) throw new Error(`link out ${href}`);
       if (!(await page.locator('.lf .sil').isVisible())) throw new Error('the silhouette went away while still loading');
