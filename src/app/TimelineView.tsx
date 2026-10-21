@@ -91,7 +91,8 @@ export function TimelineView({ fixture, initialChange, onChange }: Props) {
         </span>
         {trivialCaptures.length > 0 && (
           <span>
-            <i className="mag-tick" /> {trivialCaptures.length} trivial captures hidden (dates, counters, whitespace).
+            <i className="mag-tick" /> {trivialCaptures.length} trivial captures{' '}
+            {showTrivial ? 'shown as hollow entries.' : 'hidden (dates, counters, whitespace).'}
           </span>
         )}
       </p>
@@ -112,7 +113,9 @@ export function TimelineView({ fixture, initialChange, onChange }: Props) {
           </div>
         </>
       ) : (
-        <p className="panel-summary">Nothing meaningful changed across {snapshots.length} captures.</p>
+        <p className="panel-summary" id="diff" tabIndex={-1}>
+          Nothing meaningful changed across {snapshots.length} captures.
+        </p>
       )}
       <details className="captures-all">
         <summary>All {snapshots.length} captures</summary>

@@ -153,7 +153,7 @@ main { flex: 1; }
 @media (min-width: 60rem) { .tl-panes { grid-template-columns: 1fr 20rem; align-items: start; } }
 .change-panel { display: grid; gap: 0.6rem; padding-top: 1rem; border-top: 2px solid var(--ink); }
 .sheet .change-panel h3 { margin: 0; font: 600 var(--step-1) / 1.3 var(--font-mono); letter-spacing: 0; color: var(--ink); }
-.panel-kicker { font-size: var(--step--1); color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.08em; }
+.panel-kicker { display: block; margin-bottom: 0.6rem; font-size: var(--step--1); font-weight: 400; line-height: 1.5; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.08em; }
 .panel-kicker .change-mag { color: var(--ink); font-size: inherit; font-weight: 600; }
 .panel-summary { font: var(--step-1) / 1.45 var(--font-read); max-width: 60ch; }
 .source-label { padding: 0.1rem 0.45rem; border: 1px solid var(--rule-strong); border-radius: 999px; color: var(--ink-2); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; vertical-align: 0.2em; }
@@ -257,7 +257,8 @@ ins::after, del::after { content: "] "; }
   .mag-dot, .change-mag::before { forced-color-adjust: none; background: CanvasText; }
   .mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px CanvasText, inset 0 0 0 5.25px Canvas; }
   .change[aria-current="true"] { border-left-color: Highlight; }
-  ins, del, .w-ins, .w-del, .db .db-t { text-decoration-color: CanvasText; }
+  ins, del, .w-ins, .w-del, .db[data-op] .db-t { text-decoration-color: CanvasText; }
+  .db[data-op="equal"], .change:not([aria-current="true"]) { border-left-color: Canvas; }
   .db[data-op="added"], .db[data-op="removed"], .db[data-op="modified"] { border-left-color: CanvasText; }
   .btn[aria-disabled="true"] { color: GrayText; }
 }

@@ -47,7 +47,7 @@ export function App() {
 
   return (
     <>
-      <AppHeader samples={samples} selectedId={current?.id ?? ''} onSelect={(entry) => load(entry)} />
+      <AppHeader hasDiff={current !== null} samples={samples} selectedId={current?.id ?? ''} onSelect={(entry) => load(entry)} />
       <main id="content" tabIndex={-1}>
         {current ? (
           <TimelineView

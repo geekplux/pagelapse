@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Block, SnapshotPage, TimelineEntry } from '../../core/types.ts';
+import { formatTimestampLong } from '../../core/timestamp.ts';
 import { statsLine } from '../describe.ts';
 import { Ts } from '../Ts.tsx';
 import { DiffBlock } from './DiffBlock.tsx';
@@ -31,7 +32,9 @@ function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
     );
   }
   return (
-    <div className="db-open" tabIndex={-1} ref={ref}>
+    // A named group, not a <fieldset>: these are revealed text blocks, not form controls.
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+    <div className="db-open" role="group" aria-label={`${ops.length} unchanged blocks`} tabIndex={-1} ref={ref}>
       {ops.map((op) => (
         <DiffBlock key={op.b} op={op} a={[]} b={b} />
       ))}
@@ -45,12 +48,17 @@ export function DiffView({ entry, index, count, from, to, captureUrl, onSelect }
   const rows = useMemo(() => collapseUnchanged(entry.diff.ops), [entry]);
   // The confirmation belongs to the change it was given for.
   const [copied, setCopied] = useState({ pair: '', text: '' });
+  // Clear first, then set on the next frame, so pressing again re-announces the same text.
+  const announce = (text: string) => {
+    setCopied({ pair: '', text: '' });
+    requestAnimationFrame(() => setCopied({ pair, text }));
+  };
   const copy = () =>
     Promise.resolve()
       .then(() => navigator.clipboard.writeText(location.href))
       .then(
-        () => setCopied({ pair, text: 'Link copied' }),
-        () => setCopied({ pair, text: 'Could not copy: the link is in the address bar' }),
+        () => announce('Link copied'),
+        () => announce('Could not copy: the link is in the address bar'),
       );
   const r = entry.record;
   const structure: [string, string][] = [
@@ -61,14 +69,15 @@ export function DiffView({ entry, index, count, from, to, captureUrl, onSelect }
 
   return (
     <section className="change-panel" id="diff" tabIndex={-1} aria-labelledby="change-heading">
-      <p className="panel-kicker mono">
-        Change {index + 1} of {count} ·{' '}
-        <span className="change-mag" data-magnitude={entry.significance.magnitude}>
-          {entry.significance.magnitude}
-        </span>
-      </p>
       <h3 id="change-heading">
-        <Ts ts={entry.from} /> → <Ts ts={entry.to} />
+        <span className="panel-kicker mono">
+          Change {index + 1} of {count} ·{' '}
+          <span className="change-mag" data-magnitude={entry.significance.magnitude}>
+            {entry.significance.magnitude}
+          </span>
+        </span>{' '}
+        <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
+        <span className="sr-only"> to </span> <Ts ts={entry.to} />
       </h3>
       <p className="panel-links">
         {[entry.from, entry.to].map((ts) => (
@@ -112,7 +121,7 @@ export function DiffView({ entry, index, count, from, to, captureUrl, onSelect }
           'gap' in row ? <Gap key={i} ops={row.gap} b={to.blocks} /> : <DiffBlock key={i} op={row.op} a={from.blocks} b={to.blocks} />,
         )}
       </div>
-      <nav className="diff-nav" aria-label="Changes">
+      <nav className="diff-nav" aria-label="Previous and next change">
         <button type="button" className="btn" aria-disabled={index === 0} onClick={() => index > 0 && onSelect(index - 1)}>
           <span aria-hidden="true">‹ </span>Previous
         </button>
@@ -121,7 +130,7 @@ export function DiffView({ entry, index, count, from, to, captureUrl, onSelect }
             {index + 1} / {count}
           </span>
           <span className="sr-only">
-            Change {index + 1} of {count}
+            Change {index + 1} of {count}: {formatTimestampLong(entry.from)} to {formatTimestampLong(entry.to)}, {entry.significance.magnitude}
           </span>
         </span>
         <button type="button" className="btn" aria-disabled={index === count - 1} onClick={() => index < count - 1 && onSelect(index + 1)}>
