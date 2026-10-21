@@ -8,8 +8,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 3868,
-      "timeToReadyMs": 333,
+      "durationMs": 4491,
+      "timeToReadyMs": 395,
       "notes": [
         "9 change dates visible",
         "light paper rgb(246, 241, 231)",
@@ -23,8 +23,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 3021,
-      "timeToReadyMs": 229,
+      "durationMs": 3158,
+      "timeToReadyMs": 255,
       "notes": [
         "9 change dates visible",
         "light paper rgb(246, 241, 231)",
@@ -38,8 +38,8 @@
       "viewport": "desktop",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 3697,
-      "timeToReadyMs": 257,
+      "durationMs": 4164,
+      "timeToReadyMs": 272,
       "notes": [
         "9 change dates visible",
         "dark paper rgb(20, 18, 15)",
@@ -53,8 +53,8 @@
       "viewport": "mobile",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 2896,
-      "timeToReadyMs": 236,
+      "durationMs": 3165,
+      "timeToReadyMs": 248,
       "notes": [
         "9 change dates visible",
         "dark paper rgb(20, 18, 15)",
@@ -68,7 +68,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 3058,
+      "durationMs": 3320,
       "notes": [
         "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
         "wikipedia-internet-archive: 14 captures linked to https://arquivo.pt/wayback/",
@@ -83,7 +83,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2793,
+      "durationMs": 2974,
       "notes": [
         "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
         "wikipedia-internet-archive: 14 captures linked to https://arquivo.pt/wayback/",
@@ -98,8 +98,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1441,
-      "timeToReadyMs": 242,
+      "durationMs": 1532,
+      "timeToReadyMs": 268,
       "notes": [
         "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
         "axe: 0 serious/critical"
@@ -111,8 +111,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1165,
-      "timeToReadyMs": 246,
+      "durationMs": 1305,
+      "timeToReadyMs": 251,
       "notes": [
         "git-scm: 14 captures linked to https://arquivo.pt/wayback/",
         "axe: 0 serious/critical"
@@ -124,8 +124,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2018,
-      "timeToReadyMs": 246,
+      "durationMs": 2406,
+      "timeToReadyMs": 335,
       "notes": [
         "wikipedia-internet-archive: 14 captures linked to https://arquivo.pt/wayback/",
         "axe: 0 serious/critical"
@@ -137,8 +137,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1723,
-      "timeToReadyMs": 221,
+      "durationMs": 1849,
+      "timeToReadyMs": 251,
       "notes": [
         "wikipedia-internet-archive: 14 captures linked to https://arquivo.pt/wayback/",
         "axe: 0 serious/critical"
@@ -150,8 +150,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1507,
-      "timeToReadyMs": 250,
+      "durationMs": 1658,
+      "timeToReadyMs": 265,
       "notes": [
         "rust-lang: 13 captures linked to https://arquivo.pt/wayback/",
         "axe: 0 serious/critical"
@@ -163,8 +163,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1326,
-      "timeToReadyMs": 243,
+      "durationMs": 1406,
+      "timeToReadyMs": 252,
       "notes": [
         "rust-lang: 13 captures linked to https://arquivo.pt/wayback/",
         "axe: 0 serious/critical"
@@ -176,7 +176,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1180,
+      "durationMs": 1300,
       "notes": [
         "42 animated elements (a.skip-link, a.home-link, button.chip, article.sheet, a.mono, a.cap-out, circle.tl-marker, circle.tl-marker-ring, g.tl-move, div.diff-body, a.cap-link, a., a.licence-link) all 0s under reduce",
         "axe: 0 serious/critical"
@@ -188,7 +188,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 911,
+      "durationMs": 995,
       "notes": [
         "42 animated elements (a.skip-link, a.home-link, button.chip, article.sheet, a.mono, a.cap-out, circle.tl-marker, circle.tl-marker-ring, g.tl-move, div.diff-body, a.cap-link, a., a.licence-link) all 0s under reduce",
         "axe: 0 serious/critical"
@@ -200,9 +200,9 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1432,
+      "durationMs": 1502,
       "notes": [
-        "33 stops: header:Skip to content | header:Skip to diff | header:pagelapsePagelapse | chips:git-scm.com | chips:Wikipedia: Internet Archive | chips:rust-lang.org | main:https://git-scm.com/ | main:− Before 2025·04·044 April 2025 | main:+ After 2025·12·1818 December 2025 | main:Open capture (opens in a new tab) | main:View capture 2025·04·044 April 2025 (ope | main:View capture 2025·12·1818 December 2025  | main:Copy link | main:‹ Previous | main:Next › | main:All changes (9) | main:2014·09·088 September 2014minorAdded sec | main:2014·12·044 December 2014minorReworded 2 | main:2016·01·1414 January 2016minorReworded 2 | main:2017·06·077 June 2017minorReworded 1 pas | main:2019·02·2525 February 2019minorReworded  | main:2019·12·1818 December 2019minorReworded  | main:2021·01·1414 January 2021minorReworded 1 | main:2025·04·044 April 2025moderateAdded sect | main:2025·12·1818 December 2025majorAdded 5 s | main:Frame #14 2025·12·1818 December 2025 | main: | main:2025·12·18201420152016201720182019202020 | main:All 14 captures | footer:Internet Archive's Wayback Machine | footer:Arquivo.pt | footer:MIT | footer:Source on GitHub",
+        "33 stops: header:Skip to content | header:Skip to diff | header:pagelapsePagelapse | chips:git-scm.com | chips:Wikipedia: Internet Archive | chips:rust-lang.org | main:https://git-scm.com/ | main:− Before 2025·04·044 April 2025 | main:+ After 2025·12·1818 December 2025 | main:Open capture (opens in a new tab) | main:View capture 2025·04·044 April 2025 (ope | main:View capture 2025·12·1818 December 2025  | main:Copy link | main:‹ Previous | main:Next › | main:Frame #14 2025·12·1818 December 2025 | main: | main:2025·12·18201420152016201720182019202020 | main:All changes (9) | main:2014·09·088 September 2014minorAdded sec | main:2014·12·044 December 2014minorReworded 2 | main:2016·01·1414 January 2016minorReworded 2 | main:2017·06·077 June 2017minorReworded 1 pas | main:2019·02·2525 February 2019minorReworded  | main:2019·12·1818 December 2019minorReworded  | main:2021·01·1414 January 2021minorReworded 1 | main:2025·04·044 April 2025moderateAdded sect | main:2025·12·1818 December 2025majorAdded 5 s | main:All 14 captures | footer:Internet Archive's Wayback Machine | footer:Arquivo.pt | footer:MIT | footer:Source on GitHub",
         "announced: Showing: git-scm.com home page, 14 captures",
         "axe: 0 serious/critical"
       ],
@@ -213,9 +213,9 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1142,
+      "durationMs": 1173,
       "notes": [
-        "24 stops: header:Skip to content | header:Skip to diff | header:pagelapsePagelapse | chips:git-scm.com | chips:Wikipedia: Internet Archive | chips:rust-lang.org | main:https://git-scm.com/ | main:− Before 2025·04·044 April 2025 | main:+ After 2025·12·1818 December 2025 | main:Open capture (opens in a new tab) | main:View capture 2025·04·044 April 2025 (ope | main:View capture 2025·12·1818 December 2025  | main:Copy link | main:‹ Previous | main:Next › | main:All changes (9) | main:Frame #14 2025·12·1818 December 2025 | main: | main:2025·12·1820142016201820202022 | main:All 14 captures | footer:Internet Archive's Wayback Machine | footer:Arquivo.pt | footer:MIT | footer:Source on GitHub",
+        "24 stops: header:Skip to content | header:Skip to diff | header:pagelapsePagelapse | chips:git-scm.com | chips:Wikipedia: Internet Archive | chips:rust-lang.org | main:https://git-scm.com/ | main:− Before 2025·04·044 April 2025 | main:+ After 2025·12·1818 December 2025 | main:Open capture (opens in a new tab) | main:View capture 2025·04·044 April 2025 (ope | main:View capture 2025·12·1818 December 2025  | main:Copy link | main:‹ Previous | main:Next › | main:Frame #14 2025·12·1818 December 2025 | main: | main:2025·12·1820142016201820202022 | main:All changes (9) | main:All 14 captures | footer:Internet Archive's Wayback Machine | footer:Arquivo.pt | footer:MIT | footer:Source on GitHub",
         "announced: Showing: git-scm.com home page, 14 captures",
         "axe: 0 serious/critical"
       ],
@@ -226,8 +226,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 3760,
-      "timeToReadyMs": 245,
+      "durationMs": 4774,
+      "timeToReadyMs": 259,
       "notes": [
         "9 markers, r by magnitude minor 6 / moderate 9.5 / major 13.5 px, 1 ringed",
         "Change 9 of 9: 4 April 2025 to 18 December 2025, major: Added 5 sections incl. \"Learn\"; removed 4 sections incl. \"Documentation\" (+54 / −87 words)",
@@ -240,8 +240,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2547,
-      "timeToReadyMs": 234,
+      "durationMs": 2855,
+      "timeToReadyMs": 258,
       "notes": [
         "9 markers, r by magnitude minor 6 / moderate 9.5 / major 13.5 px, 1 ringed",
         "Change 9 of 9: 4 April 2025 to 18 December 2025, major: Added 5 sections incl. \"Learn\"; removed 4 sections incl. \"Documentation\" (+54 / −87 words)",
@@ -254,8 +254,8 @@
       "viewport": "desktop",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 3654,
-      "timeToReadyMs": 262,
+      "durationMs": 4745,
+      "timeToReadyMs": 277,
       "notes": [
         "9 markers, r by magnitude minor 6 / moderate 9.5 / major 13.5 px, 1 ringed",
         "Change 9 of 9: 4 April 2025 to 18 December 2025, major: Added 5 sections incl. \"Learn\"; removed 4 sections incl. \"Documentation\" (+54 / −87 words)",
@@ -268,8 +268,8 @@
       "viewport": "mobile",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 2454,
-      "timeToReadyMs": 240,
+      "durationMs": 2771,
+      "timeToReadyMs": 279,
       "notes": [
         "9 markers, r by magnitude minor 6 / moderate 9.5 / major 13.5 px, 1 ringed",
         "Change 9 of 9: 4 April 2025 to 18 December 2025, major: Added 5 sections incl. \"Learn\"; removed 4 sections incl. \"Documentation\" (+54 / −87 words)",
@@ -282,7 +282,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1252,
+      "durationMs": 1462,
       "notes": [
         "Home->1, ArrowRight->2, ArrowRight->3, ArrowRight->4, End->9, Home->1, PageUp->3; 5 distinct valuetexts",
         "axe: 0 serious/critical"
@@ -294,7 +294,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1072,
+      "durationMs": 1171,
       "notes": [
         "Home->1, ArrowRight->2, ArrowRight->3, ArrowRight->4, End->9, Home->1, PageUp->3; 5 distinct valuetexts",
         "axe: 0 serious/critical"
@@ -306,7 +306,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2395,
+      "durationMs": 2567,
       "notes": [
         "click -> 2, drag -> 5, hover tooltip on 3, hoverable, Escape hides it",
         "axe: 0 serious/critical"
@@ -318,7 +318,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2200,
+      "durationMs": 2275,
       "notes": [
         "click -> 2, drag -> 5, hover tooltip on 3, hoverable, Escape hides it",
         "axe: 0 serious/critical"
@@ -330,8 +330,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1742,
-      "timeToReadyMs": 274,
+      "durationMs": 1900,
+      "timeToReadyMs": 285,
       "notes": [
         "Change 3 of 9: 4 December 2014 to 14 January 2016, minor: Reworded 2 passages, added 1 passage (+36 / −3 words)",
         "4 hollow ticks; bogus change -> latest; no page overflow at 320 px",
@@ -344,8 +344,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1679,
-      "timeToReadyMs": 240,
+      "durationMs": 1898,
+      "timeToReadyMs": 271,
       "notes": [
         "Change 3 of 9: 4 December 2014 to 14 January 2016, minor: Reworded 2 passages, added 1 passage (+36 / −3 words)",
         "4 hollow ticks; bogus change -> latest; no page overflow at 320 px",
@@ -358,8 +358,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 4027,
-      "timeToReadyMs": 68,
+      "durationMs": 4816,
+      "timeToReadyMs": 77,
       "notes": [
         "22 marked blocks in order; a11y dump: Removed: Git is easy to learn and has a tiny footprint with  | Added: Git is lightning fast and has a huge ecosystem of GUI | Removed: The advantages of Git compared to other source cont | Removed: Documentation | Removed: Command reference pages, Pro Git book content, vide | Removed: Downloads | Removed: GUI clients and binary releases for all major platf | Added: Git's performance and ecosystem | Added: Learn | Added: Pro Git book, videos, tutorials, and cheat sheet | Added: Tools | Added: Command line tools, GUIs, and hosting services | Added: Reference | Added: Git's reference documentation | Added: Install | Added: Binary releases for all major platforms. | Changed: Latest source | Changed: | Removed: Graphical UIs | Tarballs | Removed: Windows Build | Source Code | Removed: Products providing Git hosting | Added: Install GitHub Repository",
         "largest change wikipedia-internet-archive #2 (69 ops): 229 nodes",
@@ -372,8 +372,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2716,
-      "timeToReadyMs": 59,
+      "durationMs": 2956,
+      "timeToReadyMs": 57,
       "notes": [
         "22 marked blocks in order; a11y dump: Removed: Git is easy to learn and has a tiny footprint with  | Added: Git is lightning fast and has a huge ecosystem of GUI | Removed: The advantages of Git compared to other source cont | Removed: Documentation | Removed: Command reference pages, Pro Git book content, vide | Removed: Downloads | Removed: GUI clients and binary releases for all major platf | Added: Git's performance and ecosystem | Added: Learn | Added: Pro Git book, videos, tutorials, and cheat sheet | Added: Tools | Added: Command line tools, GUIs, and hosting services | Added: Reference | Added: Git's reference documentation | Added: Install | Added: Binary releases for all major platforms. | Changed: Latest source | Changed: | Removed: Graphical UIs | Tarballs | Removed: Windows Build | Source Code | Removed: Products providing Git hosting | Added: Install GitHub Repository",
         "largest change wikipedia-internet-archive #2 (69 ops): 229 nodes",
@@ -386,8 +386,8 @@
       "viewport": "desktop",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 3887,
-      "timeToReadyMs": 55,
+      "durationMs": 4730,
+      "timeToReadyMs": 92,
       "notes": [
         "22 marked blocks in order; a11y dump: Removed: Git is easy to learn and has a tiny footprint with  | Added: Git is lightning fast and has a huge ecosystem of GUI | Removed: The advantages of Git compared to other source cont | Removed: Documentation | Removed: Command reference pages, Pro Git book content, vide | Removed: Downloads | Removed: GUI clients and binary releases for all major platf | Added: Git's performance and ecosystem | Added: Learn | Added: Pro Git book, videos, tutorials, and cheat sheet | Added: Tools | Added: Command line tools, GUIs, and hosting services | Added: Reference | Added: Git's reference documentation | Added: Install | Added: Binary releases for all major platforms. | Changed: Latest source | Changed: | Removed: Graphical UIs | Tarballs | Removed: Windows Build | Source Code | Removed: Products providing Git hosting | Added: Install GitHub Repository",
         "largest change wikipedia-internet-archive #2 (69 ops): 229 nodes",
@@ -400,8 +400,8 @@
       "viewport": "mobile",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 2717,
-      "timeToReadyMs": 53,
+      "durationMs": 2928,
+      "timeToReadyMs": 62,
       "notes": [
         "22 marked blocks in order; a11y dump: Removed: Git is easy to learn and has a tiny footprint with  | Added: Git is lightning fast and has a huge ecosystem of GUI | Removed: The advantages of Git compared to other source cont | Removed: Documentation | Removed: Command reference pages, Pro Git book content, vide | Removed: Downloads | Removed: GUI clients and binary releases for all major platf | Added: Git's performance and ecosystem | Added: Learn | Added: Pro Git book, videos, tutorials, and cheat sheet | Added: Tools | Added: Command line tools, GUIs, and hosting services | Added: Reference | Added: Git's reference documentation | Added: Install | Added: Binary releases for all major platforms. | Changed: Latest source | Changed: | Removed: Graphical UIs | Tarballs | Removed: Windows Build | Source Code | Removed: Products providing Git hosting | Added: Install GitHub Repository",
         "largest change wikipedia-internet-archive #2 (69 ops): 229 nodes",
@@ -414,7 +414,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1417,
+      "durationMs": 1578,
       "notes": [
         "skip link -> #diff; expanded 1 of 3 runs; Previous -> 12, Next x2 -> 13 (stays)",
         "axe: 0 serious/critical"
@@ -426,7 +426,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1244,
+      "durationMs": 1333,
       "notes": [
         "skip link -> #diff; expanded 1 of 3 runs; Previous -> 12, Next x2 -> 13 (stays)",
         "axe: 0 serious/critical"
@@ -438,7 +438,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1520,
+      "durationMs": 1696,
       "notes": [
         "structure: Removed heading “Companies & Projects Using Git” | Added heading “Products providing Git hosting”",
         "33 blocks shown, none clamped",
@@ -451,7 +451,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1280,
+      "durationMs": 1367,
       "notes": [
         "structure: Removed heading “Companies & Projects Using Git” | Added heading “Products providing Git hosting”",
         "33 blocks shown, none clamped",
@@ -464,7 +464,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2426,
+      "durationMs": 2472,
       "notes": [
         "copied ?sample=git-scm&change=20210114012400-20250404010448, reopened it; 4 trivial entries shown and selectable",
         "axe: 0 serious/critical"
@@ -476,7 +476,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2201,
+      "durationMs": 2228,
       "notes": [
         "copied ?sample=git-scm&change=20210114012400-20250404010448, reopened it; 4 trivial entries shown and selectable",
         "axe: 0 serious/critical"
@@ -488,8 +488,8 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1220,
-      "timeToReadyMs": 253,
+      "durationMs": 1252,
+      "timeToReadyMs": 271,
       "notes": [
         "title \"Pagelapse: see how any web page changed over the years\"",
         "h1 link name \"Pagelapse\"",
@@ -503,8 +503,8 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1104,
-      "timeToReadyMs": 244,
+      "durationMs": 1123,
+      "timeToReadyMs": 247,
       "notes": [
         "title \"Pagelapse: see how any web page changed over the years\"",
         "h1 link name \"Pagelapse\"",
@@ -518,8 +518,8 @@
       "viewport": "desktop",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 1194,
-      "timeToReadyMs": 251,
+      "durationMs": 1281,
+      "timeToReadyMs": 264,
       "notes": [
         "title \"Pagelapse: see how any web page changed over the years\"",
         "h1 link name \"Pagelapse\"",
@@ -533,8 +533,8 @@
       "viewport": "mobile",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 1115,
-      "timeToReadyMs": 246,
+      "durationMs": 1244,
+      "timeToReadyMs": 322,
       "notes": [
         "title \"Pagelapse: see how any web page changed over the years\"",
         "h1 link name \"Pagelapse\"",
@@ -548,7 +548,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 528,
+      "durationMs": 546,
       "notes": [
         "favicon.svg rendered at 16, 32, 64 px on paper and ink",
         "axe: 0 serious/critical; minor/moderate: landmark-one-main, page-has-heading-one, region"
@@ -560,11 +560,11 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 4078,
-      "timeToReadyMs": 261,
+      "durationMs": 4630,
+      "timeToReadyMs": 259,
       "notes": [
         "featured 20250404010448-20251218145830",
-        "visual-ready 284 ms, CLS 0.0000",
+        "visual-ready 286 ms, CLS 0.0000",
         "first-view pictures: 16 files, 127748 B",
         "fold (mat, summary, filmstrip thumbnails): 679, 373, 786",
         "axe: 0 serious/critical"
@@ -576,13 +576,13 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2684,
-      "timeToReadyMs": 225,
+      "durationMs": 2895,
+      "timeToReadyMs": 285,
       "notes": [
         "featured 20250404010448-20251218145830",
-        "visual-ready 243 ms, CLS 0.0001",
+        "visual-ready 315 ms, CLS 0.0001",
         "first-view pictures: 16 files, 127748 B",
-        "fold (mat, summary, filmstrip thumbnails): 781, 1006, 1338",
+        "fold (mat, summary, filmstrip thumbnails): 781, 1006, 1294",
         "axe: 0 serious/critical"
       ],
       "screenshot": "../../../tmp/p11shots/hero-mobile.webp"
@@ -592,11 +592,11 @@
       "viewport": "desktop",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 3879,
-      "timeToReadyMs": 241,
+      "durationMs": 4757,
+      "timeToReadyMs": 258,
       "notes": [
         "featured 20250404010448-20251218145830",
-        "visual-ready 264 ms, CLS 0.0000",
+        "visual-ready 294 ms, CLS 0.0000",
         "first-view pictures: 16 files, 127748 B",
         "fold (mat, summary, filmstrip thumbnails): 679, 373, 786",
         "axe: 0 serious/critical"
@@ -608,13 +608,13 @@
       "viewport": "mobile",
       "scheme": "dark",
       "ok": true,
-      "durationMs": 2737,
-      "timeToReadyMs": 228,
+      "durationMs": 2915,
+      "timeToReadyMs": 260,
       "notes": [
         "featured 20250404010448-20251218145830",
-        "visual-ready 248 ms, CLS 0.0001",
+        "visual-ready 283 ms, CLS 0.0001",
         "first-view pictures: 16 files, 127748 B",
-        "fold (mat, summary, filmstrip thumbnails): 781, 1006, 1338",
+        "fold (mat, summary, filmstrip thumbnails): 781, 1006, 1294",
         "axe: 0 serious/critical"
       ],
       "screenshot": "../../../tmp/p11shots/hero-mobile-dark.webp"
@@ -624,12 +624,12 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2757,
+      "durationMs": 1987,
       "notes": [
-        "load: item 591-683 in 556-684, page scrollY 0",
-        "Previous: item 567-657 in 545-680, page scrollY 0",
-        "filmstrip #01: item 552-641 in 544-679, page scrollY 0",
-        "timeline End: item -65-27 in -100-28, page scrollY 651",
+        "load: item 1512-1603 in list 1165-1604, page scrollY 0",
+        "Previous: item 1419-1509 in list 1162-1602, page scrollY 0",
+        "filmstrip #01: item 1193-1283 in list 1161-1601, page scrollY 0",
+        "timeline End: item 855-947 in list 508-948, page scrollY 652",
         "axe: 0 serious/critical"
       ],
       "screenshot": "../../../tmp/p11shots/changes-list-follows-desktop.webp"
@@ -639,7 +639,7 @@
       "viewport": "mobile",
       "scheme": "light",
       "ok": true,
-      "durationMs": 15760,
+      "durationMs": 3585,
       "notes": [
         "390x844 first view: link ends 750, bar starts 784",
         "320x844 first view: link ends 757, bar starts 784",
@@ -653,10 +653,10 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1986,
+      "durationMs": 1386,
       "notes": [
         "frame #04 shown (20160114164816); Change 3 of 9: 4 December 2014 to 14 January 2016, minor: Reworded 2 passages, added 1 passage (+36 / −3 words)",
-        "tab stops before the strip: skip-link | home-link | chip | mono | vp-side | cap-out | btn |  | change | frame",
+        "tab stops before the strip: skip-link | home-link | chip | mono | vp-side | cap-out | btn | frame",
         "axe: 0 serious/critical"
       ],
       "screenshot": "../../../tmp/p11shots/filmstrip-desktop-kbd.webp"
@@ -666,7 +666,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2629,
+      "durationMs": 2531,
       "notes": [
         "Home, Right swap pictures; Before kept on Right; ?at= restores it",
         "axe: 0 serious/critical"
@@ -678,10 +678,11 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1742,
+      "durationMs": 1526,
       "notes": [
-        "stage: vpane -> side -> film -> tl-area",
+        "stage: vpane -> side -> film -> tl-area -> changes-pane",
         "after \"Open capture\": side: View capture 2025·04·044 April",
+        "tops: vpane 234, side 234, film 698, tl-area 861, changes-pane 1159, diff-panel 1619",
         "axe: 0 serious/critical"
       ],
       "screenshot": "../../../tmp/p11shots/visual-tab-order-desktop.webp"
@@ -691,19 +692,36 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 2053,
+      "durationMs": 2056,
       "notes": [
-        "side ends 960 <= filmstrip 981; list 160px; side scrolls: true",
+        "side ends 1171 (pane 1171) <= filmstrip 1196; nothing clipped",
         "axe: 0 serious/critical"
       ],
       "screenshot": "../../../tmp/p11shots/visual-zoom-spacing-desktop.webp"
+    },
+    {
+      "flow": "stage-fit",
+      "viewport": "desktop",
+      "scheme": "light",
+      "ok": true,
+      "durationMs": 5551,
+      "notes": [
+        "1024x768 git-scm: card 235-635, no inner scroll",
+        "1024x768 wikipedia-internet-archive: card 259-679, no inner scroll",
+        "1024x768 rust-lang: card 235-635, no inner scroll",
+        "1280x800 git-scm: card 235-679, no inner scroll; thumbnails 740-786",
+        "1280x800 wikipedia-internet-archive: card 259-714, no inner scroll; thumbnails 774-820",
+        "1280x800 rust-lang: card 235-679, no inner scroll; thumbnails 740-789",
+        "axe: 0 serious/critical"
+      ],
+      "screenshot": "../../../tmp/p11shots/stage-fit-desktop.webp"
     },
     {
       "flow": "visual-partial",
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1344,
+      "durationMs": 1411,
       "notes": [
         "20170607181950: partial badge in the caption, 2 frames labelled \"◐ partial\"",
         "axe: 0 serious/critical"
@@ -715,7 +733,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 1428,
+      "durationMs": 1479,
       "notes": [
         "20200621153000: hatched card (unstyled: the archive's copy lacks the main stylesheet), link https://arquivo.pt/wayback/20200621153000/https://www.rust-lang.org/",
         "axe: 0 serious/critical"
@@ -727,7 +745,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 895,
+      "durationMs": 828,
       "notes": [
         "git-scm: 14 thumbnails, 0 without a picture",
         "axe: 0 serious/critical"
@@ -739,7 +757,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 958,
+      "durationMs": 949,
       "notes": [
         "wikipedia-internet-archive: 14 thumbnails, 0 without a picture",
         "axe: 0 serious/critical"
@@ -751,7 +769,7 @@
       "viewport": "desktop",
       "scheme": "light",
       "ok": true,
-      "durationMs": 811,
+      "durationMs": 773,
       "notes": [
         "rust-lang: 11 thumbnails, 2 without a picture",
         "axe: 0 serious/critical"
