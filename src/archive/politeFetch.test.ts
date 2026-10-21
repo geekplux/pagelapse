@@ -60,6 +60,20 @@ describe('politeFetch', () => {
     expect(long.requests).toHaveLength(1);
   });
 
+  it('never retries sooner than the backoff, even on Retry-After: 0', async () => {
+    const h = harness([{ status: 503, headers: { 'retry-after': '0' } }, { status: 503, headers: { 'retry-after': '1' } }, 200]);
+    await h.call();
+    expect(h.waits).toEqual([1000, 2000]);
+  });
+
+  it('with retry429: false, a 429 throws at once with its Retry-After (default 60 s)', async () => {
+    const h = harness([{ status: 429, headers: { 'retry-after': '12' } }], { retry429: false });
+    await expect(h.call()).rejects.toMatchObject({ name: 'RateLimitedError', retryAfter: 12 });
+    const d = harness([429], { retry429: false });
+    await expect(d.call()).rejects.toMatchObject({ retryAfter: 60 });
+    expect([h.requests.length, d.requests.length, ...h.waits, ...d.waits]).toEqual([1, 1]);
+  });
+
   it.each([403, 404, 410, 500])('does not retry %i', async (status) => {
     const h = harness([status]);
     await expect(h.call()).rejects.toMatchObject({ name: 'HttpError', status });
@@ -69,6 +83,15 @@ describe('politeFetch', () => {
   it('cuts the body at maxBytes', async () => {
     const h = harness([{ status: 200, body: 'x'.repeat(5000) }], { maxBytes: 1000 });
     expect(await h.call()).toMatchObject({ text: 'x'.repeat(1000), truncated: true });
+  });
+
+  it('does not flag a body that ends exactly at maxBytes on a chunk boundary', async () => {
+    const chunked = (...parts: string[]) =>
+      new ReadableStream<Uint8Array>({ start: (c) => (parts.forEach((p) => c.enqueue(new TextEncoder().encode(p))), c.close()) });
+    const exact = harness([{ status: 200, body: chunked('x'.repeat(600), 'y'.repeat(400)) }], { maxBytes: 1000 });
+    expect(await exact.call()).toMatchObject({ text: `${'x'.repeat(600)}${'y'.repeat(400)}`, truncated: false });
+    const over = harness([{ status: 200, body: chunked('x'.repeat(1000), 'z') }], { maxBytes: 1000 });
+    expect(await over.call()).toMatchObject({ text: 'x'.repeat(1000), truncated: true });
   });
 
   it('aborts a hung request after timeoutMs', async () => {

@@ -38,6 +38,8 @@ export interface PoliteFetchOptions {
   maxBytes?: number;
   /** Per-attempt timeout (default 20 s). */
   timeoutMs?: number;
+  /** Retry a 429 (default true). The Worker passes false: a 429 starts its global cooldown instead. */
+  retry429?: boolean;
 }
 
 /** A decoded upstream response. */
@@ -79,8 +81,9 @@ async function readCapped(res: Response, maxBytes: number): Promise<{ bytes: Uin
     if (done) break;
     chunks.push(value);
     size += value.length;
-    if (size >= maxBytes) {
-      truncated = size > maxBytes;
+    // Strictly greater: a body ending exactly at maxBytes on a chunk boundary is complete.
+    if (size > maxBytes) {
+      truncated = true;
       await reader.cancel();
       break;
     }
@@ -92,7 +95,7 @@ async function readCapped(res: Response, maxBytes: number): Promise<{ bytes: Uin
 
 /**
  * GET with manners (AC 16, 17, 19): identified User-Agent, retries only on 429/502/503/504 and
- * network errors with 1/2/4 s (±20%) backoff, honours `Retry-After` up to 30 s (longer throws
+ * network errors with 1/2/4 s (±20%) backoff, honours `Retry-After` (as a floor) up to 30 s (longer throws
  * {@link RateLimitedError}), never retries other statuses, caps the body, decodes the charset.
  */
 export async function politeFetch(url: string, opts: PoliteFetchOptions = {}): Promise<PoliteResponse> {
@@ -120,8 +123,10 @@ export async function politeFetch(url: string, opts: PoliteFetchOptions = {}): P
     if (!RETRY_STATUS.has(res.status)) throw new HttpError(res.status, url);
     const wait = retryAfterSeconds(res.headers.get('retry-after'));
     if (wait !== null && wait > MAX_RETRY_AFTER_S) throw new RateLimitedError(wait);
+    if (res.status === 429 && opts.retry429 === false) throw new RateLimitedError(wait ?? 60);
     if (last) throw res.status === 429 ? new RateLimitedError(wait ?? MAX_RETRY_AFTER_S) : new HttpError(res.status, url);
-    await sleep(wait !== null ? wait * 1000 : backoff(attempt));
+    // Never sooner than the backoff, even on `Retry-After: 0`; a longer `Retry-After` wins.
+    await sleep(Math.max((wait ?? 0) * 1000, backoff(attempt)));
   }
 }
 
