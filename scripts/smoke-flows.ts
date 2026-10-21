@@ -11,6 +11,7 @@ import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
 import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
 import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
+import { changeForCapture, shotSrc } from '../src/app/visual/visualState.ts';
 
 export interface FlowContext {
   page: Page;
@@ -90,6 +91,15 @@ async function noPageOverflow(page: Page): Promise<void> {
   if (wide > 0) throw new Error(`page scrolls sideways by ${wide}px (only the timeline strip may)`);
 }
 
+/** The pane shows capture `ts` of `f` (its picture, or the "no picture" card), and the filmstrip marks that frame. */
+async function expectShown(page: Page, f: Fixture, ts: string): Promise<void> {
+  const file = f.snapshots.find((s) => s.ts === ts)?.shot?.file;
+  const src = await page.locator('.vp-shot').getAttribute('src');
+  if (src !== (file ? shotSrc(f.id, file) : null)) throw new Error(`pane shows ${src}, expected the picture of ${ts}`);
+  const current = await page.locator('.frame[aria-current="true"] time').getAttribute('datetime');
+  if (current !== timestampToIso(ts)) throw new Error(`filmstrip marks ${current}, expected ${ts}`);
+}
+
 /** Presses a currently non-pressed chip and checks the pressed state, heading and capture links all follow. */
 async function switchTo(page: Page, f: (typeof fixtures)[number]): Promise<string> {
   const chip = page.locator(`.chip[data-sample="${f.id}"]`);
@@ -139,7 +149,7 @@ async function checkDiff(page: Page, f: Fixture, i: number): Promise<string[]> {
     return [...line('.diff-body ins', 'underline'), ...line('.diff-body del', 'line-through'), ...line('.db[data-op="added"] .db-t', 'underline'), ...line('.db[data-op="removed"] .db-t', 'line-through'), ...sym.map(() => 'gutter')];
   });
   if (bad.length) throw new Error(`marks without symbol/line style: ${bad.join(', ')}`);
-  const links = await page.locator('#diff a.cap-out').evaluateAll((as) => as.map((a) => [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel'), a.textContent]));
+  const links = await page.locator('.change-panel a.cap-out').evaluateAll((as) => as.map((a) => [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel'), a.textContent]));
   const hrefs = [e.from, e.to].map((ts) => viewCaptureUrl(f.source.archive, ts, f.url));
   links.forEach(([href, target, rel, text], k) => {
     if (href !== hrefs[k] || target !== '_blank' || rel !== 'noopener noreferrer' || !text?.includes(formatTimestampLong(k ? e.to : e.from))) throw new Error(`capture link ${k}: ${href} ${target} ${rel} "${text}"`);
@@ -205,7 +215,7 @@ export const flows: readonly Flow[] = [
   {
     name: 'reduced-motion',
     description: 'Under prefers-reduced-motion: reduce, every transition and animation computes to 0s',
-    shot: 'timeline',
+    shot: 'hero',
     suffix: '-reduced',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
@@ -422,8 +432,9 @@ export const flows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       // Wikipedia: its latest diff has collapsed unchanged runs to expand (the default's redesign has none).
       const f = fixtures.find((x) => x.id === 'wikipedia-internet-archive')!;
-      await openReady(page, baseUrl, `/?sample=${f.id}`);
       const n = timelineOf(f).entries.length;
+      const last = timelineOf(f).entries.at(-1)!;
+      await openReady(page, baseUrl, `/?sample=${f.id}&change=${last.from}-${last.to}`);
       const active = () => page.evaluate(() => `${document.activeElement?.className}|${document.activeElement?.textContent?.trim().slice(0, 40)}`);
       const tabTo = async (cls: string) => {
         for (let k = 0; k < 40; k++) {
@@ -441,8 +452,8 @@ export const flows: readonly Flow[] = [
       await tabTo('db-gap');
       await page.keyboard.press('Enter');
       if ((await page.locator('.db-gap').count()) !== gaps - 1 || !(await active()).startsWith('db-open')) throw new Error(`expanding: ${await active()}`);
-      await tabTo('btn');
-      while (!(await active()).endsWith('Previous')) await page.keyboard.press('Tab');
+      // Previous / Next sit beside the picture, before the diff in the tab order.
+      await page.locator('.diff-nav .btn').first().focus();
       await page.keyboard.press('Enter');
       await expectSelected(page, f, n - 2);
       await checkDiff(page, f, n - 2);
@@ -479,8 +490,8 @@ export const flows: readonly Flow[] = [
       await openReady(page, baseUrl, `/?sample=git-scm`);
       await page.locator('.diff-nav .btn').first().click();
       await expectSelected(page, f, t.entries.length - 2);
-      await page.locator('#diff button', { hasText: 'Copy link' }).click();
-      await page.locator('#diff [role="status"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
+      await page.locator('.change-panel button', { hasText: 'Copy link' }).click();
+      await page.locator('.change-panel [role="status"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       if (copied !== page.url() || !copied.includes('change=')) throw new Error(`copied "${copied}", page at ${page.url()}`);
       await openReady(page, baseUrl, new URL(copied).pathname + new URL(copied).search);
@@ -552,6 +563,130 @@ export const flows: readonly Flow[] = [
       );
       if (loaded !== sizes.length * 2) throw new Error(`${loaded} of ${sizes.length * 2} favicons rendered`);
       return { notes: [`favicon.svg rendered at ${sizes.join(', ')} px on paper and ink`] };
+    },
+  },
+  {
+    name: 'visual-default',
+    description: 'The hero: featured change picture, filmstrip, summary above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
+    shot: 'hero',
+    schemes: ['light', 'dark'],
+    cvd: true,
+    async run({ page, baseUrl, viewport }) {
+      const timeToReadyMs = await openReady(page, baseUrl);
+      await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
+      const [from, to] = defaultFixture.featured!.split('-') as [string, string];
+      await expectShown(page, defaultFixture, to);
+      const alt = await page.locator('.vp-shot').getAttribute('alt');
+      if (alt !== `${defaultFixture.label}, ${formatTimestampLong(to)}, top of page`) throw new Error(`alt "${alt}"`);
+      if ((await page.locator('.frame').count()) !== defaultFixture.snapshots.length) throw new Error('not one frame per capture');
+      const pressed = await page.locator('.vp-side[aria-pressed="true"]').textContent();
+      if (!pressed?.includes('After')) throw new Error(`pressed side "${pressed}"`);
+      if (!page.url().endsWith('/') || new URL(page.url()).search) throw new Error(`first view rewrote the URL: ${page.url()}`);
+      await page.waitForTimeout(500);
+      const m = await page.evaluate(async () => {
+        const cls = await new Promise<number>((done) =>
+          new PerformanceObserver((l) => done(l.getEntries().reduce((n, e) => n + ((e as unknown as { hadRecentInput: boolean }).hadRecentInput ? 0 : (e as unknown as { value: number }).value), 0))).observe({ type: 'layout-shift', buffered: true }),
+        ).then((v) => v, () => 0);
+        const pics = performance.getEntriesByType('resource').filter((r) => r.name.includes('/samples/')) as PerformanceResourceTiming[];
+        const box = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+        return {
+          visual: Math.round(performance.getEntriesByName('wd:visual-ready')[0]!.startTime),
+          cls,
+          bytes: pics.reduce((n, r) => n + r.encodedBodySize, 0),
+          count: pics.length,
+          fold: [box('.vp-mat').bottom, box('.panel-summary').bottom, box('#timeline-heading').top],
+          paneWidth: box('.vp-mat').width,
+        };
+      });
+      const problems = [
+        timeToReadyMs > 1000 && `ready ${timeToReadyMs} ms > 1,000`,
+        m.visual > 1500 && `visual-ready ${m.visual} ms > 1,500`,
+        m.cls >= 0.02 && `CLS ${m.cls.toFixed(3)}`,
+        m.bytes > 160_000 && `first-view pictures ${m.bytes} B > 160 KB`,
+        viewport === 'desktop' && m.fold.some((y) => y > 800) && `stage below the fold: ${m.fold.map(Math.round).join(', ')}`,
+        viewport === 'mobile' && m.paneWidth < 300 && `pane only ${m.paneWidth}px wide on mobile`,
+      ].filter(Boolean);
+      if (problems.length) throw new Error(problems.join('; '));
+      await noPageOverflow(page);
+      return { timeToReadyMs, notes: [`featured ${from}-${to}`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, timeline): ${m.fold.map(Math.round).join(', ')}`] };
+    },
+  },
+  {
+    name: 'visual-filmstrip-keyboard',
+    description: 'Tab to the filmstrip (one stop), Home, Right x3, Enter: the pane, the timeline valuetext and the list follow',
+    shot: 'filmstrip',
+    suffix: '-kbd',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const stops = new Set<string>();
+      for (let k = 0; k < 60 && !(await page.evaluate(() => document.activeElement?.classList.contains('frame'))); k++) {
+        await page.keyboard.press('Tab');
+        stops.add(await page.evaluate(() => document.activeElement?.className ?? ''));
+      }
+      for (const key of ['Home', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'Enter']) await page.keyboard.press(key);
+      const ts = defaultFixture.snapshots[3]!.ts;
+      await page.locator(`.frame[aria-current="true"] time[datetime="${timestampToIso(ts)}"]`).waitFor({ timeout: 2_000 });
+      await expectShown(page, defaultFixture, ts);
+      const said = await expectSelected(page, defaultFixture, changeForCapture(defaultTimeline.entries, ts));
+      await page.keyboard.press('Tab');
+      if (await page.evaluate(() => document.activeElement?.classList.contains('frame'))) throw new Error('the filmstrip has more than one tab stop');
+      await page.keyboard.press('Shift+Tab');
+      return { notes: [`frame #04 shown (${ts}); ${said}`, `tab stops before the strip: ${[...stops].join(' | ')}`] };
+    },
+  },
+  {
+    name: 'visual-timeline-sync',
+    description: 'Timeline keys swap the picture and the filmstrip frame; Before / After flips sides and is kept while scrubbing (?at=)',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const { entries } = defaultTimeline;
+      await slider(page).focus();
+      for (const [key, i] of [['Home', 0], ['ArrowRight', 1]] as const) {
+        await page.keyboard.press(key);
+        await expectSelected(page, defaultFixture, i);
+        await expectShown(page, defaultFixture, entries[i]!.to);
+      }
+      await page.locator('.vp-side', { hasText: 'Before' }).click();
+      await expectShown(page, defaultFixture, entries[1]!.from);
+      if (new URL(page.url()).searchParams.get('at') !== entries[1]!.from) throw new Error(`no ?at= for Before: ${page.url()}`);
+      await slider(page).focus();
+      await page.keyboard.press('ArrowRight');
+      await expectShown(page, defaultFixture, entries[2]!.from);
+      await openReady(page, baseUrl, page.url().replace(baseUrl, '/'));
+      await expectShown(page, defaultFixture, entries[2]!.from);
+      return { notes: ['Home, Right swap pictures; Before kept on Right; ?at= restores it'] };
+    },
+  },
+  {
+    name: 'visual-partial',
+    description: 'A capture recorded without a stylesheet carries the "missing some styles or images" badge',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const f = defaultFixture;
+      const ts = f.snapshots.find((s) => s.shot?.status === 'partial')!.ts;
+      await openReady(page, baseUrl, `/?at=${ts}`);
+      await expectShown(page, f, ts);
+      await page.locator('.vp-badge', { hasText: "The archive's copy is missing some styles or images" }).waitFor({ timeout: 2_000 });
+      await page.waitForSelector('[data-visual-ready="true"]');
+      return { notes: [`${ts}: partial badge shown`] };
+    },
+  },
+  {
+    name: 'visual-failed',
+    description: 'A capture with no picture shows the hatched card, its reason and "Open capture"; its filmstrip frame says "no picture"',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const f = fixtures.find((x) => x.id === 'rust-lang')!;
+      const shot = f.snapshots.find((s) => s.shot?.status === 'failed')!;
+      const card = page.locator('.vp-none', { hasText: 'No picture of this capture' });
+      await openReady(page, baseUrl, `/?sample=${f.id}&at=${shot.ts}`);
+      await card.waitFor({ timeout: 2_000 });
+      const href = await page.locator('.vp-cap a').getAttribute('href');
+      if (href !== viewCaptureUrl(f.source.archive, shot.ts, f.url)) throw new Error(`open capture link ${href}`);
+      if ((await page.locator('.frame-none').count()) !== f.snapshots.filter((s) => !s.shot?.file).length) throw new Error('filmstrip "no picture" frames');
+      return { notes: [`${shot.ts}: hatched card (${shot.shot!.reason}), link ${href}`] };
     },
   },
   // Review-only: every recorded thumbnail of a sample with its status, to inspect the pictures by eye.
