@@ -1,10 +1,14 @@
 // Pure geometry for the timeline strip: time -> x, year ticks and labels, marker size and stacking.
 import { timestampToIso } from '../../core/timestamp.ts';
+import type { Magnitude } from '../../core/types.ts';
 
 const DAY = 864e5;
 export const YEAR = 365.25 * DAY;
-export const R_MIN = 5;
-export const R_MAX = 14;
+/**
+ * Marker radius per magnitude: a step, not a continuum, so size alone separates the classes. Each step is
+ * about 2.5x the area of the one below (diameters 12 / 19 / 27 px, matched by the legend dots in CSS).
+ */
+export const MARKER_R = { minor: 6, moderate: 9.5, major: 13.5 } as const satisfies Record<Exclude<Magnitude, 'trivial'>, number>;
 
 export const tsToMs = (ts: string): number => Date.parse(timestampToIso(ts));
 
@@ -40,10 +44,9 @@ export function yearLabels<T extends { year: number; x: number }>(
   );
 }
 
-/** Marker radius in px: monotone in `score` (0..1), R_MIN..R_MAX, with area growing linearly with score. */
-export function markerRadius(score: number): number {
-  const s = Math.min(1, Math.max(0, score));
-  return Math.sqrt(R_MIN ** 2 + (R_MAX ** 2 - R_MIN ** 2) * s);
+/** Marker radius in px for a magnitude (trivial changes have no marker; they fall back to the minor size). */
+export function markerRadius(magnitude: Magnitude): number {
+  return magnitude === 'trivial' ? MARKER_R.minor : MARKER_R[magnitude];
 }
 
 /**
@@ -53,7 +56,7 @@ export function markerRadius(score: number): number {
 export function stackLevels(xs: readonly number[], rs: readonly number[], maxLevel = 2, gap = 3, minSep = 24): number[] {
   const placed: { x: number; r: number; level: number }[] = [];
   return xs.map((x, i) => {
-    const r = rs[i] ?? R_MIN;
+    const r = rs[i] ?? MARKER_R.minor;
     let level = 0;
     while (level < maxLevel && placed.some((p) => p.level === level && Math.abs(p.x - x) < Math.max(p.r + r + gap, minSep))) level++;
     placed.push({ x, r, level });

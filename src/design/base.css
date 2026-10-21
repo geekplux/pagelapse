@@ -105,11 +105,14 @@ main { flex: 1; }
 }
 
 /* Magnitude: size, ramp lightness and the word, shared by markers, legend and list. */
-[data-magnitude="minor"] { --d: 0.6rem; --c: var(--mag-2); }
-[data-magnitude="moderate"] { --d: 0.85rem; --c: var(--mag-3); }
-[data-magnitude="major"] { --d: 1.1rem; --c: var(--mag-4); }
+/* Legend dots use the marker diameters (2 x MARKER_R in timeline/scale.ts). */
+[data-magnitude="minor"] { --d: 12px; --c: var(--mag-2); }
+[data-magnitude="moderate"] { --d: 19px; --c: var(--mag-3); }
+[data-magnitude="major"] { --d: 27px; --c: var(--mag-4); }
 .mag-dot, .change-mag::before { content: ""; display: inline-block; width: var(--d); height: var(--d); margin: 0 0.3em 0 0.5em; border-radius: 50%; background: var(--c); vertical-align: middle; }
 .change-mag::before { margin-left: 0; }
+/* The major dot repeats the marker's inner ring (r 9 of 13.5) as a shape cue. */
+.mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px var(--c), inset 0 0 0 5.25px var(--paper); }
 .mag-tick { display: inline-block; width: 6px; height: 15px; margin-right: 0.3em; border: 1.5px solid var(--mag-1); border-radius: 3px; vertical-align: middle; }
 .change-mag { color: var(--ink-2); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.08em; }
 .tl-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; }
@@ -128,6 +131,7 @@ main { flex: 1; }
 .tl-stem { stroke: var(--rule-strong); }
 .tl-stem.is-sel { stroke: var(--ink); stroke-width: 1.5; }
 .tl-marker { fill: var(--c); stroke: var(--paper); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: tl-in 260ms var(--ease) both; }
+.tl-marker-ring { fill: none; stroke: var(--paper); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: tl-in 260ms var(--ease) both; pointer-events: none; }
 .tl-ring { fill: none; stroke: var(--ink); stroke-width: 2; }
 .tl-move { transition: transform 150ms ease-out; }
 .tl-caret { fill: var(--ink); }
@@ -136,7 +140,7 @@ main { flex: 1; }
 .tl-tip {
   position: absolute; z-index: 2; transform: translate(-50%, -100%); width: max-content; max-width: min(17rem, 85vw);
   display: grid; gap: 0.2rem; padding: 0.5rem 0.7rem; border-radius: 3px; background: var(--ink); color: var(--card);
-  font-size: 0.85rem; line-height: 1.35; pointer-events: none; box-shadow: 0 6px 18px -8px rgb(31 27 22 / 0.5);
+  border: 1px solid transparent; font-size: 0.85rem; line-height: 1.35; pointer-events: auto; box-shadow: 0 6px 18px -8px rgb(31 27 22 / 0.5);
 }
 .tl-tip .mono { font-size: 0.75rem; }
 .tl-tip b { text-transform: uppercase; letter-spacing: 0.08em; }
@@ -191,6 +195,11 @@ main { flex: 1; }
   .tl-marker, .tl-caret { fill: CanvasText; stroke: Canvas; }
   .tl-ring, .tl-stem.is-sel { stroke: Highlight; }
   .tl-trace { stroke: CanvasText; }
+  .tl-marker-ring { stroke: Canvas; }
+  .tl-year, .tl-sel-date { fill: CanvasText; }
+  .tl-axis, .tl-cap, .tl-stem { stroke: CanvasText; }
+  .tl-trivial { fill: Canvas; stroke: CanvasText; }
   .mag-dot, .change-mag::before { forced-color-adjust: none; background: CanvasText; }
+  .mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px CanvasText, inset 0 0 0 5.25px Canvas; }
   .change[aria-current="true"] { border-left-color: Highlight; }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { R_MAX, R_MIN, markerRadius, nearestPoint, stackLevels, stepIndex, timeScale, tsToMs, yearLabels, yearTicks } from './scale.ts';
+import { MARKER_R, markerRadius, nearestPoint, stackLevels, stepIndex, timeScale, tsToMs, yearLabels, yearTicks } from './scale.ts';
 
 const y = (year: number, m = 0) => Date.UTC(year, m, 1);
 
@@ -25,18 +25,23 @@ describe('timeScale and ticks', () => {
 });
 
 describe('markers', () => {
-  it('radius is monotone in score, 5-14 px, with area linear in score', () => {
-    const rs = Array.from({ length: 101 }, (_, i) => markerRadius(i / 100));
-    rs.slice(1).forEach((r, i) => expect(r).toBeGreaterThan(rs[i]!));
-    expect(markerRadius(-1)).toBe(R_MIN);
-    expect(markerRadius(2)).toBe(R_MAX);
-    const area = (s: number) => markerRadius(s) ** 2;
-    expect(area(0.5) - area(0)).toBeCloseTo(area(1) - area(0.5));
+  it('radius is one step per magnitude, each step at least twice the area of the one below', () => {
+    expect([markerRadius('minor'), markerRadius('moderate'), markerRadius('major')]).toEqual([6, 9.5, 13.5]);
+    expect(markerRadius('trivial')).toBe(MARKER_R.minor);
+    const area = (r: number) => r ** 2;
+    expect(area(MARKER_R.moderate) / area(MARKER_R.minor)).toBeGreaterThan(2);
+    expect(area(MARKER_R.major) / area(MARKER_R.moderate)).toBeGreaterThan(2);
   });
   it('stacks colliding markers upward and keeps 24 px between neighbours on a level', () => {
     expect(stackLevels([0, 2, 4, 100], [6, 6, 6, 6])).toEqual([0, 1, 2, 0]);
     expect(stackLevels([0, 20], [5, 5])).toEqual([0, 1]);
     expect(stackLevels([0, 2, 4, 6], [6, 6, 6, 6])).toEqual([0, 1, 2, 2]);
+    // Two majors need 13.5 + 13.5 + 3 px between centres; minors still keep the 24 px pointer spacing.
+    const { major, minor } = MARKER_R;
+    expect(stackLevels([0, 29], [major, major])).toEqual([0, 1]);
+    expect(stackLevels([0, 30], [major, major])).toEqual([0, 0]);
+    expect(stackLevels([0, 23], [minor, minor])).toEqual([0, 1]);
+    expect(stackLevels([0, 24], [minor, minor])).toEqual([0, 0]);
   });
   it('finds the nearest point', () => {
     expect(nearestPoint([{ x: 0, y: 0 }, { x: 10, y: 0 }], 7, 1).index).toBe(1);

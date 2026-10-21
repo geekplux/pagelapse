@@ -30,6 +30,7 @@ export function TimelineView({ fixture, initialChange, onChange }: Props) {
   const { snapshots } = fixture;
   const timeline = useMemo(() => buildTimeline(fixture.url, fixtureToSnapshots(fixture)), [fixture]);
   const { entries, trivialCaptures } = timeline;
+  const trivial = useMemo(() => new Set(trivialCaptures), [trivialCaptures]);
   const [selected, setSelected] = useState(() => changeIndex(entries, initialChange));
   const entry = entries[selected];
   const years = `${snapshots[0]?.ts.slice(0, 4)}–${snapshots.at(-1)?.ts.slice(0, 4)}`;
@@ -63,22 +64,24 @@ export function TimelineView({ fixture, initialChange, onChange }: Props) {
       </p>
       <p className="sheet-desc">{fixture.description}</p>
       <h3 id="timeline-heading">Timeline</h3>
-      <p className="captures-source tl-legend">
+      <p className="captures-source tl-legend" id="timeline-legend">
         <span>
-          {entries.length} meaningful changes. Bigger, darker marks changed more:{' '}
+          {entries.length} meaningful changes. Bigger, bolder marks changed more:{' '}
           {(['minor', 'moderate', 'major'] as const).map((m) => (
             <span key={m} className="nowrap">
               <i className="mag-dot" data-magnitude={m} /> {m}{' '}
             </span>
           ))}
         </span>
-        <span>
-          <i className="mag-tick" /> {trivialCaptures.length} trivial captures hidden (dates, counters, whitespace).
-        </span>
+        {trivialCaptures.length > 0 && (
+          <span>
+            <i className="mag-tick" /> {trivialCaptures.length} trivial captures hidden (dates, counters, whitespace).
+          </span>
+        )}
       </p>
       {entry ? (
         <>
-          <Timeline timeline={timeline} selected={selected} onSelect={select} />
+          <Timeline timeline={timeline} selected={selected} onSelect={select} labelledBy="timeline-heading" describedBy="timeline-legend" />
           <div className="tl-panes">
             <section className="change-panel" aria-labelledby="change-heading">
               <p className="panel-kicker mono">
@@ -130,7 +133,15 @@ export function TimelineView({ fixture, initialChange, onChange }: Props) {
               <a className="cap-link" href={capUrl(s.ts)}>
                 <Ts ts={s.ts} />
               </a>
-              <span className="cap-title">{s.title}</span>
+              <span className="cap-title">
+                {s.title}
+                {trivial.has(s.ts) && (
+                  <>
+                    {' '}
+                    <span className="source-label mono">trivial edit</span>
+                  </>
+                )}
+              </span>
             </li>
           ))}
         </ol>

@@ -232,7 +232,7 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'timeline',
-    description: 'Default sample timeline: a marker per change, radius monotone in score, latest change selected, SVG hidden',
+    description: 'Default sample timeline: a marker per change, one radius step per magnitude (majors ringed), latest change selected, SVG hidden',
     schemes: ['light', 'dark'],
     cvd: true,
     async run({ page, baseUrl }) {
@@ -241,11 +241,21 @@ export const flows: readonly Flow[] = [
       const said = await expectSelected(page, defaultFixture, entries.length - 1);
       const rs = await page.locator('.tl-marker').evaluateAll((cs) => cs.map((c) => Number(c.getAttribute('r'))));
       if (rs.length !== entries.length) throw new Error(`${rs.length} markers for ${entries.length} changes`);
+      // Size alone separates the classes: one radius per magnitude, rising with it, and rising with score.
+      const order = ['minor', 'moderate', 'major'];
+      const byMag = new Map<string, Set<number>>();
+      entries.forEach((e, i) => byMag.set(e.significance.magnitude, (byMag.get(e.significance.magnitude) ?? new Set()).add(rs[i]!)));
+      const steps = order.filter((m) => byMag.has(m)).map((m) => [m, [...byMag.get(m)!]] as const);
+      if (steps.some(([, r]) => r.length !== 1)) throw new Error(`marker radius varies within a magnitude: ${JSON.stringify(steps)}`);
+      if (steps.some(([, [r]], i) => i > 0 && r! <= steps[i - 1]![1][0]!)) throw new Error(`marker radius does not rise with magnitude: ${JSON.stringify(steps)}`);
       const byScore = entries.map((e, i) => [e.significance.score, rs[i]!] as const).sort((a, b) => a[0] - b[0]);
       if (byScore.some(([, r], i) => i > 0 && r < byScore[i - 1]![1])) throw new Error('marker radius is not monotone in score');
+      const majors = entries.filter((e) => e.significance.magnitude === 'major').length;
+      const rings = await page.locator('.tl-marker-ring').count();
+      if (rings !== majors) throw new Error(`${rings} inner rings for ${majors} major changes`);
       if ((await page.locator('.tl-slider svg').getAttribute('aria-hidden')) !== 'true') throw new Error('timeline SVG is not aria-hidden');
       await noPageOverflow(page);
-      return { timeToReadyMs, notes: [`${rs.length} markers, r ${Math.min(...rs).toFixed(1)}-${Math.max(...rs).toFixed(1)} px`, said] };
+      return { timeToReadyMs, notes: [`${rs.length} markers, r by magnitude ${steps.map(([m, [r]]) => `${m} ${r}`).join(' / ')} px, ${rings} ringed`, said] };
     },
   },
   {
@@ -269,6 +279,13 @@ export const flows: readonly Flow[] = [
       if (said.size < 5) throw new Error('aria-valuetext did not change between steps');
       const tip = (await page.locator('.tl-tip').textContent()) ?? '';
       if (!tip.includes(entries[pageUp]!.ruleSummary)) throw new Error(`no focus tooltip for the selected change ("${tip}")`);
+      // Escape dismisses the focus tooltip without moving the selection; the next key brings it back.
+      await page.keyboard.press('Escape');
+      await page.locator('.tl-tip').waitFor({ state: 'detached', timeout: 2_000 });
+      await expectSelected(page, defaultFixture, pageUp);
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowRight');
+      await page.locator('.tl-tip').waitFor({ timeout: 2_000 });
       return { notes: [`${steps.map(([k, i]) => `${k}->${i + 1}`).join(', ')}; ${said.size} distinct valuetexts`] };
     },
   },
@@ -296,7 +313,16 @@ export const flows: readonly Flow[] = [
       const tip = page.locator('.tl-tip');
       await tip.waitFor({ timeout: 2_000 });
       if (!((await tip.textContent()) ?? '').includes(defaultTimeline.entries[2]!.ruleSummary)) throw new Error('hover tooltip shows the wrong change');
-      return { notes: ['click -> 2, drag -> 5, hover tooltip on 3'] };
+      // WCAG 1.4.13: the tip is hoverable (moving onto it keeps it) and Escape dismisses it.
+      const t = (await tip.boundingBox())!;
+      await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 6 });
+      await page.waitForTimeout(400); // longer than the hover grace period
+      if (!(await tip.isVisible())) throw new Error('tooltip vanished when the pointer moved onto it');
+      await page.keyboard.press('Escape');
+      await tip.waitFor({ state: 'detached', timeout: 2_000 });
+      await page.mouse.move(c.x + 1, c.y);
+      await tip.waitFor({ timeout: 2_000 });
+      return { notes: ['click -> 2, drag -> 5, hover tooltip on 3, hoverable, Escape hides it'] };
     },
   },
   {

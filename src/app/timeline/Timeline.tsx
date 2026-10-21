@@ -19,14 +19,21 @@ interface Props {
   timeline: Model;
   selected: number;
   onSelect: (i: number) => void;
+  /** Id of the element naming the slider (the timeline heading). */
+  labelledBy: string;
+  /** Id of the element describing the slider (the legend). */
+  describedBy: string;
 }
+
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
  * The seismograph strip: year axis, a hairline per capture, hollow ticks for trivial captures and
- * one marker per meaningful change (area grows with score; lightness and the word say the magnitude).
+ * one marker per meaningful change (one size step per magnitude, a second ring on majors; lightness
+ * and the word in the tooltip and list say it too).
  * A focusable `role="slider"` wraps the `aria-hidden` SVG; the changes list is its text alternative.
  */
-export function Timeline({ timeline, selected, onSelect }: Props) {
+export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy }: Props) {
   const outer = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
   const [cw, setCw] = useState(0);
@@ -45,7 +52,7 @@ export function Timeline({ timeline, selected, onSelect }: Props) {
     const caps = snapshots.map((s) => tsToMs(s.ts));
     const years = (Math.max(...caps) - Math.min(...caps)) / YEAR;
     const times = entries.map((e) => tsToMs(e.to));
-    const rs = entries.map((e) => markerRadius(e.significance.score));
+    const rs = entries.map((e) => markerRadius(e.significance.magnitude));
     // Widen the strip (it scrolls) until every marker fits in the three stacking levels without overlap.
     let width = Math.max(cw - 2 * INSET, years * MIN_PX_PER_YEAR + 2 * PAD);
     let s = timeScale(caps, PAD, width - PAD);
@@ -71,12 +78,19 @@ export function Timeline({ timeline, selected, onSelect }: Props) {
     return { width, s, times, rs, points, ticks, trace, caps: snapshots.map((c, i) => ({ x: s.x(caps[i]!), trivial: trivial.has(c.ts) })) };
   }, [cw, entries, snapshots, trivialCaptures]);
 
-  const { hover, focusTip, dragging, handlers } = useScrubber(g.points, g.times, selected, onSelect);
   const sel = g.points[selected];
-  useEffect(() => {
+  /** Scroll the strip so the selection is visible; smooth after a drag unless reduced motion is on. */
+  const reveal = (smooth: boolean) => {
     const el = strip.current;
-    if (!el || !sel || dragging.current) return;
-    if (sel.x < el.scrollLeft + PAD || sel.x > el.scrollLeft + el.clientWidth - PAD) el.scrollLeft = sel.x - el.clientWidth / 2;
+    if (!el || !sel) return;
+    if (sel.x >= el.scrollLeft + PAD && sel.x <= el.scrollLeft + el.clientWidth - PAD) return;
+    el.scrollTo({ left: sel.x - el.clientWidth / 2, behavior: smooth && !reducedMotion() ? 'smooth' : 'instant' });
+  };
+  const { hover, focusTip, dragging, handlers, tipHandlers } = useScrubber(g.points, g.times, selected, onSelect, () => reveal(true));
+  useEffect(() => {
+    if (!dragging.current) reveal(false);
+    // `reveal` reads only `sel` and the strip ref.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, dragging]);
   const entry = entries[selected];
   if (!entry || !sel) return null;
@@ -97,7 +111,8 @@ export function Timeline({ timeline, selected, onSelect }: Props) {
           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
           role="slider"
           tabIndex={0}
-          aria-label="Changes over time"
+          aria-labelledby={labelledBy}
+          aria-describedby={describedBy}
           aria-orientation="horizontal"
           aria-valuemin={1}
           aria-valuemax={entries.length}
@@ -124,18 +139,18 @@ export function Timeline({ timeline, selected, onSelect }: Props) {
             {g.points.map((p, i) => (
               <line key={i} className={`tl-stem${i === selected ? ' is-sel' : ''}`} x1={p.x} x2={p.x} y1={BASE} y2={p.y + (g.rs[i] ?? 0)} />
             ))}
-            {entries.map((e, i) => (
-              <circle
-                key={e.to}
-                className="tl-marker"
-                data-index={i}
-                data-magnitude={e.significance.magnitude}
-                cx={g.points[i]!.x}
-                cy={g.points[i]!.y}
-                r={g.rs[i]}
-                style={{ animationDelay: `${Math.round(i * stagger)}ms` }}
-              />
-            ))}
+            {entries.map((e, i) => {
+              const { x, y } = g.points[i]!;
+              const r = g.rs[i]!;
+              const delay = { animationDelay: `${Math.round(i * stagger)}ms` };
+              return (
+                <g key={e.to}>
+                  <circle className="tl-marker" data-index={i} data-magnitude={e.significance.magnitude} cx={x} cy={y} r={r} style={delay} />
+                  {/* Shape cue: majors carry a second, inner ring. */}
+                  {e.significance.magnitude === 'major' && <circle className="tl-marker-ring" cx={x} cy={y} r={r - 4.5} style={delay} />}
+                </g>
+              );
+            })}
             <g className="tl-move" style={{ transform: `translate(${sel.x}px, ${sel.y}px)` }}>
               <circle className="tl-ring" r={(g.rs[selected] ?? 0) + 4.5} />
             </g>
@@ -157,6 +172,7 @@ export function Timeline({ timeline, selected, onSelect }: Props) {
         <div
           className="tl-tip"
           aria-hidden="true"
+          {...tipHandlers(tip!)}
           style={{ left: clamp(tipAt.x + INSET - scrollX, 130, cw - 130), top: tipAt.y + INSET - (g.rs[tip!] ?? 0) - 10 }}
         >
           <span className="mono">
