@@ -167,7 +167,9 @@ export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy
 
   return (
     <div className="tl" ref={outer}>
-      <div className="tl-strip" ref={strip} onScroll={(e) => setScrollX(e.currentTarget.scrollLeft)}>
+      {/* Without a slider (no change yet) the strip itself takes focus, so keyboard users can scroll it (axe). */}
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
+      <div className="tl-strip" ref={strip} onScroll={(e) => setScrollX(e.currentTarget.scrollLeft)} {...(!entry && { tabIndex: 0, role: 'group', 'aria-labelledby': labelledBy })}>
         {/* Until a live run finds its first change, the strip is a picture of the captures only. */}
         {!entry ? (
           <div style={{ width: g.width }}>{svg}</div>
