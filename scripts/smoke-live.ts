@@ -87,6 +87,26 @@ async function mockApi(
   return { log, snaps, frames, framesSince, maxInFlight: (target: string) => maxInFlight.get(host(target)) ?? 0 };
 }
 
+/**
+ * Waits until every replay frame under `sel` has fired `load`, brings them into the viewport (headless Chrome paints
+ * an out-of-process frame only there) and gives them 500 ms to paint, so the flow's screenshot shows the pages.
+ */
+async function framesPainted(page: Page, sel: string): Promise<string> {
+  const n = await page.locator(`${sel} iframe`).count();
+  await page.waitForFunction(
+    (s) => {
+      const fs = [...document.querySelectorAll<HTMLIFrameElement>(`${s} iframe`)];
+      return fs.length > 0 && fs.every((f) => f.hasAttribute('data-loaded'));
+    },
+    sel,
+    { timeout: 10_000 },
+  );
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.locator(sel).scrollIntoViewIfNeeded();
+  await sleep(500);
+  return `${n} frames loaded, then 500 ms to paint before the shot`;
+}
+
 const liveUrl = (url: string) => `/?url=${encodeURIComponent(url)}`;
 async function openLive(page: Page, baseUrl: string, url: string, status?: string): Promise<void> {
   await page.goto(new URL(liveUrl(url), baseUrl).href, { waitUntil: 'domcontentloaded' });
@@ -515,15 +535,25 @@ export const liveFlows: readonly Flow[] = [
     cvd: true,
     async run({ page, baseUrl }) {
       if (gitEntries < 3) throw new Error('the flow needs >= 3 changes');
-      const api = await mockApi(page);
+      // Snapshots answer slowly (600 ms each), so the newest change rests well past 400 ms many times during the run.
+      const api = await mockApi(page, { snapshot: () => ({ delay: 600 }) });
       await openReady(page, baseUrl);
       await sleep(500);
       if (api.frames.length) throw new Error(`${api.frames.length} Archive requests on the first view`);
       const input = page.getByRole('textbox', { name: 'See how any page changed' });
       await input.fill('git-scm.com');
       await input.press('Enter');
-      await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
+      // During the run, with no user input: the silhouette and its tag's note, never a frame.
+      const hold = await expectText(page, '.vp-hold', /^the page itself loads when you pick a change or the run finishes$/);
+      if (!(await page.locator('.lf .sil').isVisible())) throw new Error('no silhouette while the run holds the frame');
+      await page.locator('[data-live="done"]').waitFor({ timeout: 30_000 });
+      const done = Date.now();
+      const during = api.frames.filter((f) => f.start < done).length;
+      if (during) throw new Error(`${during} replay requests while the run was fetching, expected 0`);
       await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });
+      if (await page.locator('.vp-hold').count()) throw new Error('the hold note stayed after the run');
+      const after = api.frames.length;
+      if (after > 1) throw new Error(`${after} replay requests after the run, expected <= 1: ${api.frames.map((f) => f.ts).join(', ')}`);
       // Home: the first change, never the neighbour preloaded beside the latest one.
       const t0 = Date.now();
       await page.locator('.tl-slider').focus();
@@ -554,7 +584,7 @@ export const liveFlows: readonly Flow[] = [
       // Headless Chrome paints an out-of-process frame only while it is in the viewport: scroll it back for the shot.
       await page.evaluate(() => scrollTo(0, 0));
       await sleep(300);
-      return { notes: [box, tabbing, `first view: 0 Archive requests`, `Home -> 1 frame request after ${dwell} ms: ${got[0]!.url}`, `attributes ${JSON.stringify(f)}`, `${frames} iframes in the DOM`] };
+      return { notes: [hold, `run with no input: ${during} replay requests while fetching, ${after} after it ended (the selected capture)`, box, tabbing, `first view: 0 Archive requests`, `Home -> 1 frame request after ${dwell} ms: ${got[0]!.url}`, `attributes ${JSON.stringify(f)}`, `${frames} iframes in the DOM`] };
     },
   },
   {
@@ -711,7 +741,8 @@ export const liveFlows: readonly Flow[] = [
       const v = await split.getAttribute('aria-valuenow');
       if (v !== '45') throw new Error(`divider at ${v} after ArrowLeft`);
       if (!page.url().includes('view=slider')) throw new Error(`address bar ${page.url()}`);
-      return { notes: [tabbing, `divider 45 after ArrowLeft`, `deep link ${page.url()}`] };
+      const painted = await framesPainted(page, '.vp-cmp');
+      return { notes: [tabbing, `divider 45 after ArrowLeft`, `deep link ${page.url()}`, painted] };
     },
   },
   {
