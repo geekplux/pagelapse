@@ -1,5 +1,5 @@
-import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../core/timestamp.ts';
 import type { TimelineEntry } from '../core/types.ts';
+import { Ts } from './Ts.tsx';
 
 interface Props {
   entries: readonly TimelineEntry[];
@@ -16,10 +16,7 @@ export function ChangesList({ entries, selected, onSelect }: Props) {
       {entries.map((e, i) => (
         <li key={e.to}>
           <button type="button" className="change" aria-current={i === selected ? 'true' : undefined} onClick={() => onSelect(i)}>
-            <time className="mono" dateTime={timestampToIso(e.to)}>
-              <span aria-hidden="true">{formatTimestampShort(e.to)}</span>
-              <span className="sr-only">{formatTimestampLong(e.to)}</span>
-            </time>
+            <Ts ts={e.to} />
             <span className="change-mag mono" data-magnitude={e.significance.magnitude}>
               {e.significance.magnitude}
             </span>
