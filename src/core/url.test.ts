@@ -16,6 +16,8 @@ describe('validateTargetUrl', () => {
     ['https://example.org/p?q=a%20b&utm_source=x', 'https://example.org/p?q=a%20b'],
     ['https://example.org/p?x=a,b&utm_source=z', 'https://example.org/p?x=a,b'],
     ['https://bücher.example/', 'https://xn--bcher-kva.example/'],
+    ['example.org.', 'https://example.org/'],
+    ['https://Example.ORG./about', 'https://example.org/about'],
   ])('normalises %j', (input, url) => {
     expect(validateTargetUrl(input)).toEqual({ ok: true, url });
   });
@@ -35,6 +37,11 @@ describe('validateTargetUrl', () => {
     ['localhost:3000', 'host'],
     ['http://intranet/', 'host'],
     ['https://printer.local/', 'host'],
+    ['http://localhost./', 'host'],
+    ['https://printer.local./', 'host'],
+    ['https://foo.internal./', 'host'],
+    ['http://localhost../', 'host'],
+    ['http://127.0.0.1./', 'ip'],
     ['https://exa mple.org', 'invalid'],
     ['http://', 'invalid'],
     [`https://example.org/${'a'.repeat(2048)}`, 'too-long'],

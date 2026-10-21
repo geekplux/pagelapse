@@ -124,7 +124,8 @@ describe('worker API', () => {
 
   it.each([
     '/api/captures', '/api/captures?url=ftp://example.org/', '/api/captures?url=http://127.0.0.1/', '/api/captures?url=http://[::1]/',
-    '/api/captures?url=localhost:3000', '/api/captures?url=printer.local', '/api/captures?url=https://user:pw@example.org/',
+    '/api/captures?url=localhost:3000', '/api/captures?url=printer.local', '/api/captures?url=http://localhost./',
+    '/api/captures?url=https://user:pw@example.org/',
     '/api/snapshot?url=example.org', '/api/snapshot?url=example.org&ts=2020', '/api/snapshot?url=example.org&ts=20201301000000',
   ])('rejects %s with 400 invalid_url', async (path) => {
     const t = setup();

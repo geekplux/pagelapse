@@ -41,8 +41,9 @@ export function stripTrackingParams(url: URL): URL {
 
 /**
  * Normalises user input into a canonical URL string, or returns null if it cannot be
- * parsed: adds `https://` when no scheme is given, lowercases the host, drops default
- * ports, the fragment and tracking parameters. Does not check whether the URL is allowed.
+ * parsed: adds `https://` when no scheme is given, lowercases the host, drops one trailing dot
+ * from it (`example.org.` is `example.org`), default ports, the fragment and tracking
+ * parameters. Does not check whether the URL is allowed.
  */
 export function normalizeTargetUrl(input: string): string | null {
   const raw = input.trim();
@@ -51,6 +52,7 @@ export function normalizeTargetUrl(input: string): string | null {
   if (!URL.canParse(withScheme)) return null;
   const url = new URL(withScheme);
   url.hash = '';
+  if (url.hostname.length > 1 && url.hostname.endsWith('.')) url.hostname = url.hostname.slice(0, -1);
   return stripTrackingParams(url).href;
 }
 
@@ -65,7 +67,8 @@ export function validateTargetUrl(input: string): UrlCheck {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return fail('scheme');
   if (url.username || url.password) return fail('credentials');
   if (url.hostname.startsWith('[') || /^\d+(?:\.\d+){3}$/.test(url.hostname)) return fail('ip');
-  if (!url.hostname.includes('.') || LOCAL_HOST.test(url.hostname)) return fail('host');
+  const host = url.hostname;
+  if (!host.includes('.') || host.split('.').includes('') || LOCAL_HOST.test(host)) return fail('host');
   if (href.length > MAX_URL_LENGTH) return fail('too-long');
   return { ok: true, url: href };
 }
