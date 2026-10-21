@@ -187,7 +187,7 @@ export function DiffView({ entry, from, to }: Pick<Props, 'entry' | 'from' | 'to
         </details>
       )}
       <details className="fold">
-        <summary>Key</summary>
+        <summary>Diff key</summary>
         <p className="diff-legend">
           <span><b aria-hidden="true" data-op="added">+</b> added, <span className="w-ins">underlined</span></span>
           <span><b aria-hidden="true" data-op="removed">−</b> removed, <span className="w-del">struck through</span></span>

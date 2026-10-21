@@ -212,6 +212,11 @@ export async function openDisclosure(page: Page, name: string): Promise<void> {
   }, name);
 }
 
+/** Opens the timeline's key ("Key · N trivial hidden", or "Timeline key" with no trivial edits). */
+export async function openTimelineKey(page: Page): Promise<void> {
+  await page.locator('.tl-key').evaluate((d) => ((d as HTMLDetailsElement).open = true));
+}
+
 /** Opens the "All changes (N)" disclosure (folded at every width). */
 const openChanges = (page: Page) => openDisclosure(page, 'All changes');
 
@@ -580,7 +585,7 @@ export const flows: readonly Flow[] = [
       await expectSelected(page, f, t.entries.length - 2);
       // "Show trivial edits" turns the hollow ticks into selectable, labelled entries.
       const trivial = trivialEntries(t);
-      await openDisclosure(page, 'Key');
+      await openTimelineKey(page);
       await page.getByLabel('Show trivial edits').check();
       const marks = await page.locator('.tl-marker[data-magnitude="trivial"]').count();
       const items = await page.locator('.changes li').count();
@@ -788,6 +793,7 @@ export const flows: readonly Flow[] = [
         await expectShown(page, defaultFixture, entries[i]!.to);
       }
       await page.locator('.vp-side', { hasText: 'Before' }).click();
+      if ((await page.locator('.vp-side[role="radio"][aria-checked="true"]').textContent())?.includes('Before') !== true) throw new Error('Before is not the checked radio');
       await expectShown(page, defaultFixture, entries[1]!.from);
       if (new URL(page.url()).searchParams.get('at') !== entries[1]!.from) throw new Error(`no ?at= for Before: ${page.url()}`);
       await slider(page).focus();

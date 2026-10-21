@@ -140,24 +140,29 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
       )}
     </figcaption>
   );
+  // Roving radio group: Left / Up and Right / Down wrap, Home / End go to the ends; selection follows focus.
   const sideKey = (e: KeyboardEvent<HTMLButtonElement>) => {
-    const other = e.key === 'ArrowLeft' ? e.currentTarget.previousElementSibling : e.key === 'ArrowRight' ? e.currentTarget.nextElementSibling : null;
-    if (!(other instanceof HTMLButtonElement)) return;
+    const radios = [...(e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])];
+    const i = radios.indexOf(e.currentTarget);
+    const n = radios.length;
+    const to = { ArrowLeft: i - 1, ArrowUp: i - 1, ArrowRight: i + 1, ArrowDown: i + 1, Home: 0, End: n - 1 }[e.key];
+    if (to === undefined || i < 0) return;
     e.preventDefault();
-    e.currentTarget.tabIndex = -1;
-    other.tabIndex = 0;
-    other.focus();
+    const j = (to + n) % n;
+    onSide(SIDES[j]![0]);
+    radios[j]!.focus();
   };
   const tools = (
     <>
       <ModePicker mode={mode} onMode={onMode} />
       {shown === 'single' && (
-        // A named group of two toggle buttons, not a <fieldset>: no form is submitted.
+        // A radio group of two buttons, not native radios: each holds a symbol, a word and a date.
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-        <div className="vp-sides" role="group" aria-label="Show the change's capture">
+        <div className="vp-sides" role="radiogroup" aria-label="Show the change's capture">
           {SIDES.map(([s, sym, word, op]) => (
-            // One tab stop for the pair (Left / Right moves between them), like the filmstrip.
-            <button key={s} type="button" className="vp-side" aria-pressed={side === s} tabIndex={(side ?? 'after') === s ? 0 : -1} onClick={() => onSide(s)} onKeyDown={sideKey}>
+            // One tab stop for the pair (arrow keys move and select), like the filmstrip.
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+            <button key={s} type="button" role="radio" className="vp-side" aria-checked={side === s} tabIndex={(side ?? 'after') === s ? 0 : -1} onClick={() => onSide(s)} onKeyDown={sideKey}>
               <b aria-hidden="true" data-op={op}>
                 {sym}
               </b>{' '}

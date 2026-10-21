@@ -6,6 +6,8 @@ const KEYS: [string, string][] = [
   ['Filmstrip', 'Left / Right, Home / End move along the strip; Enter or Space shows that capture.'],
   ['Slider divider', 'Left / Right: 5%. Page Up / Page Down: 25%. Home / End: either edge. Enter: back to 50%.'],
   ['Onion skin', 'Left / Right on the opacity range: 5% steps.'],
+  ['Before / After (Single)', 'Left / Right switches between the Before and After capture.'],
+  ['Compare', 'Up / Down or Left / Right moves between the modes once the list is open.'],
   ['Play', 'Any key stops the time-lapse.'],
 ];
 

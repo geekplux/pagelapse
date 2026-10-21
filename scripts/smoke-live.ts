@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { API_ERRORS, GIT_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
-import { type Flow, openDisclosure, openReady } from './smoke-flows.ts';
+import { type Flow, openDisclosure, openReady, openTimelineKey } from './smoke-flows.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 
 const git = mockFromSample('git-scm');
@@ -461,7 +461,7 @@ export const liveFlows: readonly Flow[] = [
       if (dashed !== 2) throw new Error(`${dashed} dashed marks, expected 2`);
       const text = await statusLine(page);
       if (!text.endsWith('2 captures could not be fetched (dashed).')) throw new Error(`status "${text}"`);
-      await openDisclosure(page, 'Key');
+      await openTimelineKey(page);
       return { notes: [text, await expectText(page, '#timeline-legend', /2 could not be fetched/)] };
     },
   },
@@ -475,7 +475,7 @@ export const liveFlows: readonly Flow[] = [
       await openLive(page, baseUrl, 'git-scm.com', 'done');
       const text = await expectText(page, '.state-card', /14 captures, 2013–2025: nothing meaningful changed\. 13 trivial edits hidden \(dates, counters, whitespace\)\./);
       if (await page.locator('.tl-slider').count()) throw new Error('a slider with no changes');
-      await openDisclosure(page, 'Key');
+      await openTimelineKey(page);
       if (!(await page.getByRole('checkbox', { name: 'Show trivial edits' }).count())) throw new Error('no "Show trivial edits" toggle');
       return { notes: [text] };
     },

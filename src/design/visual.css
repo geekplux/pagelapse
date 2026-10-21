@@ -28,6 +28,8 @@
    its size, so nothing moves), and focus scrolls stop above it. */
 @media (max-width: 39.99rem) {
   html { scroll-padding-bottom: calc(var(--space-6) + var(--space-2)); }
+  /* A changes-list row brought into view stops clear of the sticky bar too (AAA 2.4.12). */
+  .change { scroll-margin-bottom: calc(var(--space-6) + var(--space-2)); }
   .nav-slot { min-height: 2.5rem; }
   .diff-nav[data-stuck] { position: fixed; z-index: 1; inset: auto 0 0; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--paper); border-top: 1px solid var(--rule-strong); }
 }
@@ -49,7 +51,7 @@
 .vp-side [data-op="added"], .vp-label [data-op="added"] { color: var(--added); }
 .vp-side [data-op="removed"], .vp-label [data-op="removed"] { color: var(--removed); }
 /* Pressed or checked: ink, bold and underlined; never a fill, never hue alone. */
-:is(.vp-mode:has(:checked), .vp-side[aria-pressed="true"]) { color: var(--ink); font-weight: 700; text-decoration-color: var(--ink); }
+:is(.vp-mode:has(:checked), .vp-side[aria-checked="true"]) { color: var(--ink); font-weight: 700; text-decoration-color: var(--ink); }
 
 /* The mounted print: a card mat, a strong hairline, the picture at 16:10 with its size reserved. */
 .vp-mat { position: relative; margin: 0; padding: var(--space-2); background: var(--card); border: 1px solid var(--rule-strong); border-radius: 2px; box-shadow: 0 18px 40px -28px var(--shadow); }
@@ -115,7 +117,7 @@
 @media (forced-colors: active) {
   .frame[aria-current="true"] :is(img, .frame-none, .sil) { outline-color: Highlight; }
   .frame[aria-current="true"]::before { color: CanvasText; }
-  :is(.vp-side[aria-pressed="true"], .vp-mode:has(:checked)) { text-decoration-color: CanvasText; }
+  :is(.vp-side[aria-checked="true"], .vp-mode:has(:checked)) { text-decoration-color: CanvasText; }
   .vp-split::before { forced-color-adjust: none; background: CanvasText; box-shadow: 0 0 0 2px Canvas; }
   .vp-split:focus-visible .vp-knob { background: Highlight; color: HighlightText; }
   .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border-color: CanvasText; }

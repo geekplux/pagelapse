@@ -190,7 +190,7 @@ const INVENTORY: Item[] = [
   { name: 'Compare picker', sel: '.vp-compare' },
   { name: 'compare modes (radio group)', sel: 'input[name="vp-mode"]', via: '.vp-compare' },
   { name: 'Play', sel: '.vp-play' },
-  { name: 'Before / After toggle (roving pair)', sel: '.vp-side', path: '/?view=single' },
+  { name: 'Before / After (roving radio group)', sel: '.vp-sides[role="radiogroup"] .vp-side[role="radio"]', path: '/?view=single' },
   { name: 'slider handle', sel: '.vp-split' },
   { name: 'onion range', sel: '.vp-onion input[type="range"]', path: '/?view=onion' },
   { name: 'Swap', sel: '.vp-onion button', path: '/?view=onion' },
@@ -206,7 +206,7 @@ const INVENTORY: Item[] = [
   { name: 'timeline key items', sel: '#timeline-legend', via: '.tl-key > summary' },
   { name: 'changes list items', sel: '.change', via: '.changes-pane > summary' },
   { name: 'Structure', sel: '.diff-panel details:first-of-type > summary' },
-  { name: 'diff Key', sel: '.diff-panel details:last-of-type > summary' },
+  { name: 'Diff key', sel: '.diff-panel details:last-of-type > summary' },
   { name: 'Show unchanged blocks', sel: '.db-gap', path: wiki },
   { name: 'Skip to diff', sel: '.skip-link[href="#diff"]' },
   { name: 'About these captures', sel: '.site-footer details:first-of-type > summary' },
@@ -253,9 +253,32 @@ async function inventory({ page, baseUrl }: FlowContext) {
   // The four modes are named radios in the opened group.
   await openReady(page, baseUrl);
   await openDisclosure(page, 'Compare');
-  const modes = await page.getByRole('radio').evaluateAll((rs) => rs.map((r) => r.closest('label')?.textContent?.trim()));
+  const modes = await page.locator('#vp-modes').getByRole('radio').evaluateAll((rs) => rs.map((r) => r.closest('label')?.textContent?.trim()));
   if (modes.join() !== 'Single,Side by side,Slider,Onion skin') throw new Error(`compare modes: ${modes.join()}`);
   notes.push(`compare modes: ${modes.join(', ')}`);
+  // Escape inside the open picker closes it and returns focus to its button.
+  await page.locator('#vp-modes input:checked').focus();
+  await page.keyboard.press('Escape');
+  const shut = await page.evaluate(() => ({ hidden: document.getElementById('vp-modes')!.hidden, focus: document.activeElement?.matches('.vp-compare[aria-expanded="false"]') }));
+  if (!shut.hidden || !shut.focus) throw new Error(`Escape in the compare picker: ${JSON.stringify(shut)}`);
+  notes.push('Escape closes the compare picker, focus on its button');
+  // Before / After: a radio group; arrow keys (wrapping), Home and End move focus and select.
+  await openReady(page, baseUrl, '/?view=single');
+  const group = page.getByRole('radiogroup', { name: "Show the change's capture" });
+  await group.locator('[aria-checked="true"]').focus();
+  const steps: string[] = [];
+  for (const key of ['ArrowLeft', 'ArrowLeft', 'ArrowDown', 'Home', 'End', 'ArrowUp']) {
+    await page.keyboard.press(key);
+    const at = await page.evaluate(() => {
+      const a = document.activeElement as HTMLElement | null;
+      const checked = [...document.querySelectorAll('.vp-side[aria-checked="true"]')];
+      return { word: a?.textContent?.includes('Before') ? 'Before' : 'After', ok: checked.length === 1 && checked[0] === a && a?.tabIndex === 0 };
+    });
+    if (!at.ok) throw new Error(`Before / After ${key}: focus and selection apart`);
+    steps.push(`${key}→${at.word}`);
+  }
+  if (steps.join() !== 'ArrowLeft→Before,ArrowLeft→After,ArrowDown→Before,Home→Before,End→After,ArrowUp→Before') throw new Error(`Before / After keys: ${steps.join()}`);
+  notes.push(`Before / After radios: ${steps.join(' ')}`);
   return { notes };
 }
 

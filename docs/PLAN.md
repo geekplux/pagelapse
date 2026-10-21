@@ -255,7 +255,7 @@ How it stays CVD-safe and never colour-alone:
     - **Right: the selected change.** The change line (magnitude glyph and word, both dates, the summary in Charter 20 px with its quiet source label) top-aligned with the picture, and one controls row whose bottom edge meets the picture's: Play, `‹ Previous · 9 / 9 · Next ›`, "Compare: Slider ▾" (and the roving `− Before | + After` pair in Single), then "Change details ▸".
     - Side by side needs the width: there the two prints span both columns and the selected change follows below them.
   - **Scrub strip (24 px below the hero; it is part of the focal point):** for a live run, the status line with its counter, a determinate bar and Cancel, as the strip's caption; then the filmstrip (thumbnails, the selected one with a 3 px ink outline on a 2 px paper gap and a caret); then the seismograph timeline; then "Key · 4 trivial hidden ▸" (the legend and "Show trivial edits").
-  - **Below (40 px):** "All changes (9) ▸" and "All 14 captures ▸", then the diff panel ("What the text says, <dates>", "Structure · … ▸", "Key ▸", the 72ch diff), then the footer.
+  - **Below (40 px):** "All changes (9) ▸" and "All 14 captures ▸", then the diff panel ("What the text says, <dates>", "Structure · … ▸", "Diff key ▸", the 72ch diff), then the footer.
   - **Footer:** the tagline (the about line), the one-line Internet Archive credit, "About these captures ▸" (the sample's description and page link, text and picture provenance, licence, redaction and archive notes; for live runs, what a replay is), "Keyboard shortcuts ▸", and the GitHub link. It always starts below the first viewport (`main` is at least one viewport tall).
 - **Phones (< 640 px):** one column in the same order: header (wordmark; form; short sample labels "git-scm · Wikipedia · Rust", each inside its full accessible name), title and meta, the picture at full width (top ≤ 280 px at 390×844), caption, change line, the controls row (Play and Previous / Next on one line), the scrub strip, the folded lists, the diff. Previous / Next sticks to the bottom of the screen only once its row has scrolled away above (its slot keeps its size, so nothing moves), and `scroll-padding-bottom` keeps focus clear of it. Side by side stacks Before above After.
 - **640-959 px:** single column like phones, without the sticky bar.
@@ -270,7 +270,7 @@ How it stays CVD-safe and never colour-alone:
 - **Live frames** use the same modes. A 1280×800 frame is scaled into the mat with a CSS transform, so the archived page renders at desktop layout. In compare modes, frames are `inert` with `pointer-events: none`, and a note says "Comparing the top of each page". Single mode lets the user scroll the archived page.
 - **Filmstrip:**
   - The selected frame has a 3 px `--ink` outline, a caret above it and `aria-current`.
-  - Trivial captures are dimmed to 60% opacity *and* carry a hollow tick glyph and the word "trivial" in their caption.
+  - Trivial captures are muted with `filter: grayscale(1) contrast(0.75)` *and* carry a hollow tick glyph and the word "trivial" in their caption.
   - Missing pictures are a dashed `--rule-strong` frame with "no picture".
   - The timeline tooltip shows the hovered capture's thumbnail (samples) or silhouette (live).
 - **Silhouette** (live thumbnails and live loading placeholder): a deterministic sketch of the extracted page on `--card`. Title text in mono at the top, headings as thick `--ink-2` bars, paragraphs as hairline bars proportional to their length, list items as dotted bars. It reads as "a page", is honest about being derived from text, and is labelled "text outline" in its caption.
@@ -330,10 +330,10 @@ The planner drafted these rules; phase 17 confirmed them against its 1440/390 au
 
 | View | The one focal point | Visible but secondary (smaller, `--ink-2`, quieter) | One step away (disclosure) |
 |---|---|---|---|
-| **Sample hero, desktop** (first load, ≥ 960 px) | The picture in Slider mode on the featured change. It is the largest element on screen, at least 58% of the viewport width at 1440, with its top no more than 220 px from the top of the page | The site title and one mono meta line (`14 captures · 2013–2025`). The change line: dates, magnitude word, summary and its source label. One controls row: Play, `‹ Prev · 9 / 9 · Next ›`, Compare, Change details. A one-line caption under the picture. The scrub strip (filmstrip on top of the timeline) starts in the first viewport | See the disclosure list below |
+| **Sample hero, desktop** (first load, ≥ 960 px) | The picture in Slider mode on the featured change. It is the largest element on screen, at least 58% of the viewport width at 1440, with its top no more than 220 px from the top of the page | The site title and one mono meta line (`14 captures · 2013–2025`). The change line: dates, magnitude word, summary and its source label. One controls group: Play, `‹ Prev · 9 / 9 · Next ›`, Compare, Change details; Compare and Change details wrap below Prev/Next. A one-line caption under the picture. The scrub strip (filmstrip on top of the timeline) starts in the first viewport | See the disclosure list below |
 | **Sample hero, mobile** (< 640 px) | The same picture at full width (16 px gutters), with its top no more than 280 px from the top | A one-line caption (`#14 · 2025·12·18 · Open capture ↗`), the change line and the controls row. The sample switch is a single row of short text toggles ("git-scm · Wikipedia · Rust"; each accessible name contains its visible label) | The same list |
 | **Other compare modes** (Single, Side by side, Onion skin) | The picture or pictures | As for the hero; the Before/After toggle only in Single, and the opacity range and Swap only in Onion | As for the hero |
-| **Text diff** (scrolled to "What the text says") | The diff body (72ch) | The section heading with both dates, and Prev/Next | The Structure list (its summary gives counts, e.g. "Headings: 4 added, 3 removed, 1 renamed"), the Key, and unchanged runs (already collapsed) |
+| **Text diff** (scrolled to "What the text says") | The diff body (72ch) | The section heading with both dates, and Prev/Next | The Structure list (its summary gives counts, e.g. "Headings: 4 added, 3 removed, 1 renamed"), the "Diff key", and unchanged runs (already collapsed) |
 | **Live, running** | The scrub strip filling in, with the progress line (counter and determinate bar) as its caption | The pane shows the selected capture's silhouette at reduced emphasis. No frame loads until the user picks a change (existing rule). Cancel is a quiet button | As for the hero |
 | **Live, done** | The replay pane (Single mode) | As for the hero (no Play in live mode) | As for the hero |
 | **Empty and error states** | The message: heading, one sentence and **one** primary action | The secondary action as a text link ("Open a sample"). For "no meaningful changes", the filmstrip stays visible so the looks can still be flipped through | Nothing else is drawn: no empty stage, timeline frame or filmstrip frame |
@@ -361,16 +361,17 @@ All of these use native `<details>`/`<summary>` and are **closed by default at e
   - the two "View capture ↗" links (in compare modes, the Before and After capture links live here, so AC 12 holds one step away);
   - Copy link.
 - **Filmstrip:**
-  - The visible explanation ("14 captures, oldest first… Arrow keys…") becomes the strip's `aria-describedby` text.
-  - A footer disclosure, **"Keyboard shortcuts"**, lists every key for the timeline, filmstrip, slider, onion skin and Play.
+  - The visible explanation ("14 captures, oldest first… Arrow keys…") becomes a hidden `#film-hint` paragraph, shipped as the **focused frame's** `aria-describedby="film-hint"` (the strip's one tab stop), so it is read when the strip gets focus.
+  - A footer disclosure, **"Keyboard shortcuts"**, lists every key for the timeline, filmstrip, slider, onion skin, Play, the Before / After toggle (Single) and the Compare picker.
 - **Timeline:**
-  - The legend (minor / moderate / major marks, trivial ticks) and "Show trivial edits" go behind **"Key · 4 trivial hidden"**.
+  - The legend (minor / moderate / major marks, trivial ticks) and "Show trivial edits" go behind **"Key · 4 trivial hidden"** (**"Timeline key"** when there are no trivial edits).
   - The trivial count stays visible in the summary text.
 - **Changes list:**
   - It sits behind **"All changes (9)"**, closed on every width (it was open on desktop).
   - When open, it is a **single column** in chronological order, at most 72ch (this fixes the zig-zag).
   - It carries one list-level summary-source note (AC 9 carry-over).
-- **Text diff:** the Structure list and the Key, as in the table above.
+  - "All N captures": every capture date as a link to the archive, closed by default.
+- **Text diff:** the Structure list and the "Diff key", as in the table above.
 - **Footer:**
   - Sample provenance (text and pictures), licence and redaction notes go in **"About these captures"**.
   - The one-line Internet Archive credit and the GitHub link stay visible.
@@ -1202,7 +1203,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
      - `spacing.test.ts` passes. The tokens are exactly 4/8/16/24/40/64, and the allowlist has ≤ 6 commented entries.
      - `accent.test.ts` passes.
      - No raw colour literals exist outside `tokens.css` (grep).
-  5. **No feature removed** (`calm-inventory`). Each item in a fixed inventory is reachable with Tab, Enter and Space only, opening at most one disclosure, and its accessible name is in the tree. The inventory:
+  5. **No feature removed** (`calm-inventory`). Each item in a fixed inventory is reachable with Tab, Enter and Space (roving groups: arrow keys) only, opening at most one disclosure, and its accessible name is in the tree. The inventory:
      - URL input, Show changes, the 3 sample toggles;
      - Compare picker with all 4 modes, Play, Before/After toggle, slider handle, onion range, Swap, Prev, Next;
      - Copy link, both View capture links, Open capture;
