@@ -39,8 +39,37 @@ export function initialView(entries: readonly Pair[], captures: readonly string[
   return { index, at: at ?? entries[index]?.to ?? captures.at(-1) ?? '' };
 }
 
-/** The `change` / `at` query for a view; `at` is left out when it is the change's After capture (the default). */
-export const viewQuery = (e: Pair, at: string) => ({ change: pairOf(e), at: at === e.to ? undefined : at });
+/** How the pane compares a change's two captures. Slider is the first view (D23). */
+export type Mode = 'single' | 'side' | 'slider' | 'onion';
+export const MODES: readonly [Mode, string][] = [['single', 'Single'], ['side', 'Side by side'], ['slider', 'Slider'], ['onion', 'Onion skin']];
+export const DEFAULT_MODE: Mode = 'slider';
+export const parseMode = (v?: string): Mode | undefined => MODES.find(([m]) => m === v)?.[0];
+
+/**
+ * The `change` / `at` / `view` query for a view. `at` is left out when it is the change's After capture, `view` when
+ * it is the default mode.
+ */
+export const viewQuery = (e: Pair, at: string, mode: Mode = DEFAULT_MODE) => ({
+  change: pairOf(e),
+  at: at === e.to ? undefined : at,
+  view: mode === DEFAULT_MODE ? undefined : mode,
+});
+
+const clamp = (v: number) => Math.min(100, Math.max(0, Math.round(v)));
+const SPLIT_KEYS: Record<string, (v: number) => number> = {
+  ArrowLeft: (v) => v - 5, ArrowDown: (v) => v - 5, ArrowRight: (v) => v + 5, ArrowUp: (v) => v + 5,
+  PageDown: (v) => v - 25, PageUp: (v) => v + 25, Home: () => 0, End: () => 100, Enter: () => 50,
+};
+
+/** The divider position (0-100, % of Before shown) after `key`, or `null` when the key does not move it. Enter resets to 50. */
+export const splitFromKey = (key: string, v: number): number | null => (SPLIT_KEYS[key] ? clamp(SPLIT_KEYS[key](v)) : null);
+
+/** The divider position under a pointer at `x` over a box starting at `left`, `width` wide. */
+export const splitFromPointer = (x: number, left: number, width: number) => (width > 0 ? clamp(((x - left) / width) * 100) : 50);
+
+/** The slider's `aria-valuetext`: `40% before (2013), 60% after (2025)`. */
+export const splitText = (v: number, e: Pair) => `${v}% before (${e.from.slice(0, 4)}), ${100 - v}% after (${e.to.slice(0, 4)})`;
+
 
 /** Same-origin URL of a recorded picture (`public/samples/<id>/`), full size or thumbnail. */
 export const shotSrc = (sampleId: string, file: string, thumb = false) => `/samples/${sampleId}/${file}${thumb ? '.thumb' : ''}.webp`;

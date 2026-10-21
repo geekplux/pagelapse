@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureForChange, changeForCapture, frameNo, initialView, shotAlt, shotSrc, showingText, sideOf, viewQuery } from './visualState.ts';
+import { captureForChange, changeForCapture, frameNo, initialView, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
 
 const caps = ['2013', '2014', '2015', '2016', '2017'].map((y) => `${y}0101000000`);
 // 2015 is a trivial capture: the 2014 -> 2016 change skips it.
@@ -38,8 +38,31 @@ describe('visualState', () => {
   });
 
   it('keeps the default `at` out of the query', () => {
-    expect(viewQuery(entries[1]!, caps[3]!)).toEqual({ change: `${caps[1]}-${caps[3]}`, at: undefined });
-    expect(viewQuery(entries[1]!, caps[1]!)).toEqual({ change: `${caps[1]}-${caps[3]}`, at: caps[1] });
+    expect(viewQuery(entries[1]!, caps[3]!)).toEqual({ change: `${caps[1]}-${caps[3]}`, at: undefined, view: undefined });
+    expect(viewQuery(entries[1]!, caps[1]!, 'onion')).toEqual({ change: `${caps[1]}-${caps[3]}`, at: caps[1], view: 'onion' });
+    expect(viewQuery(entries[1]!, caps[3]!, 'slider').view).toBeUndefined();
+  });
+
+  it('parses compare modes', () => {
+    expect(['single', 'side', 'slider', 'onion', 'zoom', undefined].map((v) => parseMode(v))).toEqual(['single', 'side', 'slider', 'onion', undefined, undefined]);
+  });
+
+  it('moves the divider by key: ±5, ±25 by page, Home/End, Enter resets; clamped to 0-100', () => {
+    const keys = ['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', 'Enter', 'Tab'];
+    expect(keys.map((k) => splitFromKey(k, 40))).toEqual([35, 35, 45, 45, 15, 65, 0, 100, 50, null]);
+    expect(splitFromKey('ArrowLeft', 2)).toBe(0);
+    expect(splitFromKey('PageUp', 90)).toBe(100);
+  });
+
+  it('moves the divider to the pointer, clamped to the box', () => {
+    expect(splitFromPointer(150, 100, 200)).toBe(25);
+    expect(splitFromPointer(50, 100, 200)).toBe(0);
+    expect(splitFromPointer(400, 100, 200)).toBe(100);
+    expect(splitFromPointer(10, 0, 0)).toBe(50);
+  });
+
+  it('says how much of each side the slider shows', () => {
+    expect(splitText(40, { from: '20131106090756', to: '20251218000000' })).toBe('40% before (2013), 60% after (2025)');
   });
 
   it('builds same-origin picture URLs and frame numbers', () => {

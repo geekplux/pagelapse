@@ -32,6 +32,14 @@ describe.each(THEMES)('%s theme', (theme) => {
     expect(deltaE(p['mark-plus'], p['mark-minus'], kind)).toBeGreaterThanOrEqual(8);
   });
 
+  // AC 25: picture overlays (divider, handle, Before/After chips) are ink on a card backing or halo, so against any
+  // picture, white or black, one of the two clears 3:1, and the chip text clears 4.5:1 on its own backing.
+  it.each(['#FFFFFF', '#000000'])('overlays stay visible on a %s picture', (image) => {
+    expect(Math.max(contrast(p.ink, image), contrast(p.card, image))).toBeGreaterThanOrEqual(3);
+    expect(Math.max(contrast(p['rule-strong'], image), contrast(p.card, image))).toBeGreaterThanOrEqual(3);
+    expect(contrast(p.ink, p.card)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('magnitude ramp is monotone in lightness, moving away from the card', () => {
     const ls = (['mag-1', 'mag-2', 'mag-3', 'mag-4'] as const).map((t) => lightness(p[t]));
     const dir = theme === 'light' ? -1 : 1;
