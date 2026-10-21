@@ -23,6 +23,8 @@ interface Props {
   labelledBy: string;
   /** Id of the element describing the slider (the legend). */
   describedBy: string;
+  /** Thumbnail of a capture, shown in the tooltip (samples). */
+  thumbOf?: (ts: string) => string | undefined;
 }
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -33,7 +35,7 @@ const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(pre
  * and the word in the tooltip and list say it too).
  * A focusable `role="slider"` wraps the `aria-hidden` SVG; the changes list is its text alternative.
  */
-export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy }: Props) {
+export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy, thumbOf }: Props) {
   const outer = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
   const [cw, setCw] = useState(0);
@@ -175,6 +177,7 @@ export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy
           {...tipHandlers(tip!)}
           style={{ left: clamp(tipAt.x + INSET - scrollX, 130, cw - 130), top: tipAt.y + INSET - (g.rs[tip!] ?? 0) - 10 }}
         >
+          {thumbOf?.(tipEntry.to) && <img src={thumbOf(tipEntry.to)} width={320} height={200} alt="" />}
           <span className="mono">
             {formatTimestampShort(tipEntry.from)} → {formatTimestampShort(tipEntry.to)} · <b>{tipEntry.significance.magnitude}</b>
           </span>

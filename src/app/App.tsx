@@ -10,25 +10,26 @@ interface Current {
   id: string;
   fixture: SampleFixture;
   change?: string | undefined;
+  at?: string | undefined;
 }
 
 export function App() {
   const [current, setCurrent] = useState<Current | null>(() => {
-    const { sample, change } = parseUrlState(location.search);
+    const { sample, change, at } = parseUrlState(location.search);
     // A deep link to a lazily loaded sample renders once it has loaded; unknown ids fall back to the default.
     const lazy = samples.some((s) => s.id === sample && s.id !== defaultSample.id);
-    return lazy ? null : { id: defaultSample.id, fixture: defaultSample, change };
+    return lazy ? null : { id: defaultSample.id, fixture: defaultSample, change, at };
   });
   // Polite announcement on sample switch; focus stays on the chip. Empty on first load.
   const [announcement, setAnnouncement] = useState('');
   const wanted = useRef(current?.id);
 
-  const load = (entry: SampleEntry, change?: string, announce = true) => {
+  const load = (entry: SampleEntry, change?: string, at?: string, announce = true) => {
     wanted.current = entry.id;
     void entry.load().then((fixture) => {
       // Last click wins if loads resolve out of order.
       if (wanted.current !== entry.id) return;
-      setCurrent({ id: entry.id, fixture, change });
+      setCurrent({ id: entry.id, fixture, change, at });
       if (!announce) return;
       writeUrlState({ sample: entry.id });
       setAnnouncement(`Showing: ${fixture.label}, ${fixture.snapshots.length} captures`);
@@ -36,9 +37,9 @@ export function App() {
   };
 
   useEffect(() => {
-    const { sample, change } = parseUrlState(location.search);
+    const { sample, change, at } = parseUrlState(location.search);
     const entry = samples.find((s) => s.id === sample);
-    if (!current && entry) load(entry, change, false);
+    if (!current && entry) load(entry, change, at, false);
     // An unknown `?sample=` shows the default sample: say so in the address bar (keeping any resolved change).
     if (sample && !entry) writeUrlState({ ...parseUrlState(location.search), sample: defaultSample.id });
     // Runs once on mount: only the initial deep link is restored from the URL.
@@ -54,7 +55,8 @@ export function App() {
             key={current.id}
             fixture={current.fixture}
             initialChange={current.change}
-            onChange={(change) => writeUrlState({ sample: current.id, change })}
+            initialAt={current.at}
+            onChange={(q) => writeUrlState({ sample: current.id, ...q })}
           />
         ) : (
           <p className="loading mono">Loading sample…</p>

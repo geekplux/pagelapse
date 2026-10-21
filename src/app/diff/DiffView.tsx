@@ -42,10 +42,9 @@ function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
   );
 }
 
-/** The selected change, marked up like a proofreader's galley: header, summary, structure, legend, then the diff. */
-export function DiffView({ entry, index, count, from, to, captureUrl, onSelect }: Props) {
+/** The selected change in the stage's side column: header, capture links, summary, stats, Previous / Next. */
+export function ChangeCard({ entry, index, count, captureUrl, onSelect }: Omit<Props, 'from' | 'to'>) {
   const pair = `${entry.from}-${entry.to}`;
-  const rows = useMemo(() => collapseUnchanged(entry.diff.ops), [entry]);
   // The confirmation belongs to the change it was given for.
   const [copied, setCopied] = useState({ pair: '', text: '' });
   // Clear first, then set on the next frame, so pressing again re-announces the same text.
@@ -60,6 +59,64 @@ export function DiffView({ entry, index, count, from, to, captureUrl, onSelect }
         () => announce('Link copied'),
         () => announce('Could not copy: the link is in the address bar'),
       );
+
+  // Previous / Next is a sibling of the panel, so on phones it can stick to the bottom of the whole stage.
+  return (
+    <>
+      <section className="change-panel" aria-labelledby="change-heading">
+        <h3 id="change-heading">
+          <span className="panel-kicker mono">
+            Change {index + 1} of {count} ·{' '}
+            <span className="change-mag" data-magnitude={entry.significance.magnitude}>
+              {entry.significance.magnitude}
+            </span>
+          </span>{' '}
+          <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
+          <span className="sr-only"> to </span> <Ts ts={entry.to} />
+        </h3>
+        <p className="panel-summary">
+          {entry.ruleSummary} <span className="source-label mono">auto summary</span>
+        </p>
+        <p className="panel-stats mono">{statsLine(entry.record)}</p>
+        <p className="panel-links">
+          {[entry.from, entry.to].map((ts) => (
+            <a key={ts} className="cap-out" href={captureUrl(ts)} target="_blank" rel="noopener noreferrer">
+              View capture <Ts ts={ts} />
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          ))}
+          <button type="button" className="btn" onClick={copy}>
+            Copy link
+          </button>
+          {/* An explicit status role is the most widely announced live region; <output> support varies. */}
+          {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+          <span role="status">{copied.pair === pair ? copied.text : ''}</span>
+        </p>
+      </section>
+      <nav className="diff-nav" aria-label="Previous and next change">
+        <button type="button" className="btn" aria-disabled={index === 0} onClick={() => index > 0 && onSelect(index - 1)}>
+          <span aria-hidden="true">‹ </span>Previous
+        </button>
+        <span className="mono" aria-live="polite">
+          <span aria-hidden="true">
+            {index + 1} / {count}
+          </span>
+          <span className="sr-only">
+            Change {index + 1} of {count}: {formatTimestampLong(entry.from)} to {formatTimestampLong(entry.to)}, {entry.significance.magnitude}
+          </span>
+        </span>
+        <button type="button" className="btn" aria-disabled={index === count - 1} onClick={() => index < count - 1 && onSelect(index + 1)}>
+          Next<span aria-hidden="true"> ›</span>
+        </button>
+      </nav>
+    </>
+  );
+}
+
+/** The selected change's text, marked up like a proofreader's galley: structure, legend, then the diff. */
+export function DiffView({ entry, from, to }: Pick<Props, 'entry' | 'from' | 'to'>) {
+  const pair = `${entry.from}-${entry.to}`;
+  const rows = useMemo(() => collapseUnchanged(entry.diff.ops), [entry]);
   const r = entry.record;
   const structure: [string, string][] = [
     ...(entry.diff.titleChanged ? [['modified', `Title “${from.title}” became “${to.title}”`] as [string, string]] : []),
@@ -68,35 +125,11 @@ export function DiffView({ entry, index, count, from, to, captureUrl, onSelect }
   ];
 
   return (
-    <section className="change-panel" id="diff" tabIndex={-1} aria-labelledby="change-heading">
-      <h3 id="change-heading">
-        <span className="panel-kicker mono">
-          Change {index + 1} of {count} ·{' '}
-          <span className="change-mag" data-magnitude={entry.significance.magnitude}>
-            {entry.significance.magnitude}
-          </span>
-        </span>{' '}
-        <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
+    <section className="diff-panel" id="diff" tabIndex={-1} aria-labelledby="diff-heading">
+      <h3 id="diff-heading">
+        What the text says, <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
         <span className="sr-only"> to </span> <Ts ts={entry.to} />
       </h3>
-      <p className="panel-links">
-        {[entry.from, entry.to].map((ts) => (
-          <a key={ts} className="cap-out" href={captureUrl(ts)} target="_blank" rel="noopener noreferrer">
-            View capture <Ts ts={ts} />
-            <span className="sr-only"> (opens in a new tab)</span>
-          </a>
-        ))}
-        <button type="button" className="btn" onClick={copy}>
-          Copy link
-        </button>
-        {/* An explicit status role is the most widely announced live region; <output> support varies. */}
-        {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-        <span role="status">{copied.pair === pair ? copied.text : ''}</span>
-      </p>
-      <p className="panel-summary">
-        {entry.ruleSummary} <span className="source-label mono">auto summary</span>
-      </p>
-      <p className="panel-stats mono">{statsLine(r)}</p>
       {structure.length > 0 && (
         <>
           <h4 className="diff-sub">Structure</h4>
@@ -121,22 +154,6 @@ export function DiffView({ entry, index, count, from, to, captureUrl, onSelect }
           'gap' in row ? <Gap key={i} ops={row.gap} b={to.blocks} /> : <DiffBlock key={i} op={row.op} a={from.blocks} b={to.blocks} />,
         )}
       </div>
-      <nav className="diff-nav" aria-label="Previous and next change">
-        <button type="button" className="btn" aria-disabled={index === 0} onClick={() => index > 0 && onSelect(index - 1)}>
-          <span aria-hidden="true">‹ </span>Previous
-        </button>
-        <span className="mono" aria-live="polite">
-          <span aria-hidden="true">
-            {index + 1} / {count}
-          </span>
-          <span className="sr-only">
-            Change {index + 1} of {count}: {formatTimestampLong(entry.from)} to {formatTimestampLong(entry.to)}, {entry.significance.magnitude}
-          </span>
-        </span>
-        <button type="button" className="btn" aria-disabled={index === count - 1} onClick={() => index < count - 1 && onSelect(index + 1)}>
-          Next<span aria-hidden="true"> ›</span>
-        </button>
-      </nav>
     </section>
   );
 }
