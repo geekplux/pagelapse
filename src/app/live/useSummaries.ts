@@ -17,7 +17,14 @@ export function useSummaries(url: string, entries: readonly TimelineEntry[], end
   const [ai, setAi] = useState(() => new Map<string, string>());
   const asked = useRef(new Set<string>());
   const ctrl = useRef<AbortController>(null);
-  useEffect(() => () => ctrl.current?.abort(), []);
+  // Abort on unmount; a fresh controller after StrictMode's dev remount.
+  useEffect(
+    () => () => {
+      ctrl.current?.abort();
+      ctrl.current = null;
+    },
+    [],
+  );
   useEffect(() => {
     const todo = entries.filter((e) => !asked.current.has(pairOf(e)));
     if (!todo.length || (!ended && todo.length < EVERY)) return;
