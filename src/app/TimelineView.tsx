@@ -11,8 +11,9 @@ import { Timeline } from './timeline/Timeline.tsx';
 import { Ts } from './Ts.tsx';
 import { type UrlState, changeIndex } from './urlState.ts';
 import { Filmstrip } from './visual/Filmstrip.tsx';
+import { usePlay } from './visual/usePlay.ts';
 import { VisualPane } from './visual/VisualPane.tsx';
-import { type Side, captureForChange, changeForCapture, initialView, pairOf, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
+import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, pairOf, parseMode, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
 
 interface Props {
   fixture: SampleFixture;
@@ -20,11 +21,13 @@ interface Props {
   initialChange?: string | undefined;
   /** Capture to show first (`?at=`). */
   initialAt?: string | undefined;
-  onChange: (q: Pick<UrlState, 'change' | 'at'>) => void;
+  /** Compare mode to show first (`?view=`); Slider when missing or unknown. */
+  initialMode?: string | undefined;
+  onChange: (q: Pick<UrlState, 'change' | 'at' | 'view'>) => void;
 }
 
 /** The sample as an index card: the stage (picture and selected change), filmstrip, timeline, changes list, diff and all captures. */
-export function TimelineView({ fixture, initialChange, initialAt, onChange }: Props) {
+export function TimelineView({ fixture, initialChange, initialAt, initialMode, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
   const timeline = useMemo(() => buildTimeline(fixture.url, fixtureToSnapshots(fixture)), [fixture]);
@@ -40,23 +43,43 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
     const v = initialView(entries, snapshots.map((s) => s.ts), { change: initialChange, at: initialAt, featured: fixture.featured });
     return { key: entries[v.index] ? pairOf(entries[v.index]!) : '', at: v.at };
   });
+  const [mode, setMode] = useState<Mode>(() => parseMode(initialMode) ?? DEFAULT_MODE);
   const selected = changeIndex(all, view.key);
   const entry = all[selected];
   const years = `${snapshots[0]?.ts.slice(0, 4)}–${snapshots.at(-1)?.ts.slice(0, 4)}`;
   const capUrl = (ts: string) => viewCaptureUrl(fixture.source.archive, ts, fixture.url);
   const page = (ts: string) => timeline.snapshots.find((s) => s.ts === ts);
   /** Selects change `e`, showing capture `at` (default: the same side as now, so Before stays Before while scrubbing). */
-  const choose = (e?: TimelineEntry, at?: string) => {
+  const choose = (e?: TimelineEntry, at?: string, m = mode) => {
     if (!e) return;
     const next = at ?? captureForChange(e, entry && sideOf(entry, view.at) === 'before' ? 'before' : 'after');
     setView({ key: pairOf(e), at: next });
-    onChange(viewQuery(e, next));
+    onChange(viewQuery(e, next, m));
+  };
+  const changeMode = (m: Mode) => {
+    setMode(m);
+    if (entry) onChange(viewQuery(entry, view.at, m));
   };
   const select = (i: number) => choose(all[i]);
-  const showCapture = (ts: string, list = all) => choose(list[changeForCapture(list, ts)], ts);
+  const showCapture = (ts: string, list = all, m = mode) => choose(list[changeForCapture(list, ts)], ts, m);
   const toggleTrivial = (on: boolean) => {
     setShowTrivial(on);
     if (!on && !entries.some((e) => pairOf(e) === view.key)) showCapture(view.at, entries);
+  };
+  // Play steps through every capture in Single mode, from the first when the last is shown; it stops at the last.
+  const captures = snapshots.map((s) => s.ts);
+  const play = usePlay(() => {
+    const next = captures[captures.indexOf(view.at) + 1];
+    if (next) showCapture(next);
+    return !!next && next !== captures.at(-1);
+  });
+  const togglePlay = () => {
+    if (!play.playing) {
+      setMode('single');
+      if (view.at === captures.at(-1)) showCapture(captures[0]!, all, 'single');
+      else if (entry) onChange(viewQuery(entry, view.at, 'single'));
+    }
+    play.toggle();
   };
   const thumbOf = (ts: string) => {
     const file = snapshots.find((s) => s.ts === ts)?.shot?.file;
@@ -68,7 +91,8 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
   // An unknown `?change=` or `?at=` was resolved to what is shown: show that in the address bar too.
   useEffect(() => {
     const q = entries[changeIndex(entries, view.key)];
-    if (q && ((initialChange !== undefined && initialChange !== view.key) || initialAt !== viewQuery(q, view.at).at)) onChange(viewQuery(q, view.at));
+    const want = viewQuery(q ?? { from: '', to: '' }, view.at, mode);
+    if (q && ((initialChange !== undefined && initialChange !== view.key) || initialAt !== want.at || initialMode !== want.view)) onChange(want);
     // Runs once on mount.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -106,9 +130,18 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
       <div className="stage">
         {entry && (
           <>
-            <VisualPane fixture={fixture} entry={entry} at={view.at} trivial={trivial.has(view.at)} onSide={(side: Side) => choose(entry, captureForChange(entry, side))} />
+            <VisualPane
+              fixture={fixture}
+              entry={entry}
+              at={view.at}
+              trivial={trivial.has(view.at)}
+              mode={mode}
+              onMode={changeMode}
+              onSide={(side: Side) => choose(entry, captureForChange(entry, side))}
+              play={{ ...play, toggle: togglePlay }}
+            />
             <div className="side">
-              <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} showing={showingText(snapshots.map((s) => s.ts), entry, view.at, trivial.has(view.at))} />
+              <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} showing={showingText(captures, entry, view.at, trivial.has(view.at))} quiet={play.playing} />
             </div>
           </>
         )}

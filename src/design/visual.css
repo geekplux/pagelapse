@@ -35,14 +35,30 @@
 }
 .stage h3, .sheet .vp-bar h3 { margin: 0; }
 
-.vp-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.5rem; }
+.vp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 0.5rem; }
+.vp-bar h3 { margin-right: auto; }
+/* Compare: native radios as a segmented control; the radio covers its segment, so its focus ring outlines it. */
+.vp-modes { display: inline-flex; align-items: center; min-width: 0; margin: 0; padding: 0; border: 0; }
+.vp-mode { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 2.25rem; padding: 0.25rem 0.55rem; border: 1px solid var(--rule-strong); background: var(--card); color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); white-space: nowrap; cursor: pointer; }
+.vp-mode + .vp-mode { border-left: 0; }
+.vp-mode input { position: absolute; inset: 0; margin: 0; appearance: none; cursor: pointer; }
+.vp-mode:has(:focus-visible) { z-index: 1; }
+/* Phones: Play sits beside the heading; the four segments share the next line, wrapping their words if needed. */
+@media (max-width: 39.99rem) {
+  .vp-modes { order: 1; width: 100%; }
+  .vp-mode { flex: 1 1 0; padding-inline: 0.3rem; font-size: 0.8rem; white-space: normal; text-align: center; }
+}
+.vp-play { min-height: 2.25rem; white-space: nowrap; }
+/* Playing, or swapped: a heavier ink border and bold text, besides the changed label. */
+:is(.vp-play, .vp-onion .btn)[aria-pressed="true"] { border: 2px solid var(--ink); font-weight: 700; }
 .vp-sides { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--card); }
 .vp-side { min-height: 2.25rem; padding: 0.25rem 0.75rem; border: 0; background: none; color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); cursor: pointer; }
 .vp-side + .vp-side { border-left: 1px solid var(--rule-strong); }
 .vp-side b, .vp-label b { font-family: var(--font-mono); }
 .vp-side [data-op="added"], .vp-label [data-op="added"] { color: var(--added); }
 .vp-side [data-op="removed"], .vp-label [data-op="removed"] { color: var(--removed); }
-/* Pressed: inverted and bold, not hue alone. */
+/* Pressed or checked: inverted and bold, not hue alone. */
+.vp-mode:has(:checked) { background: var(--ink); color: var(--card); font-weight: 700; }
 .vp-side[aria-pressed="true"] { background: var(--ink); color: var(--card); font-weight: 700; }
 .vp-side[aria-pressed="true"] b { color: inherit; }
 
@@ -55,14 +71,41 @@
 }
 .vp-none p:first-child { color: var(--ink); font: 600 var(--step-1) / 1.3 var(--font-display); }
 .vp-none p { padding: 0.15rem 0.5rem; background: var(--card); }
-.vp-label { position: absolute; top: 16px; left: 16px; padding: 0.3rem 0.6rem; background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); }
+.vp-label { position: absolute; z-index: 1; top: 16px; left: 16px; padding: 0.3rem 0.6rem; background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); }
+.vp-label[data-side="after"] { left: auto; right: 16px; }
+@media (max-width: 39.99rem) { .vp-label { padding: 0.2rem 0.4rem; font-size: 0.7rem; } }
+
+/* Compare: the two pictures share one 16:10 cell. Slider clips After at --split; onion skin fades the top one. */
+.vp-cmp { position: relative; display: grid; }
+.vp-cmp > :not(.vp-split) { grid-area: 1 / 1; min-width: 0; }
+.vp-clip { clip-path: inset(0 0 0 var(--split)); }
+.vp-top { opacity: var(--op); }
+/* The divider: a 32 px wide drag strip with its own touch handling, a 2 px ink line on a card halo, a card knob. */
+.vp-split { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - 16px); width: 32px; display: grid; place-items: center; touch-action: none; cursor: ew-resize; }
+.vp-split::before { content: ""; position: absolute; top: 0; bottom: 0; left: 15px; width: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); }
+.vp-knob { position: relative; display: grid; place-items: center; width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 50%; background: var(--card); color: var(--ink); box-shadow: 0 0 0 2px var(--card); font: 700 0.85rem/1 var(--font-mono); }
+.vp-split:focus-visible .vp-knob { background: var(--ink); color: var(--card); }
+.vp-onion { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; padding-top: 0.5rem; font: 0.85rem var(--font-ui); }
+.vp-onion input { vertical-align: middle; accent-color: var(--ink); }
+.vp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+@media (max-width: 39.99rem) { .vp-pair { grid-template-columns: 1fr; } }
+/* A new picture fades in over the previous one (none under reduced motion). */
+.vp-frame { background: center / cover no-repeat; }
+@media (prefers-reduced-motion: no-preference) {
+  .vp-frame[data-fade] { background-image: var(--prev); }
+  .vp-frame[data-fade] .vp-shot { animation: vp-fade 120ms ease-out; }
+}
+@keyframes vp-fade { from { opacity: 0; } }
 .vp-cap { display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; padding-top: 0.4rem; color: var(--ink-2); font-size: 0.78rem; }
 .vp-cap > :first-child { color: var(--ink); font-weight: 700; }
 .vp-cap a { margin-left: auto; color: var(--ink); padding-block: 0.35em; }
+.vp-cap a + a { margin-left: 0; }
 /* Wider screens: a long provenance line wraps in its own box between the date and "Open capture", so the caption
    stays at most two lines and the filmstrip stays near the fold. */
 @media (min-width: 40rem) { .vp-cap .vp-src { flex: 1 1 0; min-width: 10rem; } }
-.vp-badge { flex-basis: 100%; margin: 0.2rem 0 0; font-family: var(--font-ui); color: var(--ink); padding: 0.35rem 0.6rem; border: 1px solid var(--rule-strong); border-left-width: 3px; border-radius: 2px; background: var(--card); font-size: 0.85rem; }
+.vp-note { margin: 0 0 0.5rem; }
+.vp-badge { margin-top: 0.2rem; }
+.vp-badge, .vp-note { flex-basis: 100%; font-family: var(--font-ui); color: var(--ink); padding: 0.35rem 0.6rem; border: 1px solid var(--rule-strong); border-left-width: 3px; border-radius: 2px; background: var(--card); font-size: 0.85rem; }
 
 /* The contact sheet: numbered frames; the shown one has a thick ink outline and a caret above it. */
 .film-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1.25rem; }
@@ -86,5 +129,7 @@
 @media (forced-colors: active) {
   .frame[aria-current="true"] :is(img, .frame-none) { border-color: Highlight; }
   .frame[aria-current="true"]::before { color: CanvasText; }
-  .vp-side[aria-pressed="true"] { forced-color-adjust: none; background: CanvasText; color: Canvas; }
+  :is(.vp-side[aria-pressed="true"], .vp-mode:has(:checked)) { forced-color-adjust: none; background: CanvasText; color: Canvas; }
+  .vp-split::before { background: CanvasText; }
+  .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border-color: CanvasText; }
 }

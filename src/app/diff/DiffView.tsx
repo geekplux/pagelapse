@@ -44,9 +44,9 @@ function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
 
 /**
  * The selected change in the stage's side column: header, capture links, summary, stats, Previous / Next.
- * Previous / Next's live region also says which capture the pane shows (`showing`).
+ * Previous / Next's live region also says which capture the pane shows (`showing`); `quiet` silences it during Play.
  */
-export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing }: Omit<Props, 'from' | 'to'> & { showing?: string }) {
+export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing, quiet }: Omit<Props, 'from' | 'to'> & { showing?: string; quiet?: boolean }) {
   const pair = `${entry.from}-${entry.to}`;
   // The confirmation belongs to the change it was given for.
   const [copied, setCopied] = useState({ pair: '', text: '' });
@@ -100,7 +100,8 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing 
         <button type="button" className="btn" aria-disabled={index === 0} onClick={() => index > 0 && onSelect(index - 1)}>
           <span aria-hidden="true">‹ </span>Previous
         </button>
-        <span className="mono" aria-live="polite">
+        {/* Quiet while Play steps, so the time-lapse does not chatter. */}
+        <span className="mono" aria-live={quiet ? 'off' : 'polite'}>
           <span aria-hidden="true">
             {index + 1} / {count}
           </span>
