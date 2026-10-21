@@ -219,17 +219,18 @@ async function main(): Promise<number> {
       const report: FlowReport = { flow: flow.name, viewport, scheme, ok: false, durationMs: 0 };
       try {
         Object.assign(report, await flow.run({ page, baseUrl, viewport, scheme }));
-        // Every flow ends with an axe pass on the state it left behind.
-        report.notes = [...(report.notes ?? []), await assertAxeClean(page)];
-        const base = `${flow.shot ?? flow.name}-${viewport}${scheme === 'dark' ? '-dark' : ''}`;
-        const file = join(outDir, `${base}${flow.suffix ?? ''}.${values.format}`);
-        // Let the sheet's `settle` fade (and any transition) finish so images are not mid-animation.
+        // Let the sheet's `settle` fade (and any transition) finish first, so neither the axe contrast check nor the
+        // screenshot sees a picture or text mid-animation.
         await page.evaluate(() =>
           Promise.race([
             Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
             new Promise((resolve) => setTimeout(resolve, 3_000)),
           ]),
         );
+        // Every flow ends with an axe pass on the state it left behind.
+        report.notes = [...(report.notes ?? []), await assertAxeClean(page)];
+        const base = `${flow.shot ?? flow.name}-${viewport}${scheme === 'dark' ? '-dark' : ''}`;
+        const file = join(outDir, `${base}${flow.suffix ?? ''}.${values.format}`);
         // Element shots get a 16 px margin of page around them.
         const box = flow.clip ? await page.locator(flow.clip).boundingBox() : null;
         const clip = box && { x: Math.max(0, box.x - 16), y: Math.max(0, box.y - 16), width: box.width + 32, height: box.height + 32 };

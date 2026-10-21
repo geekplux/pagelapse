@@ -1,4 +1,4 @@
-import { type CSSProperties, type PointerEvent, type ReactNode, useRef, useState } from 'react';
+import { type CSSProperties, type ReactNode, useId, useRef, useState } from 'react';
 import { splitFromKey, splitFromPointer, splitText } from './visualState.ts';
 
 interface Props {
@@ -9,17 +9,26 @@ interface Props {
 
 /**
  * After drawn over Before and clipped at a divider (`--split`). The divider is a `role="slider"`: arrows ±5,
- * PageUp/PageDown ±25, Home/End, Enter or double-click back to 50%, and a 32 px wide pointer-captured drag strip.
+ * PageUp/PageDown ±25, Home/End, Enter or double-click back to 50%, and a 32 px wide pointer-captured drag strip. A
+ * single click or tap anywhere on the pictures moves the divider there (no drag needed, WCAG 2.5.7).
  */
 export function CompareSlider({ entry, before, after }: Props) {
   const [split, setSplit] = useState(50);
   const box = useRef<HTMLDivElement>(null);
-  const drag = (e: PointerEvent) => {
+  const hint = useId();
+  const drag = (e: { clientX: number }) => {
     const r = box.current!.getBoundingClientRect();
     setSplit(splitFromPointer(e.clientX, r.left, r.width));
   };
   return (
-    <div className="vp-cmp" ref={box} style={{ '--split': `${split}%` } as CSSProperties}>
+    // The click is a pointer shortcut; the divider below is the keyboard-operable slider.
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    <div
+      className="vp-cmp"
+      ref={box}
+      style={{ '--split': `${split}%` } as CSSProperties}
+      onClick={(e) => !(e.target as Element).closest('.vp-split') && drag(e)}
+    >
       {before}
       <div className="vp-clip">{after}</div>
       <div
@@ -33,6 +42,8 @@ export function CompareSlider({ entry, before, after }: Props) {
         aria-valuemax={100}
         aria-valuenow={split}
         aria-valuetext={splitText(split, entry)}
+        aria-keyshortcuts="Enter"
+        aria-describedby={hint}
         onKeyDown={(e) => {
           const v = splitFromKey(e.key, split);
           if (v === null) return;
@@ -50,6 +61,9 @@ export function CompareSlider({ entry, before, after }: Props) {
           ‹ ›
         </span>
       </div>
+      <span id={hint} hidden>
+        Enter resets it to 50%.
+      </span>
     </div>
   );
 }

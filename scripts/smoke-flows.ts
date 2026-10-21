@@ -968,7 +968,20 @@ export const flows: readonly Flow[] = [
       await page.mouse.up();
       const edge = await expectSlider(page, 0);
       await page.locator('.vp-split').dblclick();
-      return { notes: [`drag to 1/4: ${quarter}`, `past the edge: ${edge}`, `double-click: ${await expectSlider(page, 50)}`] };
+      const reset = await expectSlider(page, 50);
+      // WCAG 2.5.7: a single click anywhere on the pictures moves the divider there, no drag needed.
+      await page.locator('.vp-cmp').scrollIntoViewIfNeeded();
+      const now = (await page.locator('.vp-cmp').boundingBox())!;
+      await page.mouse.click(now.x + now.width * 0.85, now.y + now.height / 2);
+      const clicked = await expectSlider(page, 85);
+      // WCAG 1.4.10: at 320 px the Before and After chips do not overlap.
+      const size = page.viewportSize()!;
+      await page.setViewportSize({ width: 320, height: 640 });
+      const chips = await page.locator('.vp-label').evaluateAll((ls) => ls.map((l) => JSON.parse(JSON.stringify(l.getBoundingClientRect()))));
+      const [b, a] = chips;
+      if (chips.length !== 2 || !(b.right <= a.left || b.bottom <= a.top || a.bottom <= b.top)) throw new Error(`chips overlap at 320 px: ${JSON.stringify(chips)}`);
+      await page.setViewportSize(size);
+      return { notes: [`drag to 1/4: ${quarter}`, `past the edge: ${edge}`, `double-click: ${reset}`, `click at 85%: ${clicked}`, `chips apart at 320 px (${Math.round(b.right)} <= ${Math.round(a.left)})`] };
     },
   },
   {
@@ -1055,20 +1068,21 @@ export const flows: readonly Flow[] = [
       const button = page.locator('.vp-play');
       const start = await shownIndex(page);
       await page.waitForTimeout(PLAY_MS + 200);
-      if ((await shownIndex(page)) !== start || (await button.getAttribute('aria-pressed')) !== 'false') throw new Error('Play started on its own');
+      if ((await shownIndex(page)) !== start || (await button.getAttribute('data-playing')) !== null) throw new Error('Play started on its own');
       await button.click();
       const from = await shownIndex(page);
       const quiet = await page.locator('.diff-nav [aria-live]').getAttribute('aria-live');
-      if ((await button.textContent())?.trim() !== '❚❚ Pause' || (await button.getAttribute('aria-pressed')) !== 'true' || (await checkedMode(page)) !== 'single' || quiet !== 'off') throw new Error(`playing: "${await button.textContent()}", mode ${await checkedMode(page)}, nav live ${quiet}`);
+      const pause = await page.getByRole('button', { name: 'Pause time-lapse', exact: true }).count();
+      if (pause !== 1 || (await button.getAttribute('data-playing')) === null || (await button.getAttribute('aria-pressed')) !== null || (await checkedMode(page)) !== 'single' || quiet !== 'off') throw new Error(`playing: "${await button.textContent()}" (${pause} "Pause time-lapse"), mode ${await checkedMode(page)}, nav live ${quiet}`);
       await page.waitForTimeout(PLAY_MS * 3 + 300);
       const at = await shownIndex(page);
       if (at !== from + 3) throw new Error(`after 3 steps at #${at + 1}, expected #${from + 4}`);
       if (await page.evaluate(() => document.activeElement?.matches('.vp-play')) === false) throw new Error('Play moved focus');
       await page.keyboard.press('Shift');
       await page.waitForTimeout(PLAY_MS + 200);
-      const status = (await page.locator('.vpane [role="status"]').textContent()) ?? '';
+      const status = (await page.locator('.vpane .vp-said').textContent()) ?? '';
       const named = await page.getByRole('button', { name: 'Play time-lapse', exact: true }).count();
-      if (named !== 1 || (await shownIndex(page)) !== at || (await button.getAttribute('aria-pressed')) !== 'false' || !status.startsWith('Stopped at capture')) throw new Error(`a key did not stop Play (status "${status}")`);
+      if (named !== 1 || (await shownIndex(page)) !== at || (await button.getAttribute('data-playing')) !== null || !status.startsWith('Stopped at capture')) throw new Error(`a key did not stop Play (status "${status}")`);
       await button.click();
       await page.waitForTimeout(PLAY_MS + 300);
       return { notes: [`from #${from + 1} (start #${start + 1}) to #${at + 1} in 3 steps`, `stopped by a key: "${status}"`, 'shot mid-play'] };

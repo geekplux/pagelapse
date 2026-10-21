@@ -103,10 +103,10 @@ export function VisualPane({ fixture, entry, at, trivial, mode, onMode, onSide, 
       <div className="vp-bar">
         <h3 id="vpane-heading">How it looked</h3>
         <ModePicker mode={mode} onMode={onMode} />
-        <button type="button" className="btn vp-play" data-play aria-pressed={play.playing} onClick={play.toggle}>
+        <button type="button" className="btn vp-play" data-play data-playing={play.playing || undefined} onClick={play.toggle}>
           <span aria-hidden="true">{play.playing ? '❚❚ ' : '▶ '}</span>
           {play.playing ? 'Pause' : 'Play'}
-          {!play.playing && <span className="sr-only"> time-lapse</span>}
+          <span className="sr-only"> time-lapse</span>
         </button>
         {shown === 'single' && (
           // A named group of two toggle buttons, not a <fieldset>: no form is submitted.
@@ -123,13 +123,17 @@ export function VisualPane({ fixture, entry, at, trivial, mode, onMode, onSide, 
           </div>
         )}
       </div>
-      {lacking && (
-        <p className="vp-note">
-          <span aria-hidden="true">◑ </span>
-          {MODES.find(([m]) => m === mode)![1]} needs a picture of both captures. The {lacking[2]} capture, {formatTimestampLong(pair[lacking[0]].ts)}, has none, so
-          this shows one capture at a time.
-        </p>
-      )}
+      {/* Always mounted, so the note is announced when a compare mode falls back to Single. */}
+      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+      <div role="status">
+        {lacking && (
+          <p className="vp-note">
+            <span aria-hidden="true">◑ </span>
+            {MODES.find(([m]) => m === mode)![1]} needs a picture of both captures. The {lacking[2]} capture, {formatTimestampLong(pair[lacking[0]].ts)}, has none,
+            so this shows one capture at a time.
+          </p>
+        )}
+      </div>
       {shown === 'side' ? (
         <div className="vp-pair">
           {SIDES.map(([s]) => (
@@ -154,7 +158,7 @@ export function VisualPane({ fixture, entry, at, trivial, mode, onMode, onSide, 
         </figure>
       )}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-      <span className="sr-only" role="status">
+      <span className="sr-only vp-said" role="status">
         {said.text}
       </span>
     </section>

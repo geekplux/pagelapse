@@ -62,7 +62,8 @@ describe('visualState', () => {
   });
 
   it('says how much of each side the slider shows', () => {
-    expect(splitText(40, { from: '20131106090756', to: '20251218000000' })).toBe('40% before (2013), 60% after (2025)');
+    expect(splitText(40, { from: '20131106090756', to: '20251218000000' })).toBe('40% before (November 2013), 60% after (December 2025)');
+    expect(splitText(100, { from: '20250404000000', to: '20251218000000' })).toBe('100% before (April 2025), 0% after (December 2025)');
   });
 
   it('builds same-origin picture URLs and frame numbers', () => {

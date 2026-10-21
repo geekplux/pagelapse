@@ -67,9 +67,11 @@ export const splitFromKey = (key: string, v: number): number | null => (SPLIT_KE
 /** The divider position under a pointer at `x` over a box starting at `left`, `width` wide. */
 export const splitFromPointer = (x: number, left: number, width: number) => (width > 0 ? clamp(((x - left) / width) * 100) : 50);
 
-/** The slider's `aria-valuetext`: `40% before (2013), 60% after (2025)`. */
-export const splitText = (v: number, e: Pair) => `${v}% before (${e.from.slice(0, 4)}), ${100 - v}% after (${e.to.slice(0, 4)})`;
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const monthYear = (ts: string) => `${MONTHS[Number(ts.slice(4, 6)) - 1] ?? ''} ${ts.slice(0, 4)}`.trim();
 
+/** The slider's `aria-valuetext`: `40% before (November 2013), 60% after (December 2025)`; same-year captures stay apart. */
+export const splitText = (v: number, e: Pair) => `${v}% before (${monthYear(e.from)}), ${100 - v}% after (${monthYear(e.to)})`;
 
 /** Same-origin URL of a recorded picture (`public/samples/<id>/`), full size or thumbnail. */
 export const shotSrc = (sampleId: string, file: string, thumb = false) => `/samples/${sampleId}/${file}${thumb ? '.thumb' : ''}.webp`;
