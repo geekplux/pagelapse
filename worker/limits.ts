@@ -5,6 +5,8 @@ import { apiError } from './http.ts';
 const COOLDOWN_KEY = 'ia:cooldown';
 /** A 429 from the archive stops all uncached upstream requests for at least this long (AC 17). */
 export const COOLDOWN_S = 60;
+/** Per-attempt upstream timeout: with 3 attempts and backoff, a dead archive fails in ~40 s instead of ~60 s. */
+export const UPSTREAM_TIMEOUT_MS = 12_000;
 
 /** Seconds left in the global archive cooldown, or 0. The KV value is the end time in epoch ms. */
 async function cooldownLeft(env: Env): Promise<number> {
@@ -25,7 +27,7 @@ export async function fetchUpstream(req: Request, env: Env, io: Io, url: string)
     return apiError('rate_limited', 'Too many new lookups from your connection. Try again in a minute.', 60);
   }
   try {
-    return await politeFetch(url, { fetch: io.fetch, sleep: io.sleep, retry429: false });
+    return await politeFetch(url, { fetch: io.fetch, sleep: io.sleep, retry429: false, timeoutMs: UPSTREAM_TIMEOUT_MS });
   } catch (err) {
     if (err instanceof RateLimitedError) {
       const s = Math.max(COOLDOWN_S, err.retryAfter);
