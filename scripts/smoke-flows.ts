@@ -420,8 +420,10 @@ export const flows: readonly Flow[] = [
     shot: 'diff',
     suffix: '-kbd',
     async run({ page, baseUrl }) {
-      await openReady(page, baseUrl);
-      const n = defaultTimeline.entries.length;
+      // Wikipedia: its latest diff has collapsed unchanged runs to expand (the default's redesign has none).
+      const f = fixtures.find((x) => x.id === 'wikipedia-internet-archive')!;
+      await openReady(page, baseUrl, `/?sample=${f.id}`);
+      const n = timelineOf(f).entries.length;
       const active = () => page.evaluate(() => `${document.activeElement?.className}|${document.activeElement?.textContent?.trim().slice(0, 40)}`);
       const tabTo = async (cls: string) => {
         for (let k = 0; k < 40; k++) {
@@ -442,12 +444,12 @@ export const flows: readonly Flow[] = [
       await tabTo('btn');
       while (!(await active()).endsWith('Previous')) await page.keyboard.press('Tab');
       await page.keyboard.press('Enter');
-      await expectSelected(page, defaultFixture, n - 2);
-      await checkDiff(page, defaultFixture, n - 2);
+      await expectSelected(page, f, n - 2);
+      await checkDiff(page, f, n - 2);
       await page.keyboard.press('Tab');
       await page.keyboard.press('Enter');
       await page.keyboard.press('Enter');
-      await expectSelected(page, defaultFixture, n - 1);
+      await expectSelected(page, f, n - 1);
       if ((await page.locator('.diff-nav .btn').last().getAttribute('aria-disabled')) !== 'true') throw new Error('Next not disabled at the last change');
       return { notes: [`skip link -> #diff; expanded 1 of ${gaps} runs; Previous -> ${n - 1}, Next x2 -> ${n} (stays)`] };
     },
@@ -552,6 +554,33 @@ export const flows: readonly Flow[] = [
       return { notes: [`favicon.svg rendered at ${sizes.join(', ')} px on paper and ink`] };
     },
   },
+  // Review-only: every recorded thumbnail of a sample with its status, to inspect the pictures by eye.
+  ...fixtures.map((f): Flow => ({
+    name: `shots-contact-sheet-${f.id}`,
+    description: `${f.id}: every capture's thumbnail (or "no picture"), frame number, date, status`,
+    viewports: ['desktop'],
+    clip: '#contact-sheet',
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const cells = f.snapshots.map((s, i) => {
+        const label = `#${String(i + 1).padStart(2, '0')} ${formatTimestampShort(s.ts)} ${s.shot?.status ?? 'not recorded'}${s.shot?.redacted ? `, ${s.shot.redacted} hidden` : ''}`;
+        const pic = s.shot?.file
+          ? `<img src="/samples/${f.id}/${s.shot.file}.thumb.webp" width="320" height="200" alt="${f.label}, ${formatTimestampLong(s.ts)}, top of page">`
+          : '<div style="width:316px;height:196px;border:2px dashed">no picture</div>';
+        return `<figure style="margin:0">${pic}<figcaption style="font:13px/1.6 monospace">${label}</figcaption></figure>`;
+      });
+      const shown = await page.evaluate(async (html) => {
+        document.getElementById('root')!.style.display = 'none';
+        document.body.insertAdjacentHTML('beforeend', html);
+        const imgs = [...document.querySelectorAll<HTMLImageElement>('#contact-sheet img')];
+        await Promise.all(imgs.map((i) => i.decode()));
+        return imgs.filter((i) => i.naturalWidth === 320 && i.naturalHeight === 200).length;
+      }, `<main id="contact-sheet" style="display:grid;grid-template-columns:repeat(3,320px);gap:16px;padding:16px;width:max-content;background:#fff;color:#111"><h1 style="grid-column:1/-1;font:600 18px system-ui;margin:0">${f.label}: ${f.snapshots.length} captures</h1>${cells.join('')}</main>`);
+      const want = f.snapshots.filter((s) => s.shot?.file).length;
+      if (shown !== want) throw new Error(`${shown} of ${want} thumbnails decoded at 320×200`);
+      return { notes: [`${f.id}: ${shown} thumbnails, ${f.snapshots.length - want} without a picture`] };
+    },
+  })),
   {
     name: '__fail',
     description: 'Self-test: always fails, to prove cleanup and a non-zero exit',

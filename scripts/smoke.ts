@@ -2,13 +2,15 @@
 // flows from smoke-flows.ts in system Chrome, writes screenshots and a JSON
 // report, and always tears down the server and browser (even on SIGINT).
 //
-// Usage: pnpm build && pnpm smoke [--out dir] [--flows a,b] [--port 4173] [--cvd]
+// Usage: pnpm build && pnpm smoke [--out dir] [--flows a,b] [--port 4173] [--cvd] [--format png|webp]
+// --format webp encodes screenshots with Chrome's WebP encoder (quality 0.8; committed shots, D27).
 // --cvd also saves protan/deutan/tritan/gray screenshots for flows marked `cvd`.
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { type Browser, chromium } from 'playwright-core';
+import { encodeWebp } from './lib/webp.ts';
 import { CVD_VARIANTS, assertAxeClean, setCvdFilter } from './smoke-a11y.ts';
 import { type FlowResult, flows } from './smoke-flows.ts';
 
@@ -28,8 +30,10 @@ const { values } = parseArgs({
     flows: { type: 'string' },
     port: { type: 'string', default: '4173' },
     cvd: { type: 'boolean', default: false },
+    format: { type: 'string', default: 'png' },
   },
 });
+if (values.format !== 'png' && values.format !== 'webp') throw new Error('--format must be png or webp');
 const outDir = resolve(root, values.out);
 const port = Number(values.port);
 const baseUrl = `http://127.0.0.1:${port}/`;
@@ -218,7 +222,7 @@ async function main(): Promise<number> {
         // Every flow ends with an axe pass on the state it left behind.
         report.notes = [...(report.notes ?? []), await assertAxeClean(page)];
         const base = `${flow.shot ?? flow.name}-${viewport}${scheme === 'dark' ? '-dark' : ''}`;
-        const file = join(outDir, `${base}${flow.suffix ?? ''}.png`);
+        const file = join(outDir, `${base}${flow.suffix ?? ''}.${values.format}`);
         // Let the sheet's `settle` fade (and any transition) finish so images are not mid-animation.
         await page.evaluate(() =>
           Promise.race([
@@ -229,12 +233,15 @@ async function main(): Promise<number> {
         // Element shots get a 16 px margin of page around them.
         const box = flow.clip ? await page.locator(flow.clip).boundingBox() : null;
         const clip = box && { x: Math.max(0, box.x - 16), y: Math.max(0, box.y - 16), width: box.width + 32, height: box.height + 32 };
-        const shoot = (path: string) => page.screenshot({ path, fullPage: true, ...(clip && { clip }) });
+        const shoot = async (path: string) => {
+          const png = await page.screenshot({ fullPage: true, ...(clip && { clip }) });
+          writeFileSync(path, values.format === 'webp' ? await encodeWebp(page, png, { quality: 0.8 }) : png);
+        };
         await shoot(file);
         report.screenshot = relative(root, file);
         for (const variant of values.cvd && flow.cvd ? CVD_VARIANTS : []) {
           await setCvdFilter(page, variant);
-          await shoot(join(outDir, `${base}-${variant}.png`));
+          await shoot(join(outDir, `${base}-${variant}.${values.format}`));
         }
         report.ok = true;
       } catch (err) {

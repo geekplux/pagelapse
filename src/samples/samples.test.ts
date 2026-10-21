@@ -15,11 +15,11 @@ async function gzipBytes(text: string): Promise<number> {
 }
 
 describe('committed samples', () => {
-  it('match the recorder config and the registry; Wikipedia is the default', () => {
+  it('match the recorder config and the registry; git-scm is the default (D23)', () => {
     const ids = config.map((c) => c.id);
     expect(Object.keys(RAW).sort()).toEqual(ids.map((id) => `./${id}.json`).sort());
     expect(samples.map((s) => s.id)).toEqual(ids);
-    expect(defaultSample.id).toBe('wikipedia-internet-archive');
+    expect(defaultSample.id).toBe('git-scm');
   });
 
   it.each(Object.entries(RAW))('%s is real, chronological, unique and small', (file, raw) => {
