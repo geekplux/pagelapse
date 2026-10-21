@@ -31,11 +31,3 @@ export function scrollWithin(box: HTMLElement, el: HTMLElement, axis: 'x' | 'y',
   if (to === null) return;
   box.scrollTo({ [x ? 'left' : 'top']: to, ...(instant && { behavior: 'instant' }) });
 }
-
-/** The nearest ancestor of `el` that scrolls vertically by its own CSS (`overflow-y: auto | scroll`); never the page. */
-export function scrollBoxOf(el: HTMLElement): HTMLElement | null {
-  for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
-    if (/auto|scroll/.test(getComputedStyle(p).overflowY)) return p;
-  }
-  return null;
-}

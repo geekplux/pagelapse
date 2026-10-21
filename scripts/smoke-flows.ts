@@ -130,25 +130,26 @@ async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<st
 }
 
 /**
- * The list's `aria-current` change is fully visible inside the list's scroll box (below its sticky summary) and the
- * side column, once any smooth scroll has settled; the page itself has not scrolled from `pageY`.
+ * The list's `aria-current` change sits in the open, full-width changes list after the timeline, which never scrolls
+ * inside a box of its own (so no change is clipped there); the page itself has not scrolled from `pageY`.
  */
 async function currentInList(page: Page, pageY = 0): Promise<string> {
-  let m = { ok: false, text: '' };
-  for (let k = 0; k < 20 && !m.ok; k++) {
-    if (k) await page.waitForTimeout(100);
-    m = await page.evaluate((y) => {
-      const r = (el: Element) => el.getBoundingClientRect();
-      const item = r(document.querySelector('.changes .change[aria-current="true"]')!);
-      const box = r(document.querySelector('.changes-pane')!);
-      const side = r(document.querySelector('.stage .side')!);
-      const top = Math.max(box.top, side.top, r(document.querySelector('.changes-pane summary')!).bottom);
-      const bottom = Math.min(box.bottom, side.bottom);
-      const at = `item ${Math.round(item.top)}-${Math.round(item.bottom)} in ${Math.round(top)}-${Math.round(bottom)}, page scrollY ${scrollY}`;
-      return { ok: item.top >= top - 0.5 && item.bottom <= bottom + 0.5 && scrollY === y, text: at };
-    }, pageY);
-  }
-  if (!m.ok) throw new Error(`selected change hidden in the list: ${m.text}`);
+  const m = await page.evaluate((y) => {
+    const pane = document.querySelector<HTMLDetailsElement>('.stage > .changes-pane')!;
+    const item = document.querySelector('.changes .change[aria-current="true"]')!.getBoundingClientRect();
+    const box = pane.getBoundingClientRect();
+    const tl = document.querySelector('.stage > .tl-area')!.getBoundingClientRect();
+    const boxes = [pane, ...pane.querySelectorAll('*')].filter((el) => el.scrollHeight > el.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(el).overflowY));
+    const problems = [
+      !pane.open && 'the list is closed',
+      boxes.length > 0 && `${boxes.length} scroll boxes inside the list`,
+      box.top < tl.bottom - 0.5 && 'the list is not below the timeline',
+      (item.top < box.top - 0.5 || item.bottom > box.bottom + 0.5) && 'the selected change is outside the list box',
+      scrollY !== y && `the page scrolled to ${scrollY}`,
+    ].filter(Boolean);
+    return { problems, text: `item ${Math.round(item.top)}-${Math.round(item.bottom)} in list ${Math.round(box.top)}-${Math.round(box.bottom)}, page scrollY ${scrollY}` };
+  }, pageY);
+  if (m.problems.length) throw new Error(`${m.problems.join('; ')}: ${m.text}`);
   return m.text;
 }
 
@@ -636,7 +637,7 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'changes-list-follows',
-    description: 'Desktop: the selected change is visible inside the scrolling changes list after load, Previous, the filmstrip and the timeline; the page never scrolls',
+    description: 'Desktop: the full-width changes list after the timeline marks the selected change after load, Previous, the filmstrip and the timeline; it has no scroll box of its own and the page never scrolls',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
@@ -742,11 +743,11 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-tab-order',
-    description: 'Desktop: the stage tabs in visual order, pane controls then the change card and changes list, then filmstrip, timeline, diff',
+    description: 'Desktop: the stage tabs in visual order: pane controls, the change card, filmstrip, timeline, changes list, diff',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
-      const parts = ['vpane', 'side', 'film', 'tl-area', 'diff-panel'];
+      const parts = ['vpane', 'side', 'film', 'tl-area', 'changes-pane', 'diff-panel'];
       const seen: string[] = [];
       for (let k = 0; k < 120; k++) {
         await page.keyboard.press('Tab');
@@ -759,18 +760,23 @@ export const flows: readonly Flow[] = [
         if (part && seen.at(-1) !== part) seen.push(part);
       }
       // The diff has stops only when it has collapsed runs or long blocks; the rest always do.
-      if (seen.length < 4 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
-      // The first stop after the pane's controls is in the change card, beside the picture.
+      if (seen.length < 5 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
+      // The first stop after the pane's controls is in the change card, beside the picture; the card holds no list.
       await page.locator('.vpane .cap-out').focus();
       await page.keyboard.press('Tab');
       const next = await page.evaluate(() => `${document.activeElement?.closest('.side') ? 'side' : 'elsewhere'}: ${document.activeElement?.textContent?.trim().slice(0, 30)}`);
       if (!next.startsWith('side')) throw new Error(`after "Open capture": ${next}`);
-      return { notes: [`stage: ${seen.join(' -> ')}`, `after "Open capture": ${next}`] };
+      if (await page.locator('.side .changes').count()) throw new Error('the changes list is inside the side column');
+      // The visual order matches: each part starts below the one before it (the side card beside the pane).
+      const tops = await page.evaluate((ps) => ps.map((p) => Math.round(document.querySelector(`.stage .${p}`)!.getBoundingClientRect().top)), parts);
+      const rows = [tops[0]!, ...tops.slice(2)];
+      if (rows.some((t, i) => i > 0 && t <= rows[i - 1]!)) throw new Error(`parts out of visual order: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`);
+      return { notes: [`stage: ${seen.join(' -> ')}`, `after "Open capture": ${next}`, `tops: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`] };
     },
   },
   {
     name: 'visual-zoom-spacing',
-    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the side column scrolls instead of spilling onto the filmstrip; the list keeps >= 8rem',
+    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the change card is never clipped or scrolled inside the side column, and never spills onto the filmstrip',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await page.setViewportSize({ width: 1024, height: 768 });
@@ -782,31 +788,70 @@ export const flows: readonly Flow[] = [
       const m = await page.evaluate(() => {
         const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
         const side = document.querySelector<HTMLElement>('.stage .side')!;
-        const tl = r('.film').top;
         const box = side.getBoundingClientRect();
-        // Content taller than the column must be clipped and scrolled, never painted over the filmstrip below.
-        const spill = side.scrollHeight > side.clientHeight && getComputedStyle(side).overflowY === 'visible' ? 1 : 0;
         return {
           twoColumn: box.left > r('.vpane').right,
           sideBottom: box.bottom,
+          navBottom: r('.side .diff-nav').bottom,
           paneBottom: r('.vpane').bottom,
-          tl,
-          list: r('.changes-pane').height,
-          rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
-          scrolls: side.scrollHeight > side.clientHeight,
-          spill,
+          film: r('.film').top,
+          clipped: side.scrollHeight - side.clientHeight,
         };
       });
       const problems = [
         !m.twoColumn && 'the stage is not two columns at 1024 px',
-        m.sideBottom > m.tl + 0.5 && `side column ends at ${Math.round(m.sideBottom)}, filmstrip starts at ${Math.round(m.tl)}`,
-        m.paneBottom > m.tl + 0.5 && `pane ends at ${Math.round(m.paneBottom)}, filmstrip starts at ${Math.round(m.tl)}`,
-        m.list < 8 * m.rem - 0.5 && `changes list only ${Math.round(m.list)}px tall`,
-        m.spill > 0 && 'the side column overflows visibly',
+        m.clipped > 1 && `the side column hides ${m.clipped}px of the card`,
+        m.navBottom > m.sideBottom + 0.5 && `Previous / Next ends at ${Math.round(m.navBottom)}, below the side column (${Math.round(m.sideBottom)})`,
+        m.sideBottom > m.film + 0.5 && `side column ends at ${Math.round(m.sideBottom)}, filmstrip starts at ${Math.round(m.film)}`,
+        m.paneBottom > m.film + 0.5 && `pane ends at ${Math.round(m.paneBottom)}, filmstrip starts at ${Math.round(m.film)}`,
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { notes: [`side ends ${Math.round(m.sideBottom)} <= filmstrip ${Math.round(m.tl)}; list ${Math.round(m.list)}px; side scrolls: ${m.scrolls}`] };
+      return { notes: [`side ends ${Math.round(m.sideBottom)} (pane ${Math.round(m.paneBottom)}) <= filmstrip ${Math.round(m.film)}; nothing clipped`] };
+    },
+  },
+  {
+    name: 'stage-fit',
+    description: 'Desktop 1024×768 and 1280×800, every sample: the change card beside the picture is fully visible with no inner scrolling; at 1280×800 the filmstrip shows above the fold',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const notes: string[] = [];
+      for (const [width, height] of [[1024, 768], [1280, 800]] as const) {
+        await page.setViewportSize({ width, height });
+        for (const f of fixtures) {
+          await openReady(page, baseUrl, `/?sample=${f.id}`);
+          await settle(page);
+          const m = await page.evaluate(() => {
+            const side = document.querySelector<HTMLElement>('.stage .side')!;
+            const b = side.getBoundingClientRect();
+            const last = side.lastElementChild!.getBoundingClientRect();
+            const thumbs = [...document.querySelectorAll('.frame :is(img, .frame-none)')].map((t) => t.getBoundingClientRect());
+            return {
+              scroll: side.scrollHeight - side.clientHeight,
+              top: b.top,
+              bottom: Math.max(b.bottom, last.bottom),
+              beside: b.left > document.querySelector('.vpane')!.getBoundingClientRect().right,
+              thumbTop: Math.max(...thumbs.slice(0, 6).map((t) => t.top)),
+              thumbBottom: Math.max(...thumbs.slice(0, 6).map((t) => t.bottom)),
+              scrollY,
+            };
+          });
+          const label = `${width}x${height} ${f.id}`;
+          const problems = [
+            !m.beside && 'the card is not beside the picture',
+            m.scroll > 1 && `the side column scrolls by ${m.scroll}px`,
+            (m.top < 0 || m.bottom > height) && `the card spans ${Math.round(m.top)}-${Math.round(m.bottom)}, outside the ${height}px viewport`,
+            m.scrollY !== 0 && `the page scrolled to ${m.scrollY}`,
+            // The strip is seen on first view: its thumbnails start above the fold (all of them end above it for the default, see visual-default).
+            width === 1280 && m.thumbTop > height - 16 && `filmstrip thumbnails start at ${Math.round(m.thumbTop)}, below the fold`,
+          ].filter(Boolean);
+          if (problems.length) throw new Error(`${label}: ${problems.join('; ')}`);
+          notes.push(`${label}: card ${Math.round(m.top)}-${Math.round(m.bottom)}, no inner scroll${width === 1280 ? `; thumbnails ${Math.round(m.thumbTop)}-${Math.round(m.thumbBottom)}` : ''}`);
+        }
+      }
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await openReady(page, baseUrl);
+      return { notes };
     },
   },
   {

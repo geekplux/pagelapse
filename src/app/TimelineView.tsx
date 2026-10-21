@@ -23,7 +23,7 @@ interface Props {
   onChange: (q: Pick<UrlState, 'change' | 'at'>) => void;
 }
 
-/** The sample as an index card: the stage (picture and selected change), filmstrip, timeline, diff and all captures. */
+/** The sample as an index card: the stage (picture and selected change), filmstrip, timeline, changes list, diff and all captures. */
 export function TimelineView({ fixture, initialChange, initialAt, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
@@ -109,10 +109,6 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
             <VisualPane fixture={fixture} entry={entry} at={view.at} trivial={trivial.has(view.at)} onSide={(side: Side) => choose(entry, captureForChange(entry, side))} />
             <div className="side">
               <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} showing={showingText(snapshots.map((s) => s.ts), entry, view.at, trivial.has(view.at))} />
-              <details className="changes-pane" open={listOpen} onToggle={(e) => setListOpen(e.currentTarget.open)}>
-                <summary id="changes-heading">All changes ({all.length})</summary>
-                <ChangesList entries={all} selected={selected} onSelect={select} />
-              </details>
             </div>
           </>
         )}
@@ -148,6 +144,13 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
             </p>
           )}
         </div>
+        {entry && (
+          // The timeline's text alternative, full width below it: open on wider screens, collapsed on phones.
+          <details className="changes-pane" open={listOpen} onToggle={(e) => setListOpen(e.currentTarget.open)}>
+            <summary id="changes-heading">All changes ({all.length})</summary>
+            <ChangesList entries={all} selected={selected} onSelect={select} />
+          </details>
+        )}
         {entry && <DiffView entry={entry} from={page(entry.from)!} to={page(entry.to)!} />}
       </div>
       <p className="sheet-desc">{fixture.description}</p>
