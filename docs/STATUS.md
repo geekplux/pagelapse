@@ -2,7 +2,7 @@ STATE: IN-PROGRESS
 
 # Status
 
-- Current phase: 8 verified; PR being opened
+- Current phase: applying Sean's change request (rename to Pagelapse + visual pane phase): revising PLAN.md
 - Blockers: none
 
 | Phase | Branch | PR | State | Verify rounds |
@@ -14,7 +14,7 @@ STATE: IN-PROGRESS
 | 5 | phase-5-diff-engine | [#6](https://github.com/geekplux/wayback-diff/pull/6) | PR open (PASS) | 2 |
 | 6 | phase-6-significance | [#7](https://github.com/geekplux/wayback-diff/pull/7) | PR open (PASS) | 1 |
 | 7 | phase-7-timeline-ui | [#8](https://github.com/geekplux/wayback-diff/pull/8) | PR open (PASS) | 1 |
-| 8 | phase-8-diff-view | (opening) | verified PASS | 1 |
+| 8 | phase-8-diff-view | [#9](https://github.com/geekplux/pagelapse/pull/9) | PR open (PASS) | 1 |
 | 9 | phase-9-worker-archive-api | - | not started | 0 |
 | 10 | phase-10-live-mode | - | not started | 0 |
 | 11 | phase-11-ai-summaries | - | not started | 0 |
@@ -26,4 +26,4 @@ Follow-ups:
 - Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-20 (phase 8 verified)
+Last updated: 2026-10-20 (PR #9 opened)
