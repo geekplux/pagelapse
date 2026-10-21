@@ -48,19 +48,25 @@ main:focus { outline: none; }
 .masthead { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.75rem; }
 .home-link { text-decoration: none; display: inline-block; }
 .wordmark { display: inline-flex; align-items: center; gap: 0.75rem; }
-.wm-text { position: relative; display: inline-flex; align-items: baseline; gap: 0.1em; padding-bottom: 0.7rem; line-height: 1; }
-.wm-wayback { font: italic 400 2.4rem / 1 var(--font-display); letter-spacing: -0.015em; }
-.wm-pm { color: var(--ink-2); font: 600 1.3rem / 1 var(--font-mono); }
-.wm-diff { font: 600 1.7rem / 1 var(--font-mono); letter-spacing: -0.04em; }
-/* Seismograph baseline: a hairline with three tremors under "diff". */
-.wm-ticks { position: absolute; left: 0; bottom: 0; stroke: var(--ink-2); stroke-width: 1.25; stroke-linecap: round; overflow: visible; }
+.wm-text { display: inline-flex; align-items: baseline; line-height: 1; padding-bottom: 0.55rem; }
+.wm-page { font: italic 400 2.4rem / 1 var(--font-display); letter-spacing: -0.015em; margin-right: 0.03em; }
+.wm-lapse { position: relative; font: 600 2.4rem / 1 var(--font-display); letter-spacing: -0.02em; }
+/* Time-lapse strip: five hairline frames growing slowly taller; the latest one is filled. */
+.wm-frames { position: absolute; left: 0.04em; right: 0.06em; top: calc(100% + 0.3rem); display: flex; align-items: flex-end; gap: 3px; }
+.wm-frames i { flex: 1; height: 5px; border: 1px solid var(--ink-2); border-radius: 1px; }
+.wm-frames i:nth-child(2) { height: 6px; }
+.wm-frames i:nth-child(3) { height: 7px; }
+.wm-frames i:nth-child(4) { height: 8px; }
+.wm-frames i:last-child { height: 9px; border-color: var(--ink); background: var(--ink); }
 .tagline { color: var(--ink-2); font: italic 400 1.15rem / 1.35 var(--font-read); max-width: 36ch; }
 @media (min-width: 40rem) {
   .tagline { padding-left: 1.75rem; border-left: 1px solid var(--rule); }
 }
 
 .logo-tile { fill: var(--ink); }
-.logo-arc { stroke: var(--card); }
+.logo-page { fill: var(--ink); stroke: var(--card); }
+.logo-line { stroke: var(--card); }
+.logo-handle { fill: var(--card); }
 .logo-plus { stroke: var(--mark-plus); }
 .logo-minus { stroke: var(--mark-minus); }
 
@@ -244,8 +250,11 @@ ins::after, del::after { content: "] "; }
 @media (forced-colors: active) {
   :focus-visible { outline-color: Highlight; }
   .logo-tile { fill: CanvasText; }
-  .logo-arc, .logo-plus, .logo-minus { stroke: Canvas; }
-  .wm-ticks { stroke: CanvasText; }
+  .logo-page { fill: CanvasText; }
+  .logo-page, .logo-line, .logo-plus, .logo-minus { stroke: Canvas; }
+  .logo-handle { fill: Canvas; }
+  .wm-frames i { border-color: CanvasText; }
+  .wm-frames i:last-child { forced-color-adjust: none; background: CanvasText; }
   .chip[aria-pressed="true"] { border-width: 3px; }
   .tl-marker, .tl-caret { fill: CanvasText; stroke: Canvas; }
   .tl-ring, .tl-stem.is-sel { stroke: Highlight; }
