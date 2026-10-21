@@ -1,9 +1,10 @@
 /**
- * The shareable view state: `?sample=<id>&change=<from>-<to>&at=<ts>&view=<mode>` (`at`: the capture shown in Single
+ * The shareable view state: `?sample=<id>` or `?url=<page>` (a live run), then `&change=<from>-<to>&at=<ts>&view=<mode>` (`at`: the capture shown in Single
  * mode, when not the change's After; `view`: the compare mode, when not Slider).
  */
 export interface UrlState {
   sample?: string | undefined;
+  url?: string | undefined;
   change?: string | undefined;
   at?: string | undefined;
   view?: string | undefined;
@@ -11,12 +12,13 @@ export interface UrlState {
 
 export function parseUrlState(search: string): UrlState {
   const p = new URLSearchParams(search);
-  return { sample: p.get('sample') ?? undefined, change: p.get('change') ?? undefined, at: p.get('at') ?? undefined, view: p.get('view') ?? undefined };
+  return { sample: p.get('sample') ?? undefined, url: p.get('url') ?? undefined, change: p.get('change') ?? undefined, at: p.get('at') ?? undefined, view: p.get('view') ?? undefined };
 }
 
-export function formatUrlState({ sample, change, at, view }: UrlState): string {
+export function formatUrlState({ sample, url, change, at, view }: UrlState): string {
   const p = new URLSearchParams();
   if (sample) p.set('sample', sample);
+  if (url) p.set('url', url);
   if (change) p.set('change', change);
   if (at) p.set('at', at);
   if (view) p.set('view', view);

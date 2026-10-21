@@ -25,8 +25,11 @@ interface Props {
   describedBy: string;
   /** Thumbnail of a capture, shown in the tooltip (samples). */
   thumbOf?: (ts: string) => string | undefined;
+  /** Live runs: captures still being fetched (grey hairlines) or that failed (dashed). */
+  marks?: readonly { ts: string; failed: boolean }[];
 }
 
+const NO_MARKS: NonNullable<Props['marks']> = [];
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
@@ -35,7 +38,7 @@ const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(pre
  * and the word in the tooltip and list say it too).
  * A focusable `role="slider"` wraps the `aria-hidden` SVG; the changes list is its text alternative.
  */
-export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy, thumbOf }: Props) {
+export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy, thumbOf, marks = NO_MARKS }: Props) {
   const outer = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
   const [cw, setCw] = useState(0);
@@ -51,7 +54,7 @@ export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy
 
   const { entries, snapshots, trivialCaptures } = timeline;
   const g = useMemo(() => {
-    const caps = snapshots.map((s) => tsToMs(s.ts));
+    const caps = [...snapshots, ...marks].map((s) => tsToMs(s.ts));
     const years = (Math.max(...caps) - Math.min(...caps)) / YEAR;
     const times = entries.map((e) => tsToMs(e.to));
     const rs = entries.map((e) => markerRadius(e.significance.magnitude));
@@ -77,8 +80,9 @@ export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy
       end = x + 5;
     });
     trace += `L${width - PAD / 2} ${BASE}`;
-    return { width, s, times, rs, points, ticks, trace, caps: snapshots.map((c, i) => ({ x: s.x(caps[i]!), trivial: trivial.has(c.ts) })) };
-  }, [cw, entries, snapshots, trivialCaptures]);
+    const extra = marks.map((m, i) => ({ x: s.x(caps[snapshots.length + i]!), failed: m.failed }));
+    return { width, s, times, rs, points, ticks, trace, extra, caps: snapshots.map((c, i) => ({ x: s.x(caps[i]!), trivial: trivial.has(c.ts) })) };
+  }, [cw, entries, snapshots, trivialCaptures, marks]);
 
   const sel = g.points[selected];
   /** Scroll the strip so the selection is visible; smooth after a drag unless reduced motion is on. */
@@ -95,80 +99,93 @@ export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, dragging]);
   const entry = entries[selected];
-  if (!entry || !sel) return null;
-
-  const labelX = clamp(sel.x, 40, g.width - 40);
-  const labels = yearLabels(g.ticks, g.s.pxPerYear, { minGap: 44, half: 17, width: g.width, avoid: [labelX - 42, labelX + 42] });
+  const labelX = sel ? clamp(sel.x, 40, g.width - 40) : 0;
+  const labels = yearLabels(g.ticks, g.s.pxPerYear, { minGap: 44, half: 17, width: g.width, ...(sel && { avoid: [labelX - 42, labelX + 42] }) });
   const tip = hover ?? (focusTip ? selected : null);
   const tipEntry = tip === null ? undefined : entries[tip];
   const tipAt = tip === null ? undefined : g.points[tip];
-  const stagger = Math.min(40, 400 / entries.length);
+  const stagger = Math.min(40, 400 / Math.max(1, entries.length));
+  const svg = (
+    <svg aria-hidden="true" width={g.width} height={H} viewBox={`0 0 ${g.width} ${H}`}>
+      {g.ticks.map((k) => (
+        <g key={k.year}>
+          <line className="tl-grid" x1={k.x} x2={k.x} y1={6} y2={BASE} />
+          <line className="tl-axis" x1={k.x} x2={k.x} y1={BASE} y2={BASE + 6} />
+        </g>
+      ))}
+      <path className="tl-trace" d={g.trace} />
+      {g.caps.map((c, i) =>
+        c.trivial ? (
+          <rect key={i} className="tl-trivial" x={c.x - 2.5} y={BASE - 8} width={5} height={16} rx={2.5} />
+        ) : (
+          <line key={i} className="tl-cap" x1={c.x} x2={c.x} y1={BASE - 6} y2={BASE + 6} />
+        ),
+      )}
+      {g.extra.map((m, i) => (
+        <line key={`m${i}`} className={m.failed ? 'tl-failed' : 'tl-pending'} x1={m.x} x2={m.x} y1={BASE - (m.failed ? 14 : 6)} y2={BASE + 6} />
+      ))}
+      {g.points.map((p, i) => (
+        <line key={i} className={`tl-stem${i === selected ? ' is-sel' : ''}`} x1={p.x} x2={p.x} y1={BASE} y2={p.y + (g.rs[i] ?? 0)} />
+      ))}
+      {entries.map((e, i) => {
+        const { x, y } = g.points[i]!;
+        const r = g.rs[i]!;
+        const delay = { animationDelay: `${Math.round(i * stagger)}ms` };
+        return (
+          <g key={e.to}>
+            <circle className="tl-marker" data-index={i} data-magnitude={e.significance.magnitude} cx={x} cy={y} r={r} style={delay} />
+            {/* Shape cue: majors carry a second, inner ring. */}
+            {e.significance.magnitude === 'major' && <circle className="tl-marker-ring" cx={x} cy={y} r={r - 4.5} style={delay} />}
+          </g>
+        );
+      })}
+      {sel && entry && (
+        <>
+          <g className="tl-move" style={{ transform: `translate(${sel.x}px, ${sel.y}px)` }}>
+            <circle className="tl-ring" r={(g.rs[selected] ?? 0) + 4.5} />
+          </g>
+          <g className="tl-move" style={{ transform: `translateX(${sel.x}px)` }}>
+            <path className="tl-caret" d={`M-5 ${BASE + 15}L0 ${BASE + 8}L5 ${BASE + 15}Z`} />
+            <text className="tl-sel-date" x={labelX - sel.x} y={BASE + 31} textAnchor="middle">
+              {formatTimestampShort(entry.to)}
+            </text>
+          </g>
+        </>
+      )}
+      {labels.map((k) => (
+        <text key={k.year} className="tl-year" x={k.x} y={BASE + 31} textAnchor="middle">
+          {k.year}
+        </text>
+      ))}
+    </svg>
+  );
 
   return (
     <div className="tl" ref={outer}>
       <div className="tl-strip" ref={strip} onScroll={(e) => setScrollX(e.currentTarget.scrollLeft)}>
-        <div
-          className="tl-slider"
-          // A native range input cannot hold the SVG strip; this div implements the APG slider pattern.
-          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-          role="slider"
-          tabIndex={0}
-          aria-labelledby={labelledBy}
-          aria-describedby={describedBy}
-          aria-orientation="horizontal"
-          aria-valuemin={1}
-          aria-valuemax={entries.length}
-          aria-valuenow={selected + 1}
-          aria-valuetext={describeChange(entry, selected, entries.length)}
-          style={{ width: g.width }}
-          {...handlers}
-        >
-          <svg aria-hidden="true" width={g.width} height={H} viewBox={`0 0 ${g.width} ${H}`}>
-            {g.ticks.map((k) => (
-              <g key={k.year}>
-                <line className="tl-grid" x1={k.x} x2={k.x} y1={6} y2={BASE} />
-                <line className="tl-axis" x1={k.x} x2={k.x} y1={BASE} y2={BASE + 6} />
-              </g>
-            ))}
-            <path className="tl-trace" d={g.trace} />
-            {g.caps.map((c, i) =>
-              c.trivial ? (
-                <rect key={i} className="tl-trivial" x={c.x - 2.5} y={BASE - 8} width={5} height={16} rx={2.5} />
-              ) : (
-                <line key={i} className="tl-cap" x1={c.x} x2={c.x} y1={BASE - 6} y2={BASE + 6} />
-              ),
-            )}
-            {g.points.map((p, i) => (
-              <line key={i} className={`tl-stem${i === selected ? ' is-sel' : ''}`} x1={p.x} x2={p.x} y1={BASE} y2={p.y + (g.rs[i] ?? 0)} />
-            ))}
-            {entries.map((e, i) => {
-              const { x, y } = g.points[i]!;
-              const r = g.rs[i]!;
-              const delay = { animationDelay: `${Math.round(i * stagger)}ms` };
-              return (
-                <g key={e.to}>
-                  <circle className="tl-marker" data-index={i} data-magnitude={e.significance.magnitude} cx={x} cy={y} r={r} style={delay} />
-                  {/* Shape cue: majors carry a second, inner ring. */}
-                  {e.significance.magnitude === 'major' && <circle className="tl-marker-ring" cx={x} cy={y} r={r - 4.5} style={delay} />}
-                </g>
-              );
-            })}
-            <g className="tl-move" style={{ transform: `translate(${sel.x}px, ${sel.y}px)` }}>
-              <circle className="tl-ring" r={(g.rs[selected] ?? 0) + 4.5} />
-            </g>
-            <g className="tl-move" style={{ transform: `translateX(${sel.x}px)` }}>
-              <path className="tl-caret" d={`M-5 ${BASE + 15}L0 ${BASE + 8}L5 ${BASE + 15}Z`} />
-              <text className="tl-sel-date" x={labelX - sel.x} y={BASE + 31} textAnchor="middle">
-                {formatTimestampShort(entry.to)}
-              </text>
-            </g>
-            {labels.map((k) => (
-              <text key={k.year} className="tl-year" x={k.x} y={BASE + 31} textAnchor="middle">
-                {k.year}
-              </text>
-            ))}
-          </svg>
-        </div>
+        {/* Until a live run finds its first change, the strip is a picture of the captures only. */}
+        {!entry ? (
+          <div style={{ width: g.width }}>{svg}</div>
+        ) : (
+          <div
+            className="tl-slider"
+            // A native range input cannot hold the SVG strip; this div implements the APG slider pattern.
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+            role="slider"
+            tabIndex={0}
+            aria-labelledby={labelledBy}
+            aria-describedby={describedBy}
+            aria-orientation="horizontal"
+            aria-valuemin={1}
+            aria-valuemax={entries.length}
+            aria-valuenow={selected + 1}
+            aria-valuetext={describeChange(entry, selected, entries.length)}
+            style={{ width: g.width }}
+            {...handlers}
+          >
+            {svg}
+          </div>
+        )}
       </div>
       {tipEntry && tipAt && (
         <div

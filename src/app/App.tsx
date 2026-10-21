@@ -3,7 +3,9 @@ import type { SampleFixture } from '../core/types.ts';
 import { defaultSample, type SampleEntry, samples } from '../samples/index.ts';
 import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
+import { LiveView } from './live/LiveView.tsx';
 import { TimelineView } from './TimelineView.tsx';
+import { validateTargetUrl } from '../core/url.ts';
 import { parseUrlState, writeUrlState } from './urlState.ts';
 
 interface Current {
@@ -14,7 +16,22 @@ interface Current {
   view?: string | undefined;
 }
 
+/** A live run; a new `run` number remounts the view, which aborts the previous run (no stale markers). */
+interface Live {
+  url: string;
+  run: number;
+  change?: string | undefined;
+}
+
+/** `?url=` starts a live run on load when it is a valid address (an invalid one is shown at the field instead). */
+function initialLive(): Live | null {
+  const { url, change } = parseUrlState(location.search);
+  const check = url ? validateTargetUrl(url) : null;
+  return check?.ok ? { url: check.url, run: 0, change } : null;
+}
+
 export function App() {
+  const [live, setLive] = useState(initialLive);
   const [current, setCurrent] = useState<Current | null>(() => {
     const { sample, change, at, view } = parseUrlState(location.search);
     // A deep link to a lazily loaded sample renders once it has loaded; unknown ids fall back to the default.
@@ -26,6 +43,7 @@ export function App() {
   const wanted = useRef(current?.id);
 
   const load = (entry: SampleEntry, change?: string, at?: string, view?: string, announce = true) => {
+    setLive(null);
     wanted.current = entry.id;
     void entry.load().then((fixture) => {
       // Last click wins if loads resolve out of order.
@@ -37,7 +55,14 @@ export function App() {
     });
   };
 
+  const startLive = (url: string) => {
+    setLive((l) => ({ url, run: (l?.run ?? 0) + 1 }));
+    writeUrlState({ url });
+  };
+  const openSample = () => load(samples.find((s) => s.id === defaultSample.id)!);
+
   useEffect(() => {
+    if (live) return;
     const { sample, change, at, view } = parseUrlState(location.search);
     const entry = samples.find((s) => s.id === sample);
     if (!current && entry) load(entry, change, at, view, false);
@@ -49,9 +74,26 @@ export function App() {
 
   return (
     <>
-      <AppHeader hasDiff={current !== null} samples={samples} selectedId={current?.id ?? ''} onSelect={(entry) => load(entry)} />
+      <AppHeader
+        hasDiff={!live && current !== null}
+        samples={samples}
+        selectedId={live ? '' : (current?.id ?? '')}
+        onSelect={(entry) => load(entry)}
+        url={parseUrlState(location.search).url ?? ''}
+        onUrl={startLive}
+      />
       <main id="content" tabIndex={-1}>
-        {current ? (
+        {live ? (
+          <LiveView
+            key={live.run}
+            url={live.url}
+            initialChange={live.change}
+            onChange={(change) => writeUrlState({ url: live.url, change })}
+            announce={setAnnouncement}
+            onRetry={() => startLive(live.url)}
+            onSample={openSample}
+          />
+        ) : current ? (
           <TimelineView
             key={current.id}
             fixture={current.fixture}
@@ -69,7 +111,7 @@ export function App() {
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}
       </p>
-      {current && <AppFooter source={current.fixture.source} />}
+      <AppFooter source={live ? undefined : current?.fixture.source} />
     </>
   );
 }

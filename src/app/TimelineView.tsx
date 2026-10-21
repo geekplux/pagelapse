@@ -7,6 +7,7 @@ import { buildTimeline, trivialEntries } from '../core/timeline.ts';
 import { changePictures, decodePicture } from '../samples/index.ts';
 import { ChangesList } from './ChangesList.tsx';
 import { ChangeCard, DiffView } from './diff/DiffView.tsx';
+import { Legend } from './timeline/Legend.tsx';
 import { Timeline } from './timeline/Timeline.tsx';
 import { Ts } from './Ts.tsx';
 import { type UrlState, changeIndex } from './urlState.ts';
@@ -148,27 +149,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
         <Filmstrip fixture={fixture} at={view.at} trivial={trivial} onSelect={(ts) => showCapture(ts)} />
         <div className="tl-area">
           <h3 id="timeline-heading">Timeline</h3>
-          <p className="captures-source tl-legend" id="timeline-legend">
-            <span>
-              {entries.length} meaningful changes. Bigger, bolder marks changed more:{' '}
-              {(['minor', 'moderate', 'major'] as const).map((m) => (
-                <span key={m} className="nowrap">
-                  <i className="mag-dot" data-magnitude={m} /> {m}{' '}
-                </span>
-              ))}
-            </span>
-            {trivialCaptures.length > 0 && (
-              <span>
-                <i className="mag-tick" /> {trivialCaptures.length} trivial captures{' '}
-                {showTrivial ? 'shown as hollow entries.' : 'hidden (dates, counters, whitespace).'}
-              </span>
-            )}
-          </p>
-          {trivialCaptures.length > 0 && (
-            <label className="toggle">
-              <input type="checkbox" checked={showTrivial} onChange={(e) => toggleTrivial(e.currentTarget.checked)} /> Show trivial edits
-            </label>
-          )}
+          <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={toggleTrivial} />
           {entry ? (
             <Timeline timeline={shown} selected={selected} onSelect={select} labelledBy="timeline-heading" describedBy="timeline-legend" thumbOf={thumbOf} />
           ) : (

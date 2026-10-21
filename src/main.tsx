@@ -4,6 +4,7 @@ import { App } from './app/App.tsx';
 import './design/tokens.css';
 import './design/base.css';
 import './design/visual.css';
+import './design/live.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
