@@ -38,6 +38,10 @@ export interface Flow {
   suffix?: string;
   /** With `--cvd`, also capture protan/deutan/tritan/gray variants. */
   cvd?: boolean;
+  /** Screenshot only this element instead of the full page. */
+  clip?: string;
+  /** Viewports to run in (default: desktop and mobile). */
+  viewports?: FlowContext['viewport'][];
   run: (ctx: FlowContext) => Promise<FlowResult>;
 }
 
@@ -382,6 +386,8 @@ export const flows: readonly Flow[] = [
       if (new URL(page.url()).search !== `?sample=${defaultFixture.id}`) throw new Error(`bogus sample not replaced: ${page.url()}`);
       await page.setViewportSize({ width: 320, height: 800 });
       await noPageOverflow(page);
+      // Let the last load's entry fade finish so axe measures settled colours.
+      await settle(page);
       return { timeToReadyMs, notes: [said, `${ticks} hollow ticks; bogus change -> latest; no page overflow at 320 px`] };
     },
   },
@@ -488,6 +494,62 @@ export const flows: readonly Flow[] = [
       await page.locator('.panel-kicker', { hasText: 'trivial' }).waitFor({ timeout: 2_000 });
       if (!page.url().includes(`change=${trivial[0]!.from}-${trivial[0]!.to}`)) throw new Error(`trivial entry not selected: ${page.url()}`);
       return { notes: [`copied ${new URL(copied).search}, reopened it; ${marks} trivial entries shown and selectable`] };
+    },
+  },
+  {
+    name: 'header',
+    description: 'Pagelapse title, meta and wordmark (accessible name "Pagelapse", favicon link)',
+    schemes: ['light', 'dark'],
+    cvd: true,
+    clip: '.site-header',
+    async run({ page, baseUrl }) {
+      const timeToReadyMs = await openReady(page, baseUrl);
+      const want = 'Pagelapse: see how any web page changed over the years';
+      const title = await page.title();
+      if (title !== want) throw new Error(`document.title "${title}", expected "${want}"`);
+      const meta = await page.evaluate(() =>
+        ['meta[name="application-name"]', 'meta[property="og:site_name"]', 'meta[property="og:title"]', 'link[rel="icon"]'].map(
+          (sel) => document.querySelector(sel)?.getAttribute(sel.startsWith('link') ? 'href' : 'content') ?? '',
+        ),
+      );
+      if (meta.join('|') !== `Pagelapse|Pagelapse|${want}|/favicon.svg`) throw new Error(`meta: ${meta.join(' | ')}`);
+      const home = page.getByRole('heading', { level: 1 }).getByRole('link', { name: 'Pagelapse', exact: true });
+      if ((await home.count()) !== 1) throw new Error('no h1 home link named exactly "Pagelapse"');
+      await page.evaluate(() => document.fonts.ready);
+      return { timeToReadyMs, notes: [`title "${title}"`, 'h1 link name "Pagelapse"', `meta: ${meta.join(' | ')}`] };
+    },
+  },
+  {
+    name: 'brand',
+    description: 'favicon.svg at 16, 32 and 64 px on paper and on ink',
+    shot: 'brand-favicon',
+    viewports: ['desktop'],
+    clip: '#brand-sheet',
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const sizes = [16, 32, 64];
+      const { paper, ink } = palette.light;
+      const loaded = await page.evaluate(
+        async ({ sizes, paper, ink }) => {
+          const sheet = document.createElement('div');
+          sheet.id = 'brand-sheet';
+          sheet.setAttribute('style', 'display:inline-flex;flex-direction:column;align-self:flex-start;margin:16px');
+          for (const bg of [paper, ink]) {
+            const row = document.createElement('div');
+            row.setAttribute('style', `display:flex;gap:24px;align-items:center;padding:24px;background:${bg}`);
+            for (const s of sizes) row.insertAdjacentHTML('beforeend', `<img src="/favicon.svg" width="${s}" height="${s}" alt="Pagelapse icon, ${s} px">`);
+            sheet.append(row);
+          }
+          document.getElementById('root')!.style.display = 'none';
+          document.body.append(sheet);
+          const imgs = [...sheet.querySelectorAll('img')];
+          await Promise.all(imgs.map((i) => i.decode()));
+          return imgs.filter((i) => i.naturalWidth > 0).length;
+        },
+        { sizes, paper, ink },
+      );
+      if (loaded !== sizes.length * 2) throw new Error(`${loaded} of ${sizes.length * 2} favicons rendered`);
+      return { notes: [`favicon.svg rendered at ${sizes.join(', ')} px on paper and ink`] };
     },
   },
   {

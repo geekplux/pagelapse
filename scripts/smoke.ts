@@ -194,6 +194,7 @@ async function main(): Promise<number> {
   const runs = selected.flatMap((flow) => (flow.schemes ?? ['light']).map((scheme) => ({ flow, scheme })));
   for (const { flow, scheme } of runs) {
     for (const [viewport, size] of Object.entries(VIEWPORTS) as [keyof typeof VIEWPORTS, { width: number; height: number }][]) {
+      if (flow.viewports && !flow.viewports.includes(viewport)) continue;
       // One context at a time; each flow/viewport/scheme gets a clean one.
       const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1, colorScheme: scheme });
       await context.route('**/*', (route) => {
@@ -225,11 +226,15 @@ async function main(): Promise<number> {
             new Promise((resolve) => setTimeout(resolve, 3_000)),
           ]),
         );
-        await page.screenshot({ path: file, fullPage: true });
+        // Element shots get a 16 px margin of page around them.
+        const box = flow.clip ? await page.locator(flow.clip).boundingBox() : null;
+        const clip = box && { x: Math.max(0, box.x - 16), y: Math.max(0, box.y - 16), width: box.width + 32, height: box.height + 32 };
+        const shoot = (path: string) => page.screenshot({ path, fullPage: true, ...(clip && { clip }) });
+        await shoot(file);
         report.screenshot = relative(root, file);
         for (const variant of values.cvd && flow.cvd ? CVD_VARIANTS : []) {
           await setCvdFilter(page, variant);
-          await page.screenshot({ path: join(outDir, `${base}-${variant}.png`), fullPage: true });
+          await shoot(join(outDir, `${base}-${variant}.png`));
         }
         report.ok = true;
       } catch (err) {
