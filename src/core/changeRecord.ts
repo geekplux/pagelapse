@@ -35,14 +35,14 @@ const largest = <T>(items: { v: T; size: number }[], n: number): T[] =>
 
 /**
  * Builds the compact summariser input for the change from capture `a` to capture `b`:
- * title, headings added/removed (a renamed heading counts as both), the largest added and
+ * title, headings added/removed/renamed, the largest added and
  * removed blocks, excerpts of the most-edited blocks, and word/block counts. Edits that only
  * touch masked noise are left out. Snippets are clipped to {@link MAX_SNIPPET_CHARS}, and
  * items are dropped (longest list first, headings last) until the JSON fits {@link MAX_RECORD_CHARS}.
  */
 export function toChangeRecord(diff: PageDiff, a: SnapshotPage, b: SnapshotPage): ChangeRecord {
   const stats = { wordsAdded: 0, wordsRemoved: 0, blocksAdded: 0, blocksRemoved: 0, blocksModified: 0 };
-  const [headingsAdded, headingsRemoved] = [[] as string[], [] as string[]];
+  const [headingsAdded, headingsRemoved, renamed] = [[] as string[], [] as string[], [] as [string, string][]];
   const [added, removed] = [[] as { v: string; size: number }[], [] as { v: string; size: number }[]];
   const modified: { v: ChangeRecord['modified'][number]; size: number }[] = [];
   for (const op of diff.ops) {
@@ -60,10 +60,8 @@ export function toChangeRecord(diff: PageDiff, a: SnapshotPage, b: SnapshotPage)
       stats.wordsAdded += ins;
       stats.wordsRemoved += del;
       stats.blocksModified++;
-      if (op.kind === 'heading') {
-        headingsRemoved.push(clip(a.blocks[op.a]!.text, 80));
-        headingsAdded.push(clip(b.blocks[op.b]!.text, 80));
-      } else modified.push({ v: { before: excerpt(op.words, 'del'), after: excerpt(op.words, 'ins') }, size: ins + del });
+      if (op.kind === 'heading') renamed.push([clip(a.blocks[op.a]!.text, 80), clip(b.blocks[op.b]!.text, 80)]);
+      else modified.push({ v: { before: excerpt(op.words, 'del'), after: excerpt(op.words, 'ins') }, size: ins + del });
     }
   }
   const record: ChangeRecord = {
@@ -72,6 +70,7 @@ export function toChangeRecord(diff: PageDiff, a: SnapshotPage, b: SnapshotPage)
     ...(diff.titleChanged ? { titleChanged: true as const } : {}),
     headingsAdded: headingsAdded.slice(0, LIMITS.headings),
     headingsRemoved: headingsRemoved.slice(0, LIMITS.headings),
+    ...(renamed.length ? { headingsRenamed: renamed.slice(0, LIMITS.headings) } : {}),
     added: largest(added, LIMITS.added),
     removed: largest(removed, LIMITS.removed),
     modified: largest(modified, LIMITS.modified),
@@ -80,7 +79,7 @@ export function toChangeRecord(diff: PageDiff, a: SnapshotPage, b: SnapshotPage)
   const longest = (lists: unknown[][]) => lists.reduce((x, y) => (y.length > x.length ? y : x));
   while (JSON.stringify(record).length > MAX_RECORD_CHARS) {
     const body = longest([record.modified, record.removed, record.added]);
-    (body.length ? body : longest([record.headingsRemoved, record.headingsAdded])).pop();
+    (body.length ? body : longest([record.headingsRemoved, record.headingsAdded, record.headingsRenamed ?? []])).pop();
   }
   return record;
 }

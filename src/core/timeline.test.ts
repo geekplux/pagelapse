@@ -37,7 +37,8 @@ describe('change records and rule summaries over every sample pair', () => {
       const summary = ruleSummary(r);
       expect(summary.length).toBeGreaterThan(0);
       expect(summary.length).toBeLessThanOrEqual(MAX_RULE_SUMMARY_CHARS);
-      expect(summary).toContain((r.headingsAdded[0] ?? '').slice(0, 20));
+      const named = [...r.headingsAdded, ...(r.headingsRenamed ?? []).flat()];
+      expect(!named.length || named.some((h) => summary.includes(h.slice(0, 20)))).toBe(true);
     }
   });
 });
@@ -50,6 +51,18 @@ describe('ruleSummary', () => {
     expect(ruleSummary(toChangeRecord(diffPages(a, c), a, c))).toBe('Added section "Downloads" (+6 / −0 words)');
     const d = snap(3, [BASE[0]!.replace('river', 'lake'), ...BASE.slice(1)]);
     expect(ruleSummary(toChangeRecord(diffPages(a, d), a, d))).toBe('Reworded 1 passage (+1 / −1 words)');
+  });
+
+  it('reads a reworded heading as a rename, calls out version bumps, and names an informative heading', () => {
+    const h = (text: string) => ({ kind: 'heading' as const, text, level: 2 as const });
+    const a = { ...snap(1, BASE), blocks: [h('Cyberattacks'), ...snap(1, BASE).blocks] };
+    const b = { ...a, ts: '20200102000000', blocks: [h('2024 cyberattacks'), ...a.blocks.slice(1)] };
+    expect(ruleSummary(toChangeRecord(diffPages(a, b), a, b))).toBe('Renamed section "Cyberattacks" to "2024 cyberattacks" (+2 / −1 words)');
+    const c = snap(2, [BASE[0]!, 'Version 1.44.1 is the latest stable release.', ...BASE.slice(1)]);
+    const d = snap(3, [BASE[0]!, 'Version 1.69.0 is the latest stable release.', ...BASE.slice(1)]);
+    expect(ruleSummary(toChangeRecord(diffPages(c, d), c, d))).toBe('Updated version 1.44.1 to 1.69.0; reworded 1 passage (+1 / −1 words)');
+    const e = { ...snap(4, BASE), title: 'Rust Programming Language', blocks: [h('Rust'), h('Why Rust?'), ...BASE.map((text) => ({ kind: 'paragraph' as const, text }))] };
+    expect(ruleSummary(toChangeRecord(diffPages(snap(1, BASE), e), snap(1, BASE), e))).toMatch(/^Title changed to .*; added 2 sections incl\. "Why Rust\?"/);
   });
 
   it('stays within budget for long names, and falls back for moves only', () => {

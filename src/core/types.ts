@@ -186,6 +186,8 @@ export interface ChangeRecord {
   titleChanged?: true;
   headingsAdded: string[];
   headingsRemoved: string[];
+  /** Headings reworded in place, `[before, after]`. */
+  headingsRenamed?: [string, string][];
   /** Snippets (<= 160 chars) of the largest added / removed blocks, in page order. */
   added: string[];
   removed: string[];

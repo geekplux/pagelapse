@@ -133,6 +133,7 @@ export function DiffView({ entry, from, to }: Pick<Props, 'entry' | 'from' | 'to
     ...(entry.diff.titleChanged ? [['modified', `Title “${from.title}” became “${to.title}”`] as [string, string]] : []),
     ...r.headingsRemoved.map((h): [string, string] => ['removed', `Removed heading “${h}”`]),
     ...r.headingsAdded.map((h): [string, string] => ['added', `Added heading “${h}”`]),
+    ...(r.headingsRenamed ?? []).map(([x, y]): [string, string] => ['modified', `Renamed heading “${x}” to “${y}”`]),
   ];
 
   return (
