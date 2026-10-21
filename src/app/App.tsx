@@ -39,6 +39,8 @@ export function App() {
     const { sample, change } = parseUrlState(location.search);
     const entry = samples.find((s) => s.id === sample);
     if (!current && entry) load(entry, change, false);
+    // An unknown `?sample=` shows the default sample: say so in the address bar (keeping any resolved change).
+    if (sample && !entry) writeUrlState({ ...parseUrlState(location.search), sample: defaultSample.id });
     // Runs once on mount: only the initial deep link is restored from the URL.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -1,21 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { SampleFixture } from '../core/types.ts';
+import type { SampleFixture, TimelineEntry } from '../core/types.ts';
 import { ARCHIVES } from '../archive/archives.ts';
 import { viewCaptureUrl } from '../core/url.ts';
 import { fixtureToSnapshots } from '../core/fixture.ts';
-import { buildTimeline } from '../core/timeline.ts';
-import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../core/timestamp.ts';
+import { buildTimeline, trivialEntries } from '../core/timeline.ts';
 import { ChangesList } from './ChangesList.tsx';
-import { statsLine } from './describe.ts';
+import { DiffView } from './diff/DiffView.tsx';
 import { Timeline } from './timeline/Timeline.tsx';
+import { Ts } from './Ts.tsx';
 import { changeIndex } from './urlState.ts';
 
-const Ts = ({ ts }: { ts: string }) => (
-  <time className="mono" dateTime={timestampToIso(ts)}>
-    <span aria-hidden="true">{formatTimestampShort(ts)}</span>
-    <span className="sr-only">{formatTimestampLong(ts)}</span>
-  </time>
-);
+const keyOf = (e?: TimelineEntry) => (e ? `${e.from}-${e.to}` : '');
 
 interface Props {
   fixture: SampleFixture;
@@ -31,16 +26,37 @@ export function TimelineView({ fixture, initialChange, onChange }: Props) {
   const timeline = useMemo(() => buildTimeline(fixture.url, fixtureToSnapshots(fixture)), [fixture]);
   const { entries, trivialCaptures } = timeline;
   const trivial = useMemo(() => new Set(trivialCaptures), [trivialCaptures]);
-  const [selected, setSelected] = useState(() => changeIndex(entries, initialChange));
-  const entry = entries[selected];
+  const [showTrivial, setShowTrivial] = useState(false);
+  const all = useMemo(
+    () => (showTrivial ? [...entries, ...trivialEntries(timeline)].sort((x, y) => (x.to < y.to ? -1 : 1)) : entries),
+    [showTrivial, entries, timeline],
+  );
+  const shown = useMemo(() => ({ ...timeline, entries: all, trivialCaptures: showTrivial ? [] : trivialCaptures }), [timeline, all, showTrivial, trivialCaptures]);
+  const [key, setKey] = useState(() => keyOf(entries[changeIndex(entries, initialChange)]));
+  const selected = changeIndex(all, key);
+  const entry = all[selected];
   const years = `${snapshots[0]?.ts.slice(0, 4)}–${snapshots.at(-1)?.ts.slice(0, 4)}`;
   const capUrl = (ts: string) => viewCaptureUrl(fixture.source.archive, ts, fixture.url);
-  const select = (i: number) => {
-    const e = entries[i];
+  const page = (ts: string) => timeline.snapshots.find((s) => s.ts === ts);
+  const choose = (e?: TimelineEntry) => {
     if (!e) return;
-    setSelected(i);
-    onChange(`${e.from}-${e.to}`);
+    setKey(keyOf(e));
+    onChange(keyOf(e));
   };
+  const select = (i: number) => choose(all[i]);
+  const toggleTrivial = (on: boolean) => {
+    setShowTrivial(on);
+    if (!on && !entries.some((e) => keyOf(e) === key)) choose(entries.at(-1));
+  };
+  // The changes list starts collapsed on narrow screens, behind its "All changes (N)" summary.
+  const [listOpen, setListOpen] = useState(() => typeof matchMedia !== 'function' || matchMedia('(min-width: 40rem)').matches);
+
+  // An unknown `?change=` was resolved to the latest change: show that in the address bar too.
+  useEffect(() => {
+    if (initialChange !== undefined && initialChange !== key) onChange(key);
+    // Runs once on mount.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Signal "rendered" to the smoke check once the timeline is in the DOM.
   useEffect(() => {
@@ -79,37 +95,20 @@ export function TimelineView({ fixture, initialChange, onChange }: Props) {
           </span>
         )}
       </p>
+      {trivialCaptures.length > 0 && (
+        <label className="toggle">
+          <input type="checkbox" checked={showTrivial} onChange={(e) => toggleTrivial(e.currentTarget.checked)} /> Show trivial edits
+        </label>
+      )}
       {entry ? (
         <>
-          <Timeline timeline={timeline} selected={selected} onSelect={select} labelledBy="timeline-heading" describedBy="timeline-legend" />
+          <Timeline timeline={shown} selected={selected} onSelect={select} labelledBy="timeline-heading" describedBy="timeline-legend" />
           <div className="tl-panes">
-            <section className="change-panel" aria-labelledby="change-heading">
-              <p className="panel-kicker mono">
-                Change {selected + 1} of {entries.length} ·{' '}
-                <span className="change-mag" data-magnitude={entry.significance.magnitude}>
-                  {entry.significance.magnitude}
-                </span>
-              </p>
-              <h3 id="change-heading">
-                <Ts ts={entry.from} /> → <Ts ts={entry.to} />
-              </h3>
-              <p className="panel-summary">
-                {entry.ruleSummary} <span className="source-label mono">auto summary</span>
-              </p>
-              <p className="panel-stats mono">{statsLine(entry.record)}</p>
-              {/* Links are named by the long dates inside <time>; the linter cannot see through the nested spans. */}
-              <p className="panel-links">
-                Open in the archive:{' '}
-                {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label */}
-                <a href={capUrl(entry.from)}><Ts ts={entry.from} /></a> ·{' '}
-                {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label */}
-                <a href={capUrl(entry.to)}><Ts ts={entry.to} /></a>
-              </p>
-            </section>
-            <section className="changes-pane" aria-labelledby="changes-heading">
-              <h3 id="changes-heading">All changes</h3>
-              <ChangesList entries={entries} selected={selected} onSelect={select} />
-            </section>
+            <DiffView entry={entry} index={selected} count={all.length} from={page(entry.from)!} to={page(entry.to)!} captureUrl={capUrl} onSelect={select} />
+            <details className="changes-pane" open={listOpen} onToggle={(e) => setListOpen(e.currentTarget.open)}>
+              <summary id="changes-heading">All changes ({all.length})</summary>
+              <ChangesList entries={all} selected={selected} onSelect={select} />
+            </details>
           </div>
         </>
       ) : (

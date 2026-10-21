@@ -109,8 +109,10 @@ main { flex: 1; }
 [data-magnitude="minor"] { --d: 12px; --c: var(--mag-2); }
 [data-magnitude="moderate"] { --d: 19px; --c: var(--mag-3); }
 [data-magnitude="major"] { --d: 27px; --c: var(--mag-4); }
+[data-magnitude="trivial"] { --d: 12px; --c: var(--mag-1); }
 .mag-dot, .change-mag::before { content: ""; display: inline-block; width: var(--d); height: var(--d); margin: 0 0.3em 0 0.5em; border-radius: 50%; background: var(--c); vertical-align: middle; }
 .change-mag::before { margin-left: 0; }
+.change-mag[data-magnitude="trivial"]::before, .tl-marker[data-magnitude="trivial"] { background: none; fill: var(--paper); border: 2px solid var(--c); stroke: var(--c); stroke-width: 2; }
 /* The major dot repeats the marker's inner ring (r 9 of 13.5) as a shape cue. */
 .mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px var(--c), inset 0 0 0 5.25px var(--paper); }
 .mag-tick { display: inline-block; width: 6px; height: 15px; margin-right: 0.3em; border: 1.5px solid var(--mag-1); border-radius: 3px; vertical-align: middle; }
@@ -156,8 +158,60 @@ main { flex: 1; }
 .panel-summary { font: var(--step-1) / 1.45 var(--font-read); max-width: 60ch; }
 .source-label { padding: 0.1rem 0.45rem; border: 1px solid var(--rule-strong); border-radius: 999px; color: var(--ink-2); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap; vertical-align: 0.2em; }
 .panel-stats, .panel-links { color: var(--ink-2); font-size: 0.9rem; }
+.panel-links { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.25rem; }
 .panel-links a { color: var(--ink); }
-.sheet .changes-pane h3 { margin-top: 0; }
+/* Inline links get a >= 24 px tall target without changing the line box. */
+.sheet-url a, .panel-links a, .site-footer a { padding-block: 0.35em; }
+.cap-out::after { content: " ↗" / ""; }
+.btn { min-height: 2.5rem; padding: 0.3rem 0.9rem; border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--card); color: var(--ink); font: 500 0.9rem/1 var(--font-ui); cursor: pointer; }
+.btn:hover { border-color: var(--ink); }
+.btn[aria-disabled="true"] { border-style: dashed; color: var(--ink-2); cursor: default; }
+.btn-link { min-height: 24px; padding: 0.2rem 0; border: 0; background: none; color: var(--ink); font: 600 0.85rem var(--font-ui); text-decoration: underline; cursor: pointer; }
+.toggle { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; font-size: 0.9rem; cursor: pointer; }
+.toggle input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--ink); }
+.diff-sub { font: 600 var(--step--1) / 1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); }
+.diff-structure { list-style: none; padding: 0; margin: 0; font-family: var(--font-read); }
+.diff-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; color: var(--ink-2); font-size: 0.85rem; }
+.diff-legend b { font-family: var(--font-mono); }
+
+/* The diff as a marked galley: gutter symbol and text style carry the meaning, hue and tint repeat it. */
+.diff-body { display: grid; gap: 0.5rem; max-width: 72ch; font: 1.05rem / 1.6 var(--font-read); animation: fade 120ms ease-out; }
+.db, .diff-structure li { position: relative; padding: 0.3rem 0.6rem 0.3rem 1.9rem; border-left: 3px solid transparent; }
+.db::before, .diff-structure li::before { position: absolute; left: 0.55rem; font: 700 1rem / 1.6 var(--font-mono); }
+.db-t { margin: 0; overflow-wrap: anywhere; }
+.db-t.is-clamped { max-height: 12lh; overflow: hidden; }
+.db[data-op="equal"] { color: var(--ink-2); }
+:is(.db, .diff-structure li)[data-op="added"]::before { content: "+" / ""; }
+:is(.db, .diff-structure li)[data-op="removed"]::before { content: "−" / ""; }
+:is(.db, .diff-structure li)[data-op="modified"]::before { content: "~" / ""; }
+:is(.db, .diff-structure li)[data-op="moved"]::before { content: "↕" / ""; }
+.diff-structure [data-op="added"]::before, .db[data-op="added"]::before, .diff-legend [data-op="added"] { color: var(--added); }
+.diff-structure [data-op="removed"]::before, .db[data-op="removed"]::before, .diff-legend [data-op="removed"] { color: var(--removed); }
+.db[data-op="added"] { background: var(--added-tint); border-left-color: var(--added); }
+.db[data-op="removed"] { background: var(--removed-tint); border-left-color: var(--removed); }
+.db[data-op="modified"] { border-left-color: var(--ink-2); }
+.db[data-op="moved"] { border-left: 3px dotted var(--ink-2); font-style: italic; }
+ins, .w-ins, .db[data-op="added"] .db-t { text-decoration: underline 2px var(--added); text-underline-offset: 3px; text-decoration-skip-ink: none; }
+del, .w-del, .db[data-op="removed"] .db-t { text-decoration: line-through 2px var(--removed); }
+ins, .w-ins { background: var(--added-tint); }
+del, .w-del { background: var(--removed-tint); }
+del + ins { margin-left: 0.2em; }
+/* Spoken word marks (generated content reaches the accessibility tree, not the screen). */
+ins::before, ins::after, del::before, del::after { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+ins::before { content: " [added: "; }
+del::before { content: " [removed: "; }
+ins::after, del::after { content: "] "; }
+.db[data-kind="heading"] .db-t { font: 600 1.25rem / 1.3 var(--font-display); }
+.db[data-kind="list-item"] .db-t::before { content: "•" / ""; display: inline-block; margin-right: 0.5em; }
+.db[data-kind="code"] .db-t { font: 0.9rem / 1.5 var(--font-mono); white-space: pre-wrap; }
+.db[data-kind="quote"] .db-t { font-style: italic; }
+.db-gap { min-height: 2.25rem; padding: 0.3rem 0.75rem; border: 1px dashed var(--rule-strong); border-radius: 3px; background: none; color: var(--ink-2); font: 0.85rem var(--font-mono); text-align: left; cursor: pointer; }
+.db-gap::before { content: "⋯ " / ""; }
+.db-gap:hover { color: var(--ink); border-color: var(--ink); }
+.db-open { display: grid; gap: 0.5rem; }
+.diff-nav { white-space: nowrap; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding-block: 0.6rem; background: var(--card); border-top: 1px solid var(--rule); font-size: 0.9rem; }
+/* On phones the Previous / Next bar stays in reach at the bottom of the screen while reading the diff. */
+@media (max-width: 39.99rem) { .diff-nav { position: sticky; bottom: 0; z-index: 1; } }
 .changes { list-style: none; padding: 0; margin-top: 0.5rem; border-bottom: 1px solid var(--rule); }
 .change {
   display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.75rem; width: 100%; min-height: 2.75rem; padding: 0.55rem 0.5rem 0.55rem 0.75rem;
@@ -168,13 +222,14 @@ main { flex: 1; }
 .change[aria-current="true"] .change-sum { font-weight: 600; }
 .change-sum { grid-column: 1 / -1; font: 0.98rem / 1.4 var(--font-read); }
 .captures-all { margin-top: 2rem; }
-.captures-all summary { min-height: 1.5rem; cursor: pointer; font: 600 var(--step--1) / 1.5 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); }
+.captures-all summary, .changes-pane summary { min-height: 1.5rem; cursor: pointer; font: 600 var(--step--1) / 1.5 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); }
 .loading { padding-block: 2rem; color: var(--ink-2); }
 
 .site-footer { padding-block: 2rem 3rem; margin-top: 2.5rem; border-top: 1px solid var(--rule); display: grid; gap: 0.6rem; color: var(--ink-2); font-size: 0.9rem; max-width: 64rem; }
 .site-footer a { color: var(--ink); }
 .licence-link { white-space: nowrap; }
 
+@keyframes fade { from { opacity: 0; } }
 @keyframes settle { from { opacity: 0; transform: translateY(6px); } }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -202,4 +257,7 @@ main { flex: 1; }
   .mag-dot, .change-mag::before { forced-color-adjust: none; background: CanvasText; }
   .mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px CanvasText, inset 0 0 0 5.25px Canvas; }
   .change[aria-current="true"] { border-left-color: Highlight; }
+  ins, del, .w-ins, .w-del, .db .db-t { text-decoration-color: CanvasText; }
+  .db[data-op="added"], .db[data-op="removed"], .db[data-op="modified"] { border-left-color: CanvasText; }
+  .btn[aria-disabled="true"] { color: GrayText; }
 }

@@ -8,6 +8,9 @@ export function AppHeader(props: Parameters<typeof SamplePicker>[0]) {
       <a className="skip-link" href="#content">
         Skip to content
       </a>
+      <a className="skip-link" href="#diff">
+        Skip to diff
+      </a>
       <div className="masthead">
         <h1>
           <a href="/" className="home-link">
