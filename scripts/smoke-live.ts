@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { API_ERRORS, GIT_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
-import { type Flow, openReady } from './smoke-flows.ts';
+import { type Flow, openDisclosure, openReady } from './smoke-flows.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 
 const git = mockFromSample('git-scm');
@@ -58,7 +58,7 @@ export async function mockApi(
   opts: {
     data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; snapshot?: (i: number) => Plan; frame?: (ts: string) => number | null;
     /** `/api/summaries`: Workers AI lines (git-scm), a 500, or (default) "rule" for every pair, as without a binding. */
-    summaries?: 'ai' | 'error';
+    summaries?: 'ai' | 'some' | 'error';
   } = {},
 ) {
   const frames = await stubReplay(page, opts.frame);
@@ -87,10 +87,11 @@ export async function mockApi(
       const { pairs } = route.request().postDataJSON() as { pairs: { from: string; to: string }[] };
       entry.pairs = pairs.map((p) => `${p.from}-${p.to}`);
       await sleep(300);
-      const line = (pair: string) => GIT_AI_SUMMARIES[gitTimeline.findIndex((e) => `${e.from}-${e.to}` === pair)];
+      // 'some': AI lines for every other change only (a mixed list).
+      const line = (pair: string, i = gitTimeline.findIndex((e) => `${e.from}-${e.to}` === pair)) => (opts.summaries === 'some' && i % 2 ? undefined : GIT_AI_SUMMARIES[i]);
       reply = opts.summaries === 'error'
         ? { status: 500, body: { error: 'archive_unavailable', message: 'Something went wrong.' } }
-        : { status: 200, body: { summaries: entry.pairs.map((pair) => (opts.summaries === 'ai' && line(pair) ? { pair, source: 'ai', text: line(pair) } : { pair, source: 'rule' })) } };
+        : { status: 200, body: { summaries: entry.pairs.map((pair) => (opts.summaries !== 'error' && opts.summaries && line(pair) ? { pair, source: 'ai', text: line(pair) } : { pair, source: 'rule' })) } };
     }
     entry.end = Date.now();
     // The page may have aborted the request meanwhile (Cancel, a new run): nothing left to answer.
@@ -472,6 +473,7 @@ export const liveFlows: readonly Flow[] = [
       await openLive(page, baseUrl, 'git-scm.com', 'done');
       const text = await expectText(page, '.state-card', /14 captures, 2013–2025: nothing meaningful changed\. 13 trivial edits hidden \(dates, counters, whitespace\)\./);
       if (await page.locator('.tl-slider').count()) throw new Error('a slider with no changes');
+      await openDisclosure(page, 'Key');
       if (!(await page.getByRole('checkbox', { name: 'Show trivial edits' }).count())) throw new Error('no "Show trivial edits" toggle');
       return { notes: [text] };
     },
@@ -659,6 +661,7 @@ export const liveFlows: readonly Flow[] = [
       const hidden = await page.locator('.lf iframe[data-hidden]').evaluate((el: HTMLIFrameElement) => ({ inert: el.inert, ariaHidden: el.getAttribute('aria-hidden'), visibility: getComputedStyle(el).visibility }));
       if (!hidden.inert || hidden.ariaHidden !== 'true' || hidden.visibility !== 'hidden') throw new Error(`preloaded frame ${JSON.stringify(hidden)}`);
       const t1 = Date.now();
+      await openDisclosure(page, 'Compare');
       await page.getByRole('radio', { name: 'Slider' }).check();
       await page.locator('.vp-cmp iframe[data-loaded]').nth(1).waitFor({ timeout: 5000 });
       await sleep(3000);
@@ -746,6 +749,7 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       await mockApi(page);
       await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await openDisclosure(page, 'Compare');
       await page.getByRole('radio', { name: 'Slider' }).check();
       await page.locator('.vp-cmp iframe[data-loaded]').nth(1).waitFor({ timeout: 5000 });
       const frames = await page.locator('iframe').evaluateAll((els) => els.map((el) => (el as HTMLIFrameElement).inert));

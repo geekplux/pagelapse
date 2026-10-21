@@ -180,10 +180,10 @@ async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<st
  */
 async function currentInList(page: Page, pageY = 0): Promise<string> {
   const m = await page.evaluate((y) => {
-    const pane = document.querySelector<HTMLDetailsElement>('.stage > .changes-pane')!;
+    const pane = document.querySelector<HTMLDetailsElement>('.stage .changes-pane')!;
     const item = document.querySelector('.changes .change[aria-current="true"]')!.getBoundingClientRect();
     const box = pane.getBoundingClientRect();
-    const tl = document.querySelector('.stage > .tl-area')!.getBoundingClientRect();
+    const tl = document.querySelector('.stage .tl-area')!.getBoundingClientRect();
     const boxes = [pane, ...pane.querySelectorAll('*')].filter((el) => el.scrollHeight > el.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(el).overflowY));
     const problems = [
       !pane.open && 'the list is closed',
@@ -198,11 +198,22 @@ async function currentInList(page: Page, pageY = 0): Promise<string> {
   return m.text;
 }
 
-/** Opens the "All changes (N)" disclosure (collapsed on mobile). */
-async function openChanges(page: Page): Promise<void> {
-  const pane = page.locator('.changes-pane');
-  if (!(await pane.evaluate((d) => (d as HTMLDetailsElement).open))) await pane.locator('summary').click();
+/**
+ * Opens a folded part (phase 17): the `<details>` whose summary starts with `name`, or the `aria-expanded` button
+ * named so (the compare picker). Set in script, so the page does not scroll to it.
+ */
+export async function openDisclosure(page: Page, name: string): Promise<void> {
+  await page.evaluate((n) => {
+    const summary = [...document.querySelectorAll('summary')].find((x) => x.textContent?.trim().startsWith(n));
+    if (summary) (summary.parentElement as HTMLDetailsElement).open = true;
+    const button = [...document.querySelectorAll<HTMLButtonElement>('button[aria-expanded="false"]')].find((b) => b.textContent?.trim().startsWith(n));
+    button?.click();
+    if (!summary && !button && !document.querySelector(`button[aria-expanded="true"]`)) throw new Error(`no disclosure "${n}"`);
+  }, name);
 }
+
+/** Opens the "All changes (N)" disclosure (folded at every width). */
+const openChanges = (page: Page) => openDisclosure(page, 'All changes');
 
 const SPOKEN: Record<string, string> = { added: 'Added:', removed: 'Removed:', modified: 'Changed:', moved: 'Moved:' };
 
@@ -485,8 +496,9 @@ export const flows: readonly Flow[] = [
       if (nodes >= 1500) throw new Error(`diff panel has ${nodes} nodes`);
       const timeToReadyMs = await openReady(page, baseUrl);
       const notes = await checkDiff(page, defaultFixture, defaultTimeline.entries.length - 1);
+      // Folded at every width since phase 17 (Calm layout); it was open on desktop before.
       const open = await page.locator('.changes-pane').evaluate((d) => (d as HTMLDetailsElement).open);
-      if (open !== (viewport === 'desktop')) throw new Error(`changes list open=${open} on ${viewport}`);
+      if (open) throw new Error(`changes list open=${open} on ${viewport}`);
       const summary = (await page.locator('.changes-pane summary').textContent())?.trim();
       if (summary !== `All changes (${defaultTimeline.entries.length})`) throw new Error(`summary "${summary}"`);
       await noPageOverflow(page);
@@ -559,6 +571,7 @@ export const flows: readonly Flow[] = [
       await openReady(page, baseUrl, `/?sample=git-scm`);
       await page.locator('.diff-nav .btn').first().click();
       await expectSelected(page, f, t.entries.length - 2);
+      await openDisclosure(page, 'Change details');
       await page.locator('.change-panel button', { hasText: 'Copy link' }).click();
       await page.locator('.change-panel [role="status"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
       const copied = await page.evaluate(() => navigator.clipboard.readText());
@@ -567,6 +580,7 @@ export const flows: readonly Flow[] = [
       await expectSelected(page, f, t.entries.length - 2);
       // "Show trivial edits" turns the hollow ticks into selectable, labelled entries.
       const trivial = trivialEntries(t);
+      await openDisclosure(page, 'Key');
       await page.getByLabel('Show trivial edits').check();
       const marks = await page.locator('.tl-marker[data-magnitude="trivial"]').count();
       const items = await page.locator('.changes li').count();
@@ -683,6 +697,7 @@ export const flows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
       const { entries } = defaultTimeline;
+      await openChanges(page);
       const notes = [`load: ${await currentInList(page)}`];
       // Dispatched clicks: a real click would let Playwright scroll the page to the target first.
       await page.locator('.diff-nav .btn').first().dispatchEvent('click');
@@ -710,7 +725,8 @@ export const flows: readonly Flow[] = [
       const notes: string[] = [];
       for (const [width, height] of [[390, 844], [320, 844], [320, 568]] as const) {
         await page.setViewportSize({ width, height });
-        await openReady(page, baseUrl);
+        // Single: the caption's own "Open capture" (in compare modes the pair's links are in Change details).
+        await openReady(page, baseUrl, '/?view=single');
         await settle(page);
         // Short screens cannot show the caption on first view; there the link must come clear when tabbed to.
         if (height < 700) {
@@ -804,7 +820,8 @@ export const flows: readonly Flow[] = [
       // The diff has stops only when it has collapsed runs or long blocks; the rest always do.
       if (seen.length < 5 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
       // The first stop after the pane's controls is in the change card, beside the picture; the card holds no list.
-      await page.locator('.vpane .cap-out').last().focus();
+      // The pane's last stop: "Open capture" in Single, the divider in Slider (its links are in Change details).
+      await page.locator('.vpane :is(.cap-out, .vp-split)').last().focus();
       await page.keyboard.press('Tab');
       const next = await page.evaluate(() => `${document.activeElement?.closest('.side') ? 'side' : 'elsewhere'}: ${document.activeElement?.textContent?.trim().slice(0, 30)}`);
       if (!next.startsWith('side')) throw new Error(`after "Open capture": ${next}`);
@@ -995,6 +1012,7 @@ export const flows: readonly Flow[] = [
     description: 'Side by side: two labelled mats with their own captions and links, side by side on desktop and stacked on phones; ?view=side',
     async run({ page, baseUrl, viewport }) {
       await openReady(page, baseUrl);
+      await openDisclosure(page, 'Compare');
       await page.getByRole('radio', { name: 'Side by side' }).check();
       const mats = await page.locator('.vp-pair .vp-mat').evaluateAll((ms) =>
         ms.map((m) => ({ ...JSON.parse(JSON.stringify(m.getBoundingClientRect())), label: m.querySelector('.vp-label')?.textContent, links: m.querySelectorAll('.cap-out').length })),
@@ -1019,6 +1037,7 @@ export const flows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
+      await openDisclosure(page, 'Compare');
       await page.getByRole('radio', { name: 'Slider' }).focus();
       await page.keyboard.press('ArrowRight');
       if ((await checkedMode(page)) !== 'onion') throw new Error(`Right from Slider checked ${await checkedMode(page)}`);

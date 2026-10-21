@@ -4,7 +4,7 @@
 import type { Page } from 'playwright-core';
 import { mockFromSample } from '../test/fixtures/api/live.ts';
 import { assertAxeClean } from './smoke-a11y.ts';
-import { type Flow, type FlowContext, openReady } from './smoke-flows.ts';
+import { type Flow, type FlowContext, openDisclosure, openReady } from './smoke-flows.ts';
 import { framesPainted, mockApi, openLive } from './smoke-live.ts';
 
 const baseline = !!process.env.CALM_BASELINE;
@@ -150,10 +150,12 @@ const VIEWS: View[] = [
   { name: 'live-invalid-url', setup: (page, baseUrl) => openReady(page, baseUrl, '/?url=ftp%3A%2F%2Fexample.org') },
 ];
 
+/** Settles finite animations (the live dot pulses forever, so the wait is capped). */
+const settled = (page: Page) => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))), new Promise((r) => setTimeout(r, 1_500))]));
+
 async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
   await view.setup(page, baseUrl);
-  // Settle finite animations (the live dot pulses forever, so cap the wait).
-  await page.evaluate(() => Promise.race([Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))), new Promise((r) => setTimeout(r, 1_500))]));
+  await settled(page);
   const m = await page.evaluate(measure);
   const wide = viewport === 'wide';
   const w = page.viewportSize()!.width;
@@ -177,13 +179,230 @@ async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
   return { notes: problems.length ? [...notes, `over caps (baseline run): ${problems.join('; ')}`] : notes };
 }
 
-export const calmFlows: readonly Flow[] = VIEWS.map((view) => ({
-  name: `calm-audit:${view.name}`,
-  description: `Calm layout caps on the first viewport of "${view.name}" (1440×900, 390×844), with a first-view shot`,
-  shot: view.name,
-  widthTag: true,
-  firstView: true,
-  viewports: ['wide', 'mobile'],
-  apiErrors: view.name.startsWith('live-e'),
-  run: (ctx) => audit(view, ctx),
-}));
+/** Every feature reachable by Tab, Enter and Space only, opening at most one disclosure (AC 5). */
+type Item = { name: string; sel: string; path?: string; via?: string };
+const SAMPLE_IDS = ['git-scm', 'wikipedia-internet-archive', 'rust-lang'];
+const wiki = '/?sample=wikipedia-internet-archive';
+const INVENTORY: Item[] = [
+  { name: 'URL input', sel: '#url-input' },
+  { name: 'Show changes', sel: '.btn-go' },
+  ...SAMPLE_IDS.map((id) => ({ name: `sample ${id}`, sel: `.chip[data-sample="${id}"]` })),
+  { name: 'Compare picker', sel: '.vp-compare' },
+  { name: 'compare modes (radio group)', sel: 'input[name="vp-mode"]', via: '.vp-compare' },
+  { name: 'Play', sel: '.vp-play' },
+  { name: 'Before / After toggle (roving pair)', sel: '.vp-side', path: '/?view=single' },
+  { name: 'slider handle', sel: '.vp-split' },
+  { name: 'onion range', sel: '.vp-onion input[type="range"]', path: '/?view=onion' },
+  { name: 'Swap', sel: '.vp-onion button', path: '/?view=onion' },
+  { name: 'Previous', sel: '.diff-nav .btn:first-child' },
+  { name: 'Next', sel: '.diff-nav .btn:last-child' },
+  { name: 'Copy link', sel: '.change-details button', via: '.change-details > summary' },
+  { name: 'View capture (Before)', sel: '.change-details a.cap-out:first-of-type', via: '.change-details > summary' },
+  { name: 'View capture (After)', sel: '.change-details a.cap-out:nth-of-type(2)', via: '.change-details > summary' },
+  { name: 'Open capture', sel: '.vpane .cap-out', path: '/?view=single' },
+  { name: 'filmstrip', sel: '.frame' },
+  { name: 'timeline slider', sel: '.tl-slider' },
+  { name: 'Show trivial edits', sel: '.tl-key input[type="checkbox"]', via: '.tl-key > summary' },
+  { name: 'timeline key items', sel: '#timeline-legend', via: '.tl-key > summary' },
+  { name: 'changes list items', sel: '.change', via: '.changes-pane > summary' },
+  { name: 'Structure', sel: '.diff-panel details:first-of-type > summary' },
+  { name: 'diff Key', sel: '.diff-panel details:last-of-type > summary' },
+  { name: 'Show unchanged blocks', sel: '.db-gap', path: wiki },
+  { name: 'Skip to diff', sel: '.skip-link[href="#diff"]' },
+  { name: 'About these captures', sel: '.site-footer details:first-of-type > summary' },
+  { name: 'Keyboard shortcuts', sel: '.site-footer details:last-of-type > summary' },
+  { name: 'GitHub link', sel: '.site-footer a[href*="github.com"]' },
+];
+
+/** Tabs from the top until `item` has focus (or, for text, is shown), pressing Enter on its one disclosure on the way. */
+async function reach(page: Page, baseUrl: string, item: Item): Promise<string> {
+  await openReady(page, baseUrl, item.path ?? '/');
+  const text = item.sel === '#timeline-legend';
+  let opened = '';
+  for (let k = 1; k <= 160; k++) {
+    await page.keyboard.press('Tab');
+    const at = await page.evaluate(({ sel, via }) => {
+      const a = document.activeElement;
+      return { hit: !!a?.matches(sel), via: !!via && !!a?.matches(via) };
+    }, item);
+    if (at.via && !opened) {
+      // Enter for a <summary>, Space for the compare button: both native activations.
+      opened = item.via!.includes('summary') ? 'Enter' : 'Space';
+      await page.keyboard.press(opened);
+      if (text) break;
+      continue;
+    }
+    if (at.hit) {
+      const tree = await page.locator(':focus').ariaSnapshot();
+      // A named role (`button "Copy link"`), or a <summary>, which the snapshot lists by its text.
+      if (!/"[^"]+"|^- text: \S/m.test(tree)) throw new Error(`${item.name}: focused but unnamed (${tree})`);
+      return `${item.name}: Tab x${k}${opened ? ` after ${opened} on its disclosure` : ''}; ${tree.split('\n')[0]!.trim().slice(0, 60)}`;
+    }
+  }
+  if (text) {
+    const shown = await page.locator(item.sel).evaluate((el) => el.checkVisibility() && !!el.textContent?.trim());
+    const tree = await page.locator(item.sel).ariaSnapshot();
+    if (shown && tree.trim()) return `${item.name}: shown after ${opened} on its disclosure; ${tree.split('\n')[0]!.trim().slice(0, 60)}`;
+  }
+  throw new Error(`${item.name} (${item.sel}) not reached by keyboard`);
+}
+
+async function inventory({ page, baseUrl }: FlowContext) {
+  const notes: string[] = [];
+  for (const item of INVENTORY) notes.push(await reach(page, baseUrl, item));
+  // The four modes are named radios in the opened group.
+  await openReady(page, baseUrl);
+  await openDisclosure(page, 'Compare');
+  const modes = await page.getByRole('radio').evaluateAll((rs) => rs.map((r) => r.closest('label')?.textContent?.trim()));
+  if (modes.join() !== 'Single,Side by side,Slider,Onion skin') throw new Error(`compare modes: ${modes.join()}`);
+  notes.push(`compare modes: ${modes.join(', ')}`);
+  return { notes };
+}
+
+/** Phones: the sticky Previous / Next bar is not stuck on first view and never covers the pane's caption (AC 9d). */
+async function sticky(page: Page, scroll: boolean) {
+  await settled(page);
+  const m = () =>
+    page.evaluate(() => {
+      const nav = document.querySelector('.diff-nav')!;
+      const cap = document.querySelector('.vpane .vp-cap')!.getBoundingClientRect();
+      const bar = nav.getBoundingClientRect();
+      return { stuck: nav.hasAttribute('data-stuck'), fixed: getComputedStyle(nav).position === 'fixed', bar: [bar.top, bar.bottom], cap: [cap.top, cap.bottom], meets: cap.top < bar.bottom && bar.top < cap.bottom, vh: innerHeight };
+    });
+  const first = await m();
+  if (first.stuck || first.fixed || first.meets) throw new Error(`first view: ${JSON.stringify(first)}`);
+  const notes = [`first view: bar in flow at ${first.bar.map(Math.round).join('-')}, caption ${first.cap.map(Math.round).join('-')}`];
+  if (!scroll) return notes;
+  await page.evaluate(() => document.getElementById('diff')!.scrollIntoView({ block: 'start' }));
+  await page.waitForFunction(() => document.querySelector('.diff-nav[data-stuck]'), null, { timeout: 3_000 });
+  const later = await m();
+  if (!later.fixed || Math.round(later.bar[1]!) !== later.vh || later.meets) throw new Error(`scrolled: ${JSON.stringify(later)}`);
+  return [...notes, `scrolled to the diff: bar fixed at ${later.bar.map(Math.round).join('-')}, caption ${later.cap.map(Math.round).join('-')} (clear)`];
+}
+
+const live = (page: Page, baseUrl: string) => VIEWS.find((v) => v.name === 'live-done')!.setup(page, baseUrl);
+const SOURCES = { rule: 'Summaries: auto summary (rules)', ai: 'Summaries: AI summary (Workers AI)', some: 'Summaries: mixed: items marked AI are by Workers AI' } as const;
+
+export const calmFlows: readonly Flow[] = [
+  ...VIEWS.map(
+    (view): Flow => ({
+      name: `calm-audit:${view.name}`,
+      description: `Calm layout caps on the first viewport of "${view.name}" (1440×900, 390×844), with a first-view shot`,
+      shot: view.name,
+      widthTag: true,
+      firstView: true,
+      viewports: ['wide', 'mobile'],
+      apiErrors: view.name.startsWith('live-e'),
+      ...(view.name === 'hero' && { schemes: ['light', 'dark'], cvd: true }),
+      run: (ctx) => audit(view, ctx),
+    }),
+  ),
+  { name: 'calm-inventory', description: 'Every feature reachable by Tab, Enter and Space, opening at most one disclosure, named in the tree', viewports: ['wide', 'mobile'], widthTag: true, firstView: true, run: inventory },
+  {
+    name: 'calm-fit',
+    description: 'Every sample at 1280×800 and 1440×900: the controls row ends within 8 px of the picture; the scrub strip starts in the first viewport',
+    viewports: ['desktop', 'wide'],
+    widthTag: true,
+    firstView: true,
+    async run({ page, baseUrl }) {
+      const notes: string[] = [];
+      for (const id of SAMPLE_IDS) {
+        await openReady(page, baseUrl, `/?sample=${id}`);
+        const m = await page.evaluate(() => {
+          const r = (s: string) => document.querySelector(s)!.getBoundingClientRect();
+          return { gap: Math.round(Math.abs(r('.controls').bottom - r('.vpane .vp-mat').bottom)), scrub: Math.round(r('.scrub').top), vh: innerHeight };
+        });
+        if (m.gap > 8 || m.scrub >= m.vh) throw new Error(`${id}: controls ${m.gap} px from the picture's bottom, scrub strip at ${m.scrub} of ${m.vh}`);
+        notes.push(`${id}: controls ${m.gap} px from the picture's bottom; scrub strip at ${m.scrub} (< ${m.vh})`);
+      }
+      return { notes };
+    },
+  },
+  {
+    name: 'calm-sticky',
+    description: 'Phones, sample: Previous / Next is in flow on first view and sticks to the bottom only once the row scrolled away, never over the caption',
+    shot: 'hero',
+    suffix: '-sticky-scrolled',
+    viewports: ['mobile'],
+    widthTag: true,
+    firstView: true,
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      return { notes: await sticky(page, true) };
+    },
+  },
+  {
+    name: 'calm-sticky-live',
+    description: 'Phones, live run: on first view the bar is in flow and clear of the caption',
+    shot: 'live',
+    suffix: '-first-view',
+    viewports: ['mobile'],
+    widthTag: true,
+    firstView: true,
+    async run({ page, baseUrl }) {
+      await live(page, baseUrl);
+      await page.evaluate(() => scrollTo(0, 0));
+      return { notes: await sticky(page, false) };
+    },
+  },
+  {
+    name: 'calm-tag-320',
+    description: 'At 320 px the loading tag of a held live pane covers at most 10% of the text outline',
+    viewports: ['mobile'],
+    async run({ page, baseUrl }) {
+      await page.setViewportSize({ width: 320, height: 640 });
+      await VIEWS.find((v) => v.name === 'live-running')!.setup(page, baseUrl);
+      const m = await page.evaluate(() => {
+        const area = (s: string) => { const r = document.querySelector(s)!.getBoundingClientRect(); return r.width * r.height; };
+        return { share: area('.vpane .lf-tag') / area('.vpane .lf'), text: document.querySelector('.vpane .lf-tag')!.textContent };
+      });
+      if (m.share > 0.1) throw new Error(`the tag covers ${(m.share * 100).toFixed(1)}% of the outline`);
+      return { notes: [`tag covers ${(m.share * 100).toFixed(1)}% of the outline; its full text stays in the DOM: "${m.text}"`] };
+    },
+  },
+  {
+    name: 'calm-reduced',
+    description: 'The hero under reduced motion (shot)',
+    shot: 'hero',
+    suffix: '-reduced',
+    viewports: ['wide'],
+    widthTag: true,
+    firstView: true,
+    async run({ page, baseUrl }) {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openReady(page, baseUrl);
+      return { notes: ['reduced motion'] };
+    },
+  },
+  {
+    name: 'calm-kbd-disclosure',
+    description: 'Keyboard only: Tab to Change details, Enter, Tab: focus is on a folded item (shot)',
+    shot: 'hero',
+    suffix: '-kbd-disclosure',
+    viewports: ['wide'],
+    widthTag: true,
+    firstView: true,
+    async run({ page, baseUrl }) {
+      return { notes: [await reach(page, baseUrl, INVENTORY.find((i) => i.name === 'View capture (Before)')!)] };
+    },
+  },
+  ...(Object.keys(SOURCES) as (keyof typeof SOURCES)[]).map(
+    (v): Flow => ({
+      name: `calm-source:${v}`,
+      description: `The changes list says once where its summaries come from (${v}); the timeline tooltip says it per change`,
+      viewports: ['desktop'],
+      async run({ page, baseUrl }) {
+        await mockApi(page, v === 'rule' ? {} : { summaries: v });
+        await openLive(page, baseUrl, 'git-scm.com', 'done');
+        await page.waitForFunction((want) => document.querySelector('.changes-note')?.textContent === want, SOURCES[v], { timeout: 10_000 });
+        const marks = await page.locator('.changes .change-sum .source-label').count();
+        if ((v === 'some') !== marks > 0) throw new Error(`${marks} items marked AI in a "${v}" list`);
+        await page.locator('.tl-slider').focus();
+        await page.keyboard.press('Home');
+        const tip = (await page.locator('.tl-tip').textContent()) ?? '';
+        if (!/AI summary|auto summary/.test(tip)) throw new Error(`tooltip "${tip}"`);
+        return { notes: [SOURCES[v], `${marks} items marked AI`, `tooltip: ${tip.slice(0, 80)}`] };
+      },
+    }),
+  ),
+];

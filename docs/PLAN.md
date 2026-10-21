@@ -245,26 +245,20 @@ How it stays CVD-safe and never colour-alone:
 
 ### Layout (the visual scrub is the hero)
 
-*As built through phase 16, with the hero order changed on 2026-10-21: picture and side card, then filmstrip, then timeline. Where this subsection conflicts with "Calm layout" below, Calm layout wins. Phase 17 rewrites this subsection to match what ships.*
+*Rewritten in phase 17 to match what ships; "Calm layout" below has the rules and the caps.*
 
-- **Desktop (>= 960 px):**
-  - **Header row:** wordmark on the left, then the URL input (a wide, inviting field), then sample chips below it ("Try: git-scm.com · Wikipedia · rust-lang.org").
-  - **Stage:** two columns, above the fold at 1280×800.
-    - **Left (about 62%): the visual pane.** A toolbar with the mode radio group (`Single · Side by side · Slider · Onion skin`) and a **Play** button. Below it, the picture in a 16:10 mat (`--card`, 1 px `--rule-strong` border, 12 px padding: a mounted print). Under the picture, a mono caption strip: `#09 · 2018·07·16 · Arquivo.pt capture · top of page · Open capture ↗`, plus an honest-state badge when needed.
-    - **Right (about 38%): the selected change.** Dates, magnitude word, the summary line with its source label, stats, Prev/Next, then the changes list (scrolls inside its own max-height).
-  - **Below the stage, full width:** the seismograph **timeline strip** (about 140 px), and directly under it the **filmstrip**. Thumbnails are 112×70 CSS px with frame numbers and dates, evenly spaced. A hairline leader runs from each thumbnail up to its capture tick on the time axis. This is the proof-sheet link between "when" and "how it looked".
-  - **Below that:** the **diff panel** (72ch measure, centred) and the footer, which carries credits ("Captures courtesy of the Internet Archive's Wayback Machine"; sample provenance, text and picture recording notes and licence) and the GitHub link.
-- **Mobile (< 640 px):** stacked, in this order:
-  - header and input, then sample chips;
-  - the **visual pane at full width** (Slider by default; the mode group becomes a compact segmented control; Play), and its caption;
-  - the timeline;
-  - the filmstrip (horizontal scroll inside its container, with visible overflow affordance);
-  - the summary, then the sticky bottom bar "‹ Prev · 4 / 11 · Next ›";
-  - the diff;
-  - the changes list behind an "All changes (11)" disclosure.
-
-  Side by side stacks Before above After.
-- **640-959 px:** single column like mobile, with the changes list expanded.
+- **One measure:** header, content and footer share `min(100% − 2 × gutter, 84rem)`, with 16 px gutters on phones and 40 px from 640 px. No card or sheet frames the content: it sits on `--paper`, grouped by space and alignment.
+- **Desktop (≥ 960 px):**
+  - **Header (one row, wrapping when narrow):** the wordmark, the URL form (a quiet sentence-case label "See how any page changed" above the input and the solid-ink "Show changes"), then the sample toggles ("Try git-scm.com · Wikipedia: Internet Archive · rust-lang.org" as quiet text buttons).
+  - **Hero:** the title (Fraunces 25 px) with one mono meta line (`14 captures · 2013–2025`), then two columns, 2 : 1 with a 40 px gap.
+    - **Left (about two thirds): the picture** in its 16:10 mat (`--card`, 1 px `--rule-strong`, 8 px padding), Slider by default, with a one-line caption inside the mat: frame number(s), the date in Single, "Open capture ↗" in Single (one per print in Side by side), and the honest badges. At 1440×900 it is 869 px wide (60%) with its top at 170 px.
+    - **Right: the selected change.** The change line (magnitude glyph and word, both dates, the summary in Charter 20 px with its quiet source label) top-aligned with the picture, and one controls row whose bottom edge meets the picture's: Play, `‹ Previous · 9 / 9 · Next ›`, "Compare: Slider ▾" (and the roving `− Before | + After` pair in Single), then "Change details ▸".
+    - Side by side needs the width: there the two prints span both columns and the selected change follows below them.
+  - **Scrub strip (24 px below the hero; it is part of the focal point):** for a live run, the status line with its counter, a determinate bar and Cancel, as the strip's caption; then the filmstrip (thumbnails, the selected one with a 3 px ink outline on a 2 px paper gap and a caret); then the seismograph timeline; then "Key · 4 trivial hidden ▸" (the legend and "Show trivial edits").
+  - **Below (40 px):** "All changes (9) ▸" and "All 14 captures ▸", then the diff panel ("What the text says, <dates>", "Structure · … ▸", "Key ▸", the 72ch diff), then the footer.
+  - **Footer:** the tagline (the about line), the one-line Internet Archive credit, "About these captures ▸" (the sample's description and page link, text and picture provenance, licence, redaction and archive notes; for live runs, what a replay is), "Keyboard shortcuts ▸", and the GitHub link. It always starts below the first viewport (`main` is at least one viewport tall).
+- **Phones (< 640 px):** one column in the same order: header (wordmark; form; short sample labels "git-scm · Wikipedia · Rust", each inside its full accessible name), title and meta, the picture at full width (top ≤ 280 px at 390×844), caption, change line, the controls row (Play and Previous / Next on one line), the scrub strip, the folded lists, the diff. Previous / Next sticks to the bottom of the screen only once its row has scrolled away above (its slot keeps its size, so nothing moves), and `scroll-padding-bottom` keeps focus clear of it. Side by side stacks Before above After.
+- **640-959 px:** single column like phones, without the sticky bar.
 - Pictures always keep their 16:10 box (explicit `width`/`height` and `aspect-ratio`), so nothing jumps when they load.
 
 ### Visual pane and compare modes
@@ -328,7 +322,7 @@ How it stays CVD-safe and never colour-alone:
 
 The UI shows too much at once. These rules refine the proof-sheet concept above; they don't replace it. The same constraints still apply: CVD-safe palette, never colour alone, keyboard operable, reduced motion respected, no decorative 3D.
 
-The planner drafted these rules. Phase 17 confirms or amends each one against its 1440/390 audit, with review by the a11y-reviewer and the verifier, and keeps this subsection in sync with the code. From phase 17 on, the verifier and the a11y-reviewer judge every UI phase against it, and crowding counts as a design FAIL.
+The planner drafted these rules; phase 17 confirmed them against its 1440/390 audit and amended a few (marked *Amended in phase 17*, listed at the end of this subsection and in DECISIONS.md), with review by the a11y-reviewer and the verifier. Keep this subsection in sync with the code. From phase 17 on, the verifier and the a11y-reviewer judge every UI phase against it, and crowding counts as a design FAIL.
 
 **Product focal point.** The focal point is the **visual scrub**: the page itself, scrubbed along its timeline. The text diff and the compare modes are one step later.
 
@@ -352,7 +346,7 @@ All of these use native `<details>`/`<summary>` and are **closed by default at e
 
 - **Header:**
   - The tagline moves to the footer's about line and the meta description; it is no longer in the header.
-  - The "Try a sample" eyebrow becomes visually hidden (it stays the group's accessible label).
+  - The "Try a sample" eyebrow becomes visually hidden (it stays the group's accessible label). *Amended in phase 17:* a quiet, `aria-hidden` "Try" in `--ink-2` sentence case precedes the toggles, so sighted users read them as samples.
   - The chips lose their pill borders and become quiet text toggles with `aria-pressed`. The pressed one gets an ink underline plus weight.
 - **Pane toolbar:**
   - The compare-mode radio group goes behind a **"Compare: Slider"** button (`aria-expanded`, `aria-controls`; the button names the current mode). The group keeps its fieldset and its "Compare" legend.
@@ -397,10 +391,10 @@ These are measured by the smoke flow `calm-audit` at 1440×900 and 390×844. Reg
 | Measure (first viewport, after `data-visual-ready`) | 1440×900 | 390×844 |
 |---|---|---|
 | Regions intersecting the viewport | ≤ 3 | ≤ 3 |
-| Visible tab stops (roving groups count once; the skip link excluded). The budget is the input, Show changes, 3 samples, slider handle, Open capture, Play, Prev, Next, Compare, Change details and the filmstrip | ≤ 13 | ≤ 12 |
+| Visible tab stops (roving groups count once; the skip links and the wordmark's home link excluded, *amended in phase 17*). The budget is the input, Show changes, 3 samples, slider handle (Slider) or Open capture (Single), Play, Prev, Next, Compare, Change details and the filmstrip | ≤ 13 | ≤ 12 |
 | Framed boxes outside form controls and the picture mat (a border on 3 or more sides, a box-shadow, or a background other than `--paper`) | ≤ 2 | ≤ 2 |
 | Visible eyebrow labels (uppercase mono section labels) | ≤ 2 | ≤ 1 |
-| Solid accent fills | ≤ 1 | ≤ 1 |
+| Solid accent fills (an element of at least 16×16 px with an `--ink` background) | ≤ 1 | ≤ 1 |
 
 The same region cap applies to every audited state view.
 
@@ -411,8 +405,8 @@ The same region cap applies to every audited state view.
   - 4/8 inside controls and between a label and its value;
   - 16 between items in a group;
   - 24 between groups in a region;
-  - 40 between regions (24 below 640 px);
-  - 64 around the hero at ≥ 1280 px.
+  - 40 between regions (24 below 640 px), except 24 between the hero and the scrub strip, which belongs to the focal point (*amended in phase 17*);
+  - 64 above and below the footer's rule. *Amended in phase 17:* not around the hero, because at 1280×800 the picture, the summary and the first filmstrip thumbnails must all stay above the fold (AC 31b, visual-default).
 - **Enforced by `spacing.test.ts`:**
   - Every `margin*`, `padding*`, `gap`/`row-gap`/`column-gap`, `inset*`/`top`/`right`/`bottom`/`left` and `scroll-padding*`/`scroll-margin*` value in `src/**/*.css` must be one of: `0`, `auto`, a `--space-*` token, a negated token, or a `calc()` of tokens.
   - At most 6 commented allowlist entries are allowed (for example a 1-2 px hairline offset).
@@ -451,6 +445,20 @@ The same region cap applies to every audited state view.
   - The only hues are data encodings, each paired with a symbol or a word:
     - `--added`/`--removed` and their tints only in the diff and the Before/After labels;
     - `--mag-*` only on timeline marks and their key.
+
+#### Phase 17 amendments and how the measures are taken
+
+- **Measures** (`scripts/smoke-calm.ts`): an element counts when it is visible and intersects the first viewport. Framed boxes are non-inline elements of at least 48×24 px with a border on 3 or more sides, a box-shadow, or a background other than `--paper`, outside form controls, `<summary>`, `.btn`, the picture mat and the filmstrip's frames. Eyebrows are the topmost uppercase mono elements with text. `calm-shots` is folded into `calm-audit`: every audit flow saves its first-view shot.
+- **Tab stops** exclude the wordmark's home link, like the skip links (site chrome on every view; the drafted budget did not list it).
+- **The compare pair's links:** in Slider and Onion skin the caption carries no links; "View capture" for Before and After are in Change details (AC 12, one step away). Single has "Open capture" in the caption; Side by side has one per print.
+- **Before / After** is one roving tab stop (Left / Right move between the two toggle buttons), like the filmstrip, so a live run's first view stays within the budget with Cancel.
+- **The sticky bar** is the in-flow Previous / Next itself, fixed to the bottom on phones once its row has scrolled away above; there is never a second copy of the buttons.
+- **Header:** a visible quiet "Try" (above); the URL field keeps a visible sentence-case label.
+- **Moved into "About these captures":** the sample's description and its page link (the hero's meta line is only `14 captures · 2013–2025`; the "Cat." number is dropped).
+- **Structure** loses its `h4`: its summary ("Structure · headings: 4 added, 3 removed, 1 renamed") names it. The region headings (How it looked, the change, Filmstrip, Timeline, What the text says) stay as headings, `sr-only` where not shown.
+- **Live:** the status line (with a determinate bar) is the scrub strip's caption; the timeline key follows the strip.
+- **Side by side** spans both hero columns on desktop; the selected change follows below.
+- **The footer** always starts below the first viewport (`main` is at least one viewport tall), so a short state view shows only its message.
 
 ---
 
