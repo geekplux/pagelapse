@@ -7,13 +7,13 @@ STATE: IN-PROGRESS
 
 | Phase | Branch | PR | State | Verify rounds |
 |---|---|---|---|---|
-| 1 | phase-1-toolchain-sample | [#1](https://github.com/geekplux/wayback-diff/pull/1) | PR open (PASS) | 1 |
-| 2 | phase-2-design-shell | [#2](https://github.com/geekplux/wayback-diff/pull/2) | PR open (PASS) | 1 |
-| 3 | phase-3-extract | [#4](https://github.com/geekplux/wayback-diff/pull/4) | PR open (PASS) | 2 |
-| 4 | phase-4-recorder-samples | [#5](https://github.com/geekplux/wayback-diff/pull/5) | PR open (PASS) | 1 |
-| 5 | phase-5-diff-engine | [#6](https://github.com/geekplux/wayback-diff/pull/6) | PR open (PASS) | 2 |
-| 6 | phase-6-significance | [#7](https://github.com/geekplux/wayback-diff/pull/7) | PR open (PASS) | 1 |
-| 7 | phase-7-timeline-ui | [#8](https://github.com/geekplux/wayback-diff/pull/8) | PR open (PASS) | 1 |
+| 1 | phase-1-toolchain-sample | [#1](https://github.com/geekplux/pagelapse/pull/1) | PR open (PASS) | 1 |
+| 2 | phase-2-design-shell | [#2](https://github.com/geekplux/pagelapse/pull/2) | PR open (PASS) | 1 |
+| 3 | phase-3-extract | [#4](https://github.com/geekplux/pagelapse/pull/4) | PR open (PASS) | 2 |
+| 4 | phase-4-recorder-samples | [#5](https://github.com/geekplux/pagelapse/pull/5) | PR open (PASS) | 1 |
+| 5 | phase-5-diff-engine | [#6](https://github.com/geekplux/pagelapse/pull/6) | PR open (PASS) | 2 |
+| 6 | phase-6-significance | [#7](https://github.com/geekplux/pagelapse/pull/7) | PR open (PASS) | 1 |
+| 7 | phase-7-timeline-ui | [#8](https://github.com/geekplux/pagelapse/pull/8) | PR open (PASS) | 1 |
 | 8 | phase-8-diff-view | [#9](https://github.com/geekplux/pagelapse/pull/9) | PR open (PASS) | 1 |
 | 9 | phase-9-rename-pagelapse | - | in progress | 0 |
 | 10 | phase-10-sample-pictures | - | not started | 0 |

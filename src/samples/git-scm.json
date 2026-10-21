@@ -4,7 +4,7 @@
 "label": "git-scm.com home page",
 "url": "https://git-scm.com/",
 "description": "The Git project's home page: the tagline, the latest release number and the links to docs and downloads, through a decade of releases and redesigns.",
-"source": {"archive":"arquivo-pt","recordedAt":"2026-10-20","recorder":"wayback-diff record-samples 0.1.0 (extractor v2)","license":"MIT","attribution":"Trimmed text excerpt from git-scm.com by the Git project contributors; the site source is MIT-licensed (github.com/git/git-scm.com)."},
+"source": {"archive":"arquivo-pt","recordedAt":"2026-10-20","recorder":"pagelapse record-samples 0.1.0 (extractor v2)","license":"MIT","attribution":"Trimmed text excerpt from git-scm.com by the Git project contributors; the site source is MIT-licensed (github.com/git/git-scm.com)."},
 "blocks": [
   {"k":"paragraph","t":"Git is a free and open source distributed version control system designed to handle everything from small to very large projects with speed and efficiency."},
   {"k":"paragraph","t":"Git is easy to learn and has a tiny footprint with lightning fast performance. It outclasses SCM tools like Subversion, CVS, Perforce, and ClearCase with features like cheap local branching, convenient staging areas, and multiple workflows."},

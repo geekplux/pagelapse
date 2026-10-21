@@ -1,8 +1,8 @@
 {
-  "name": "wayback-diff",
+  "name": "pagelapse",
   "version": "0.1.0",
   "private": true,
-  "description": "See how any web page changed over the years, from Internet Archive captures.",
+  "description": "See how any web page looked and changed over the years, from web archive captures.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@9.15.9",

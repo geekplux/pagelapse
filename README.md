@@ -1,6 +1,6 @@
-# wayback-diff
+# Pagelapse
 
-Paste any URL and see how that page has changed over the years: wayback-diff pulls Internet Archive snapshots, picks the ones where something meaningful changed, and lays them out as a visual timeline with a one-line AI summary per change, so you can scrub a decade of edits in a minute.
+See how any web page looked and changed over the years. Paste a URL and Pagelapse pulls web archive captures, keeps the ones where something meaningful changed, and lays them out as a time-lapse you can scrub: what the page looked like at each capture, a before/after compare, and a one-line summary of each change. A decade of edits in a minute.
 
 **Status:** planning
 

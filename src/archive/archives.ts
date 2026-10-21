@@ -14,7 +14,7 @@ export interface Archive {
   replay: string;
 }
 
-/** Archives wayback-diff can read from. */
+/** Archives Pagelapse can read from. */
 export const ARCHIVES: Readonly<Record<ArchiveId, Archive>> = {
   'internet-archive': {
     id: 'internet-archive',

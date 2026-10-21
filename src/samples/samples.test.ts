@@ -27,7 +27,7 @@ describe('committed samples', () => {
     const cfg = config.find((c) => `./${c.id}.json` === file)!;
     expect(f).toMatchObject({ id: cfg.id, url: cfg.url, source: { license: cfg.license, attribution: cfg.attribution } });
     expect(['internet-archive', 'arquivo-pt']).toContain(f.source.archive);
-    expect(f.source.recorder).toMatch(/^wayback-diff record-samples /);
+    expect(f.source.recorder).toMatch(/^pagelapse record-samples /);
     expect(f.snapshots.length).toBeGreaterThanOrEqual(8);
     expect(new Set(f.snapshots.map((s) => s.digest)).size).toBe(f.snapshots.length);
     expect(new TextEncoder().encode(raw).length).toBeLessThanOrEqual(150 * KB);

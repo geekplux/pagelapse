@@ -4,7 +4,7 @@
 "label": "Wikipedia: Internet Archive",
 "url": "https://en.wikipedia.org/wiki/Internet_Archive",
 "description": "The encyclopedia article about the archive itself, opening section and early history, as it grew and was reworded over a decade of edits.",
-"source": {"archive":"arquivo-pt","recordedAt":"2026-10-20","recorder":"wayback-diff record-samples 0.1.0 (extractor v2)","license":"CC-BY-SA-4.0","attribution":"Trimmed text excerpt, not the full article (blocks stating monetary figures are omitted), from the Wikipedia article “Internet Archive” by Wikipedia contributors (see the article history); revisions before June 2023 were published under CC BY-SA 3.0."},
+"source": {"archive":"arquivo-pt","recordedAt":"2026-10-20","recorder":"pagelapse record-samples 0.1.0 (extractor v2)","license":"CC-BY-SA-4.0","attribution":"Trimmed text excerpt, not the full article (blocks stating monetary figures are omitted), from the Wikipedia article “Internet Archive” by Wikipedia contributors (see the article history); revisions before June 2023 were published under CC BY-SA 3.0."},
 "blocks": [
   {"k":"heading","t":"Internet Archive","l":1},
   {"k":"paragraph","t":"\"archive.org\" redirects here. For arXiv.org, see arXiv."},

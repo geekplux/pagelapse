@@ -25,7 +25,7 @@ function harness(steps: Step[], extra: object = {}) {
 
 describe('politeFetch', () => {
   it('sends the identified User-Agent on every attempt', async () => {
-    expect(USER_AGENT).toBe(`wayback-diff/${APP_VERSION} (+https://github.com/geekplux/wayback-diff)`);
+    expect(USER_AGENT).toBe(`pagelapse/${APP_VERSION} (+https://github.com/geekplux/pagelapse)`);
     expect(pkg.version).toBe(APP_VERSION);
     const h = harness([503, 503, 200]);
     expect((await h.call()).text).toBe('ok');

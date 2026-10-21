@@ -1,4 +1,4 @@
-# CI for wayback-diff. Lives in ci/ because the repo token lacks `workflow`
+# CI for Pagelapse. Lives in ci/ because the repo token lacks `workflow`
 # scope; move to .github/workflows/ci.yml once that scope is granted.
 name: CI
 

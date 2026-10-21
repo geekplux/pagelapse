@@ -1,5 +1,5 @@
 /**
- * Public, typed API of the wayback-diff core: pure functions with no DOM or network
+ * Public, typed API of the Pagelapse core: pure functions with no DOM or network
  * access, shared by the browser, the Worker and the recorder. Every export carries
  * TSDoc at its declaration.
  *

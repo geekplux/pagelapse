@@ -17,7 +17,7 @@ export function AppFooter({ source }: { source: SampleSource }) {
         <a className="licence-link" href={`https://spdx.org/licenses/${source.license}.html`}>{source.license}</a>.
       </p>
       <p>
-        wayback-diff is open source (MIT). <a href="https://github.com/geekplux/wayback-diff">Source on GitHub</a>
+        Pagelapse is open source (MIT). <a href="https://github.com/geekplux/pagelapse">Source on GitHub</a>
       </p>
     </footer>
   );

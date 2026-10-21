@@ -129,7 +129,7 @@ for (const cfg of configs) {
     source: {
       archive,
       recordedAt: new Date().toISOString().slice(0, 10),
-      recorder: `wayback-diff record-samples ${APP_VERSION} (extractor v${EXTRACTOR_VERSION})`,
+      recorder: `pagelapse record-samples ${APP_VERSION} (extractor v${EXTRACTOR_VERSION})`,
       license: cfg.license,
       attribution: cfg.attribution,
     },
