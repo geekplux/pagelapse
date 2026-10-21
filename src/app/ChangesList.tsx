@@ -23,7 +23,7 @@ export function ChangesList({ entries, selected, onSelect }: Props) {
             <span className="change-mag mono" data-magnitude={e.significance.magnitude}>
               {e.significance.magnitude}
             </span>
-            <span className="change-sum">{e.ruleSummary}</span>
+            <span className="change-sum">{e.aiSummary ?? e.ruleSummary}</span>
           </button>
         </li>
       ))}

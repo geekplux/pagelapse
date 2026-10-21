@@ -203,7 +203,7 @@ export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy
           <span className="mono">
             {formatTimestampShort(tipEntry.from)} → {formatTimestampShort(tipEntry.to)} · <b>{tipEntry.significance.magnitude}</b>
           </span>
-          <span>{tipEntry.ruleSummary}</span>
+          <span>{tipEntry.aiSummary ?? tipEntry.ruleSummary}</span>
         </div>
       )}
     </div>

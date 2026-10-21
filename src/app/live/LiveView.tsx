@@ -1,6 +1,6 @@
 import { type FocusEvent, type KeyboardEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ARCHIVES } from '../../archive/archives.ts';
-import { trivialEntries } from '../../core/timeline.ts';
+import { trivialEntries, withAiSummaries } from '../../core/timeline.ts';
 import type { TimelineEntry } from '../../core/types.ts';
 import { viewCaptureUrl } from '../../core/url.ts';
 import { ChangesList } from '../ChangesList.tsx';
@@ -17,6 +17,7 @@ import { VisualPane } from '../visual/VisualPane.tsx';
 import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pairOf, parseMode, showingText, sideOf, viewQuery } from '../visual/visualState.ts';
 import { progressText } from './liveState.ts';
 import { useLiveTimeline } from './useLiveTimeline.ts';
+import { useSummaries } from './useSummaries.ts';
 
 interface Props {
   url: string;
@@ -43,7 +44,9 @@ const IA = ARCHIVES['internet-archive'];
  */
 export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
   const { state, cancel } = useLiveTimeline(url);
-  const { status, captures, timeline, failed, error } = state;
+  const { status, captures, failed, error } = state;
+  const ai = useSummaries(url, state.timeline.entries, status === 'done');
+  const timeline = useMemo(() => withAiSummaries(state.timeline, ai), [state.timeline, ai]);
   const { entries, trivialCaptures, snapshots } = timeline;
   const [pick, setPick] = useState(initialChange);
   /** The user has picked a change or capture here (timeline, filmstrip, list, Previous / Next, Before / After). */

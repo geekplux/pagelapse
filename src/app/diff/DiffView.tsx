@@ -87,7 +87,7 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
           <span className="sr-only"> to </span> <Ts ts={entry.to} />
         </h3>
         <p className="panel-summary">
-          {entry.ruleSummary} <span className="source-label mono">auto summary</span>
+          {entry.aiSummary ?? entry.ruleSummary} <span className="source-label mono">{entry.aiSummary ? 'AI summary' : 'auto summary'}</span>
         </p>
         <p className="panel-stats mono">{statsLine(entry.record)}</p>
         <p className="panel-links">

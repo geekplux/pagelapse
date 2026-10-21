@@ -3,6 +3,7 @@ import { toChangeRecord } from './changeRecord.ts';
 import { ruleSummary } from './ruleSummary.ts';
 import { scoreDiff } from './score.ts';
 import type { SnapshotPage, Timeline, TimelineEntry } from './types.ts';
+import { pairKey } from './url.ts';
 
 /** Options for {@link buildTimeline} and {@link appendSnapshot}, passed on to `diffPages`. */
 export interface TimelineOptions {
@@ -58,4 +59,10 @@ export function trivialEntries(t: Timeline, opts: TimelineOptions = {}): Timelin
     else if (base) out.push(compare(base, s, opts));
   }
   return out;
+}
+
+/** `t` with the AI text of each entry whose pair is in `ai` (the rule summary stays as the fallback). */
+export function withAiSummaries(t: Timeline, ai: ReadonlyMap<string, string>): Timeline {
+  if (!ai.size) return t;
+  return { ...t, entries: t.entries.map((e) => (ai.has(pairKey(e.from, e.to)) ? { ...e, aiSummary: ai.get(pairKey(e.from, e.to))! } : e)) };
 }

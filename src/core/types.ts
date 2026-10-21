@@ -204,6 +204,8 @@ export interface TimelineEntry {
   significance: Significance;
   record: ChangeRecord;
   ruleSummary: string;
+  /** Workers AI's one-liner (labelled "AI summary"), when one arrived or was baked into the sample. */
+  aiSummary?: string;
 }
 
 /** The model the UI consumes; build with `buildTimeline` or grow with `appendSnapshot`. */

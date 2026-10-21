@@ -30,10 +30,10 @@ export interface CapturesResponse {
 export type SnapshotResponse = ExtractedPage & { ts: string };
 
 /** Fetches JSON from the API; non-2xx answers become an {@link ApiError}, an abort rethrows as is. */
-async function get<T>(path: string, signal: AbortSignal): Promise<T> {
+async function get<T>(path: string, signal: AbortSignal, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, { signal });
+    res = await fetch(path, { ...init, signal });
   } catch (err) {
     if (signal.aborted) throw err;
     throw new ApiError('network', 'We could not reach the Pagelapse server. Check your connection and try again.');
@@ -51,3 +51,11 @@ export const fetchCaptures = (url: string, signal: AbortSignal) =>
 
 export const fetchSnapshot = (url: string, ts: string, signal: AbortSignal) =>
   get<SnapshotResponse>(`/api/snapshot?url=${encodeURIComponent(url)}&ts=${ts}`, signal);
+
+/** `POST /api/summaries`: one line per pair; `source: "rule"` pairs have no text (keep the local rule summary). */
+export const fetchSummaries = (url: string, pairs: { from: string; to: string }[], signal: AbortSignal) =>
+  get<{ summaries: { pair: string; source: 'ai' | 'rule'; text?: string }[] }>('/api/summaries', signal, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ url, pairs }),
+  });

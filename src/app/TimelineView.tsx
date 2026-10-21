@@ -3,7 +3,7 @@ import type { SampleFixture, TimelineEntry } from '../core/types.ts';
 import { ARCHIVES } from '../archive/archives.ts';
 import { viewCaptureUrl } from '../core/url.ts';
 import { fixtureToSnapshots } from '../core/fixture.ts';
-import { buildTimeline, trivialEntries } from '../core/timeline.ts';
+import { buildTimeline, trivialEntries, withAiSummaries } from '../core/timeline.ts';
 import { changePictures, decodePicture } from '../samples/index.ts';
 import { ChangesList } from './ChangesList.tsx';
 import { ChangeCard, DiffView } from './diff/DiffView.tsx';
@@ -31,7 +31,11 @@ interface Props {
 export function TimelineView({ fixture, initialChange, initialAt, initialMode, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
-  const timeline = useMemo(() => buildTimeline(fixture.url, fixtureToSnapshots(fixture)), [fixture]);
+  // Baked AI summaries (scripts/bake-sample-summaries.ts), if any; else every change reads "auto summary".
+  const timeline = useMemo(() => {
+    const baked = Object.entries(fixture.summaries ?? {}).flatMap(([pair, s]) => (s.source === 'ai' ? [[pair, s.text] as const] : []));
+    return withAiSummaries(buildTimeline(fixture.url, fixtureToSnapshots(fixture)), new Map(baked));
+  }, [fixture]);
   const { entries, trivialCaptures } = timeline;
   const trivial = useMemo(() => new Set(trivialCaptures), [trivialCaptures]);
   const [showTrivial, setShowTrivial] = useState(false);
