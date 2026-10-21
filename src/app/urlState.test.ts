@@ -9,10 +9,11 @@ const entries = [
 ];
 
 describe('urlState', () => {
-  it('round-trips sample and change', () => {
-    const s = { sample: 'git-scm', change: '20140101000000-20150101000000' };
+  it('round-trips sample, change and at', () => {
+    const s = { sample: 'git-scm', change: '20140101000000-20150101000000', at: '20140101000000' };
     expect(parseUrlState(formatUrlState(s))).toEqual(s);
-    expect(parseUrlState('')).toEqual({ sample: undefined, change: undefined });
+    expect(formatUrlState(s)).toBe('?sample=git-scm&change=20140101000000-20150101000000&at=20140101000000');
+    expect(parseUrlState('')).toEqual({ sample: undefined, change: undefined, at: undefined });
     expect(formatUrlState({})).toBe('');
   });
   it('resolves a change pair, falling back to the latest entry', () => {

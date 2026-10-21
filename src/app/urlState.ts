@@ -1,18 +1,20 @@
-/** The shareable view state: `?sample=<id>&change=<from>-<to>`. */
+/** The shareable view state: `?sample=<id>&change=<from>-<to>&at=<ts>` (`at`: the capture shown, when not the change's After). */
 export interface UrlState {
   sample?: string | undefined;
   change?: string | undefined;
+  at?: string | undefined;
 }
 
 export function parseUrlState(search: string): UrlState {
   const p = new URLSearchParams(search);
-  return { sample: p.get('sample') ?? undefined, change: p.get('change') ?? undefined };
+  return { sample: p.get('sample') ?? undefined, change: p.get('change') ?? undefined, at: p.get('at') ?? undefined };
 }
 
-export function formatUrlState({ sample, change }: UrlState): string {
+export function formatUrlState({ sample, change, at }: UrlState): string {
   const p = new URLSearchParams();
   if (sample) p.set('sample', sample);
   if (change) p.set('change', change);
+  if (at) p.set('at', at);
   const q = p.toString();
   return q ? `?${q}` : '';
 }
