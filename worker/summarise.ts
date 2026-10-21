@@ -4,56 +4,13 @@ import { ruleSummary } from '../src/core/ruleSummary.ts';
 import type { ChangeRecord } from '../src/core/types.ts';
 import { sha256 } from './cache.ts';
 import type { Env } from './env.ts';
+import { MODEL, PROMPT_VERSION, type Summary, batches, messages, parseSummaries } from './prompt.ts';
 
-export const MODEL = '@cf/meta/llama-3.2-3b-instruct';
-export const PROMPT_VERSION = 1;
-export const MAX_BATCH = 8;
-export const MAX_BATCH_CHARS = 10_000;
 /** Approximate: a KV counter, read then written. */
 export const DAILY_CAP = 3000;
-const SYSTEM =
-  'You summarise how a web page changed between two archived captures. For each numbered change, reply with exactly one line: `<n>. <summary>`. Each summary is at most 90 characters, neutral, past tense, names concrete things (sections, claims, products of the page itself), no speculation, no quotes, no URLs.';
-
-export interface Summary {
-  pair: string;
-  text: string;
-  source: 'ai' | 'rule';
-}
 
 /** Whether this Worker has Workers AI (production only, D11). */
 export const aiAvailable = (env: Env): boolean => !!env.AI;
-
-/** The chat messages for one batch: the numbered records, without their pair keys (the model has no use for them). */
-export const messages = (records: readonly ChangeRecord[]) => [
-  { role: 'system', content: SYSTEM },
-  { role: 'user', content: records.map((r, i) => `${i + 1}. ${JSON.stringify(r, (k, v) => (k === 'pair' ? undefined : v))}`).join('\n') },
-];
-
-const echoes = (r: ChangeRecord) => [r.title, ...r.headingsAdded, ...r.headingsRemoved, ...r.added, ...r.removed];
-/** A usable line: 8-120 chars, one line, no URL or domain, not a copy of the input. */
-export const validLine = (text: string | undefined, r: ChangeRecord): text is string =>
-  !!text && text.length >= 8 && text.length <= 120 && !/[\r\n]|:\/\/|www\.|\b[\w-]+\.(?:com|org|net|io|dev|app)\b/i.test(text) && !echoes(r).includes(text);
-
-/** Each record's line from the model's `<n>. text` output; missing or invalid ones fall back to the rule summary. */
-export function parseSummaries(output: string, records: readonly ChangeRecord[]): Summary[] {
-  const lines = new Map<number, string>();
-  for (const m of output.matchAll(/^\s*(\d+)[.)]\s+(.+?)\s*$/gm)) if (!lines.has(+m[1]!)) lines.set(+m[1]!, m[2]!);
-  return records.map((r, i) => {
-    const line = lines.get(i + 1);
-    return validLine(line, r) ? { pair: r.pair, text: line, source: 'ai' } : { pair: r.pair, text: ruleSummary(r), source: 'rule' };
-  });
-}
-
-/** Groups records into calls of at most {@link MAX_BATCH} records and {@link MAX_BATCH_CHARS} prompt chars. */
-export function batches(records: readonly ChangeRecord[]): ChangeRecord[][] {
-  const out: ChangeRecord[][] = [];
-  for (const r of records) {
-    const last = out.at(-1);
-    if (last && last.length < MAX_BATCH && messages([...last, r])[1]!.content.length <= MAX_BATCH_CHARS) last.push(r);
-    else out.push([r]);
-  }
-  return out;
-}
 
 const sumKey = async (url: string, pair: string) => `sum:v1:${MODEL}:p${PROMPT_VERSION}:${await sha256(url)}:${pair}`;
 const rule = (r: ChangeRecord): Summary => ({ pair: r.pair, text: ruleSummary(r), source: 'rule' });

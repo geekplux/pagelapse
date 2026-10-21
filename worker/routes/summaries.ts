@@ -7,7 +7,8 @@ import { pairKey, validateTargetUrl } from '../../src/core/url.ts';
 import { snapKey } from '../cache.ts';
 import type { Env } from '../env.ts';
 import { apiError, json } from '../http.ts';
-import { MAX_BATCH, summarise } from '../summarise.ts';
+import { MAX_BATCH } from '../prompt.ts';
+import { summarise } from '../summarise.ts';
 
 type Pair = { from: string; to: string };
 const isPair = (p: unknown): p is Pair => {

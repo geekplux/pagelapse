@@ -7,7 +7,8 @@ import { buildTimeline } from '../src/core/timeline.ts';
 import { snapKey } from './cache.ts';
 import type { Env } from './env.ts';
 import { handle } from './index.ts';
-import { MAX_BATCH, MAX_BATCH_CHARS, batches, messages, summarise } from './summarise.ts';
+import { MAX_BATCH, MAX_BATCH_CHARS, batches, messages } from './prompt.ts';
+import { summarise } from './summarise.ts';
 
 const timeline = (j: unknown) => {
   const f = parseSampleFixture(j);

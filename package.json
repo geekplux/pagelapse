@@ -20,6 +20,7 @@
     "smoke": "node scripts/smoke.ts",
     "record:samples": "node scripts/record-samples.ts",
     "record:visuals": "node scripts/record-visuals.ts",
+    "bake:summaries": "node scripts/bake-sample-summaries.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {

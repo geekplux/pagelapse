@@ -1,6 +1,8 @@
-# Copy to .dev.vars (gitignored) for local secrets. Nothing is required: the built-in samples and the
-# archive API run with no keys and no Cloudflare login.
+# Copy to .dev.vars (gitignored) for local secrets. Nothing is required: the built-in samples, the archive API and
+# summaries (rule-based without Workers AI) run with no keys and no Cloudflare login.
 #
-# Optional, phase 16 (bake AI summaries into samples):
+# Optional, only for `pnpm bake:summaries` (scripts/bake-sample-summaries.ts), which bakes Workers AI one-liners
+# into the samples. The token needs the "Workers AI: Read" permission. The Worker itself never reads these: in
+# production it uses the `AI` binding (wrangler.jsonc, env.production).
 # CLOUDFLARE_ACCOUNT_ID=
 # CLOUDFLARE_API_TOKEN=
