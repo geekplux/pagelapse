@@ -2,7 +2,7 @@ STATE: IN-PROGRESS
 
 # Status: Pagelapse
 
-- Current phase: 13 (`phase-13-worker-archive-api`) starting
+- Current phase: 13 verified; PR being opened
 - Blockers: none
 
 | Phase | Branch | PR | State | Verify rounds |
@@ -19,7 +19,7 @@ STATE: IN-PROGRESS
 | 10 | phase-10-sample-pictures | [#11](https://github.com/geekplux/pagelapse/pull/11) | PR open (PASS) | 1 |
 | 11 | phase-11-visual-pane | [#12](https://github.com/geekplux/pagelapse/pull/12) | PR open (PASS) | 3 |
 | 12 | phase-12-compare-play | [#13](https://github.com/geekplux/pagelapse/pull/13) | PR open (PASS) | 1 |
-| 13 | phase-13-worker-archive-api | - | not started | 0 |
+| 13 | phase-13-worker-archive-api | (opening) | verified PASS | 2 |
 | 14 | phase-14-live-mode | - | not started | 0 |
 | 15 | phase-15-live-visual | - | not started | 0 |
 | 16 | phase-16-ai-summaries | - | not started | 0 |
@@ -30,6 +30,7 @@ STATE: IN-PROGRESS
 Follow-ups:
 - After deploy: confirm web.archive.org allows `if_` replay in a frame (`curl -sI`), see phase 19.
 - Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
+- Record a real Internet Archive CDX listing for `test/fixtures/api/` (current one is synthetic; IA unreachable from this box).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-21 (PR #13 opened)
+Last updated: 2026-10-21 (phase 13 verified)
