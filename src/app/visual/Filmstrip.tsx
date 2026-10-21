@@ -57,7 +57,7 @@ export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
       </p>
       {/* Safari drops list semantics when list-style is none, so the role is not redundant here. */}
       {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles, jsx-a11y/no-noninteractive-element-interactions */}
-      <ol className="film-strip" role="list" aria-labelledby="film-heading" aria-describedby="film-hint" ref={list} onKeyDown={onKeyDown}>
+      <ol className="film-strip" role="list" aria-labelledby="film-heading" ref={list} onKeyDown={onKeyDown}>
         {snapshots.map((s, i) => (
           <li key={s.ts}>
             <button
@@ -65,6 +65,7 @@ export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
               className="frame"
               tabIndex={i === focus ? 0 : -1}
               aria-current={i === sel ? 'true' : undefined}
+              aria-describedby={i === focus ? 'film-hint' : undefined}
               data-trivial={trivial.has(s.ts) || undefined}
               onClick={() => onSelect(s.ts)}
               onFocus={() => setFocus(i)}
@@ -80,6 +81,11 @@ export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
                 {trivial.has(s.ts) && (
                   <span className="frame-trivial">
                     <span aria-hidden="true">▯ </span>trivial
+                  </span>
+                )}
+                {s.shot?.status === 'partial' && (
+                  <span className="frame-partial">
+                    <span aria-hidden="true">◐ </span>partial
                   </span>
                 )}
               </span>

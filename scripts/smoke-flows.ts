@@ -11,7 +11,7 @@ import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
 import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
 import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
-import { changeForCapture, shotSrc } from '../src/app/visual/visualState.ts';
+import { changeForCapture, shotAlt, shotSrc } from '../src/app/visual/visualState.ts';
 
 export interface FlowContext {
   page: Page;
@@ -577,7 +577,7 @@ export const flows: readonly Flow[] = [
       const [from, to] = defaultFixture.featured!.split('-') as [string, string];
       await expectShown(page, defaultFixture, to);
       const alt = await page.locator('.vp-shot').getAttribute('alt');
-      if (alt !== `${defaultFixture.label}, ${formatTimestampLong(to)}, top of page`) throw new Error(`alt "${alt}"`);
+      if (alt !== shotAlt(defaultFixture.label, { from, to }, to) || !alt.includes('(After)')) throw new Error(`alt "${alt}"`);
       if ((await page.locator('.frame').count()) !== defaultFixture.snapshots.length) throw new Error('not one frame per capture');
       const pressed = await page.locator('.vp-side[aria-pressed="true"]').textContent();
       if (!pressed?.includes('After')) throw new Error(`pressed side "${pressed}"`);
@@ -660,6 +660,75 @@ export const flows: readonly Flow[] = [
     },
   },
   {
+    name: 'visual-tab-order',
+    description: 'Desktop: the stage tabs in visual order, pane controls then the change card and changes list, then timeline, filmstrip, diff',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const parts = ['vpane', 'side', 'tl-area', 'film', 'diff-panel'];
+      const seen: string[] = [];
+      for (let k = 0; k < 120; k++) {
+        await page.keyboard.press('Tab');
+        const part = await page.evaluate((ps) => {
+          const el = document.activeElement;
+          if (!el || el === document.body || el.closest('footer')) return null;
+          return ps.find((p) => el.closest(`.stage .${p}`)) ?? '';
+        }, parts);
+        if (part === null) break;
+        if (part && seen.at(-1) !== part) seen.push(part);
+      }
+      // The diff has stops only when it has collapsed runs or long blocks; the rest always do.
+      if (seen.length < 4 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
+      // The first stop after the pane's controls is in the change card, beside the picture.
+      await page.locator('.vpane .cap-out').focus();
+      await page.keyboard.press('Tab');
+      const next = await page.evaluate(() => `${document.activeElement?.closest('.side') ? 'side' : 'elsewhere'}: ${document.activeElement?.textContent?.trim().slice(0, 30)}`);
+      if (!next.startsWith('side')) throw new Error(`after "Open capture": ${next}`);
+      return { notes: [`stage: ${seen.join(' -> ')}`, `after "Open capture": ${next}`] };
+    },
+  },
+  {
+    name: 'visual-zoom-spacing',
+    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the side column scrolls instead of spilling onto the timeline; the list keeps >= 8rem',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await page.setViewportSize({ width: 1024, height: 768 });
+      await openReady(page, baseUrl);
+      await page.addStyleTag({
+        content: 'html { font-size: 125% !important; } * { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }',
+      });
+      await settle(page);
+      const m = await page.evaluate(() => {
+        const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+        const side = document.querySelector<HTMLElement>('.stage .side')!;
+        const tl = r('.tl-area').top;
+        const box = side.getBoundingClientRect();
+        // Content taller than the column must be clipped and scrolled, never painted over the timeline.
+        const spill = side.scrollHeight > side.clientHeight && getComputedStyle(side).overflowY === 'visible' ? 1 : 0;
+        return {
+          twoColumn: box.left > r('.vpane').right,
+          sideBottom: box.bottom,
+          paneBottom: r('.vpane').bottom,
+          tl,
+          list: r('.changes-pane').height,
+          rem: parseFloat(getComputedStyle(document.documentElement).fontSize),
+          scrolls: side.scrollHeight > side.clientHeight,
+          spill,
+        };
+      });
+      const problems = [
+        !m.twoColumn && 'the stage is not two columns at 1024 px',
+        m.sideBottom > m.tl + 0.5 && `side column ends at ${Math.round(m.sideBottom)}, timeline starts at ${Math.round(m.tl)}`,
+        m.paneBottom > m.tl + 0.5 && `pane ends at ${Math.round(m.paneBottom)}, timeline starts at ${Math.round(m.tl)}`,
+        m.list < 8 * m.rem - 0.5 && `changes list only ${Math.round(m.list)}px tall`,
+        m.spill > 0 && 'the side column overflows visibly',
+      ].filter(Boolean);
+      if (problems.length) throw new Error(problems.join('; '));
+      await noPageOverflow(page);
+      return { notes: [`side ends ${Math.round(m.sideBottom)} <= timeline ${Math.round(m.tl)}; list ${Math.round(m.list)}px; side scrolls: ${m.scrolls}`] };
+    },
+  },
+  {
     name: 'visual-partial',
     description: 'A capture recorded without a stylesheet carries the "missing some styles or images" badge',
     viewports: ['desktop'],
@@ -668,9 +737,11 @@ export const flows: readonly Flow[] = [
       const ts = f.snapshots.find((s) => s.shot?.status === 'partial')!.ts;
       await openReady(page, baseUrl, `/?at=${ts}`);
       await expectShown(page, f, ts);
-      await page.locator('.vp-badge', { hasText: "The archive's copy is missing some styles or images" }).waitFor({ timeout: 2_000 });
+      await page.locator('.vp-cap .vp-badge', { hasText: "The archive's copy is missing some styles or images" }).waitFor({ timeout: 2_000 });
+      const labelled = await page.locator('.frame-partial').count();
+      if (labelled !== f.snapshots.filter((s) => s.shot?.status === 'partial').length) throw new Error(`${labelled} filmstrip frames labelled partial`);
       await page.waitForSelector('[data-visual-ready="true"]');
-      return { notes: [`${ts}: partial badge shown`] };
+      return { notes: [`${ts}: partial badge in the caption, ${labelled} frames labelled "◐ partial"`] };
     },
   },
   {

@@ -12,7 +12,7 @@ import { Ts } from './Ts.tsx';
 import { type UrlState, changeIndex } from './urlState.ts';
 import { Filmstrip } from './visual/Filmstrip.tsx';
 import { VisualPane } from './visual/VisualPane.tsx';
-import { type Side, captureForChange, changeForCapture, initialView, pairOf, shotSrc, sideOf, viewQuery } from './visual/visualState.ts';
+import { type Side, captureForChange, changeForCapture, initialView, pairOf, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
 
 interface Props {
   fixture: SampleFixture;
@@ -105,7 +105,16 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
       </div>
       <div className="stage">
         {entry && (
-          <VisualPane fixture={fixture} entry={entry} at={view.at} trivial={trivial.has(view.at)} onSide={(side: Side) => choose(entry, captureForChange(entry, side))} />
+          <>
+            <VisualPane fixture={fixture} entry={entry} at={view.at} trivial={trivial.has(view.at)} onSide={(side: Side) => choose(entry, captureForChange(entry, side))} />
+            <div className="side">
+              <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} showing={showingText(snapshots.map((s) => s.ts), entry, view.at, trivial.has(view.at))} />
+              <details className="changes-pane" open={listOpen} onToggle={(e) => setListOpen(e.currentTarget.open)}>
+                <summary id="changes-heading">All changes ({all.length})</summary>
+                <ChangesList entries={all} selected={selected} onSelect={select} />
+              </details>
+            </div>
+          </>
         )}
         <div className="tl-area">
           <h3 id="timeline-heading">Timeline</h3>
@@ -139,18 +148,7 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
           )}
         </div>
         <Filmstrip fixture={fixture} at={view.at} trivial={trivial} onSelect={(ts) => showCapture(ts)} />
-        {entry && (
-          <>
-            <div className="side">
-              <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} />
-              <details className="changes-pane" open={listOpen} onToggle={(e) => setListOpen(e.currentTarget.open)}>
-                <summary id="changes-heading">All changes ({all.length})</summary>
-                <ChangesList entries={all} selected={selected} onSelect={select} />
-              </details>
-            </div>
-            <DiffView entry={entry} from={page(entry.from)!} to={page(entry.to)!} />
-          </>
-        )}
+        {entry && <DiffView entry={entry} from={page(entry.from)!} to={page(entry.to)!} />}
       </div>
       <p className="sheet-desc">{fixture.description}</p>
       <details className="captures-all">

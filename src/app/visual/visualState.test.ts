@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureForChange, changeForCapture, frameNo, initialView, shotSrc, sideOf, viewQuery } from './visualState.ts';
+import { captureForChange, changeForCapture, frameNo, initialView, shotAlt, shotSrc, showingText, sideOf, viewQuery } from './visualState.ts';
 
 const caps = ['2013', '2014', '2015', '2016', '2017'].map((y) => `${y}0101000000`);
 // 2015 is a trivial capture: the 2014 -> 2016 change skips it.
@@ -47,5 +47,18 @@ describe('visualState', () => {
     expect(shotSrc('git-scm', '20131106090756-302c3cea', true)).toBe('/samples/git-scm/20131106090756-302c3cea.thumb.webp');
     expect(frameNo(0)).toBe('#01');
     expect(frameNo(13)).toBe('#14');
+  });
+
+  it('says which capture is shown, naming the side or the frame', () => {
+    expect(showingText(caps, entries[1]!, caps[1]!, false)).toBe('Before, 1 January 2014');
+    expect(showingText(caps, entries[1]!, caps[3]!, false)).toBe('After, 1 January 2016');
+    expect(showingText(caps, entries[1]!, caps[2]!, true)).toBe('capture #03, 1 January 2015, trivial edit');
+    expect(showingText(caps, entries[1]!, caps[2]!, false)).toBe('capture #03, 1 January 2015');
+  });
+
+  it('names the side in the alt text', () => {
+    expect(shotAlt('x.org home page', entries[1]!, caps[3]!)).toBe('x.org home page as captured 1 January 2016 (After), top of page');
+    expect(shotAlt('x.org home page', entries[1]!, caps[1]!)).toBe('x.org home page as captured 1 January 2014 (Before), top of page');
+    expect(shotAlt('x.org home page', entries[1]!, caps[2]!)).toBe('x.org home page as captured 1 January 2015, top of page');
   });
 });

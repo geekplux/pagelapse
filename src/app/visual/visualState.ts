@@ -1,4 +1,5 @@
 // Pure selection logic of the visual pane: which capture a change shows, and which change a capture belongs to.
+import { formatTimestampLong } from '../../core/timestamp.ts';
 
 /** A change as the pane sees it: its baseline (`from`) and its new capture (`to`). */
 interface Pair {
@@ -46,3 +47,21 @@ export const shotSrc = (sampleId: string, file: string, thumb = false) => `/samp
 
 /** Frame number as shown on the filmstrip, `#01`. */
 export const frameNo = (i: number) => `#${String(i + 1).padStart(2, '0')}`;
+
+const SIDE_WORD: Record<Side, string> = { before: 'Before', after: 'After' };
+
+/**
+ * What the pane shows, for the announcement after a selection: `Before, 6 November 2013`, or for a capture that is
+ * neither side of change `e`, `capture #05, 6 November 2013, trivial edit`.
+ */
+export function showingText(captures: readonly string[], e: Pair, at: string, trivial: boolean): string {
+  const side = sideOf(e, at);
+  if (side) return `${SIDE_WORD[side]}, ${formatTimestampLong(at)}`;
+  return `capture ${frameNo(captures.indexOf(at))}, ${formatTimestampLong(at)}${trivial ? ', trivial edit' : ''}`;
+}
+
+/** Alt text of the pane's picture: `git-scm.com home page as captured 18 December 2025 (After), top of page`. */
+export const shotAlt = (label: string, e: Pair, at: string) => {
+  const side = sideOf(e, at);
+  return `${label} as captured ${formatTimestampLong(at)}${side ? ` (${SIDE_WORD[side]})` : ''}, top of page`;
+};

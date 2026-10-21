@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { ARCHIVES } from '../../archive/archives.ts';
-import { formatTimestampLong } from '../../core/timestamp.ts';
 import { viewCaptureUrl } from '../../core/url.ts';
 import type { SampleFixture, TimelineEntry } from '../../core/types.ts';
 import { Ts } from '../Ts.tsx';
-import { type Side, captureForChange, frameNo, shotSrc, sideOf } from './visualState.ts';
+import { type Side, captureForChange, frameNo, shotAlt, shotSrc, sideOf } from './visualState.ts';
 
 interface Props {
   fixture: SampleFixture;
@@ -57,7 +56,7 @@ export function VisualPane({ fixture, entry, at, trivial, onSide }: Props) {
             src={full}
             width={960}
             height={600}
-            alt={`${fixture.label}, ${formatTimestampLong(at)}, top of page`}
+            alt={shotAlt(fixture.label, entry, at)}
             decoding="async"
             fetchPriority="high"
             style={{ backgroundImage: `url(${shotSrc(fixture.id, shot!.file!, true)})` }}
@@ -86,13 +85,13 @@ export function VisualPane({ fixture, entry, at, trivial, onSide }: Props) {
           <a className="cap-out" href={viewCaptureUrl(fixture.source.archive, at, fixture.url)} target="_blank" rel="noopener noreferrer">
             Open capture<span className="sr-only"> (opens in a new tab)</span>
           </a>
+          {shot?.status === 'partial' && (
+            <span className="vp-badge">
+              <span aria-hidden="true">◐ </span>Partial: the archive's copy is missing some styles or images.
+            </span>
+          )}
         </figcaption>
       </figure>
-      {shot?.status === 'partial' && (
-        <p className="vp-badge">
-          <span aria-hidden="true">◐ </span>The archive's copy is missing some styles or images.
-        </p>
-      )}
     </section>
   );
 }

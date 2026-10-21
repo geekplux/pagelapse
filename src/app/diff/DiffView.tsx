@@ -42,8 +42,11 @@ function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
   );
 }
 
-/** The selected change in the stage's side column: header, capture links, summary, stats, Previous / Next. */
-export function ChangeCard({ entry, index, count, captureUrl, onSelect }: Omit<Props, 'from' | 'to'>) {
+/**
+ * The selected change in the stage's side column: header, capture links, summary, stats, Previous / Next.
+ * Previous / Next's live region also says which capture the pane shows (`showing`).
+ */
+export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing }: Omit<Props, 'from' | 'to'> & { showing?: string }) {
   const pair = `${entry.from}-${entry.to}`;
   // The confirmation belongs to the change it was given for.
   const [copied, setCopied] = useState({ pair: '', text: '' });
@@ -103,6 +106,7 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect }: Omit<P
           </span>
           <span className="sr-only">
             Change {index + 1} of {count}: {formatTimestampLong(entry.from)} to {formatTimestampLong(entry.to)}, {entry.significance.magnitude}
+            {showing && `, showing ${showing}`}
           </span>
         </span>
         <button type="button" className="btn" aria-disabled={index === count - 1} onClick={() => index < count - 1 && onSelect(index + 1)}>
