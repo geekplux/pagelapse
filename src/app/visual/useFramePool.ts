@@ -24,15 +24,17 @@ export interface PoolInput {
   saveData: boolean;
   /** A live run is still fetching snapshots. */
   runActive: boolean;
+  /** The selection is following a live run on its own (the user has not picked anything yet): mount nothing new. */
+  hold: boolean;
 }
 
 /**
- * Which archive frames to keep mounted (least recently used first), per D24: nothing new until the selection has
- * rested 400 ms; then the wanted frame(s); then, 2 s after they loaded, the one next capture in the direction of travel,
+ * Which archive frames to keep mounted (least recently used first), per D24: nothing new while the selection only
+ * follows a live run (each rest would load an archived page nobody asked for), nor until it has rested 400 ms; then the wanted frame(s); then, 2 s after they loaded, the one next capture in the direction of travel,
  * hidden, never in compare modes, under Save-Data or while a run fetches. The pool keeps at most 3, evicting the oldest.
  */
 export function nextFramesToMount(i: PoolInput): string[] {
-  if (i.restMs < REST_MS) return [...i.pool];
+  if (i.hold || i.restMs < REST_MS) return [...i.pool];
   const next = [...i.pool.filter((t) => !i.want.includes(t)), ...i.want];
   const at = i.steps.indexOf(i.want[0] ?? '');
   const near = at < 0 ? undefined : (i.steps[at + i.direction] ?? i.steps[at - i.direction]);
@@ -48,7 +50,7 @@ const saveData = () => (navigator as { connection?: { saveData?: boolean } }).co
  * {@link nextFramesToMount} when the selection changes, when a frame loads and when a rest timer fires. A new `scope`
  * (the shown mode: its frames sit elsewhere in the DOM) starts from an empty pool.
  */
-export function useFramePool(want: readonly string[], steps: readonly string[], opts: { scope: string; compare: boolean; runActive: boolean }) {
+export function useFramePool(want: readonly string[], steps: readonly string[], opts: { scope: string; compare: boolean; runActive: boolean; hold: boolean }) {
   const scope = want.length ? opts.scope : '';
   const [s, setS] = useState({ scope, pool: [] as string[], loaded: new Map<string, number>() });
   if (s.scope !== scope) setS({ scope, pool: [], loaded: new Map() });
@@ -67,7 +69,7 @@ export function useFramePool(want: readonly string[], steps: readonly string[], 
     const loadedAt = times.every((t) => t !== undefined) ? Math.max(...(times as number[])) : null;
     const next = nextFramesToMount({
       pool, want, steps, direction: rest.current.direction, restMs: now - rest.current.since, loadedMs: loadedAt === null ? null : now - loadedAt,
-      compare: opts.compare, saveData: saveData(), runActive: opts.runActive,
+      compare: opts.compare, saveData: saveData(), runActive: opts.runActive, hold: opts.hold,
     });
     // An evicted frame loads from scratch if it comes back.
     if (next.join(' ') !== pool.join(' ')) setS((x) => ({ ...x, pool: next, loaded: new Map([...x.loaded].filter(([t]) => next.includes(t))) }));
@@ -78,7 +80,7 @@ export function useFramePool(want: readonly string[], steps: readonly string[], 
     return () => clearTimeout(timer);
     // `want` and `steps` are tracked by their joined values.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, steps.join(' '), pool, loaded, tick, opts.compare, opts.runActive]);
+  }, [key, steps.join(' '), pool, loaded, tick, opts.compare, opts.runActive, opts.hold]);
   const onLoad = useCallback((ts: string) => setS((x) => (x.loaded.has(ts) || !x.pool.includes(ts) ? x : { ...x, loaded: new Map(x.loaded).set(ts, Date.now()) })), []);
   return { frames: pool, loaded, onLoad };
 }

@@ -148,6 +148,8 @@
 .frame .sil { aspect-ratio: 16 / 10; height: auto; border: 1px solid var(--rule-strong); }
 .frame[aria-current="true"] .sil { border: 3px solid var(--ink); }
 .lf-tag, .lf-note p { position: absolute; left: 8px; bottom: 8px; padding: 0.2rem 0.5rem; border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--card); color: var(--ink); font-size: 0.75rem; }
+/* The tag stays inside the picture at any width (the held-run explanation is a long one). */
+.lf-tag { max-width: calc(100% - 16px); }
 /* The pane's one "still loading" note sits below the picture(s) in normal flow, so nothing covers or clips it. */
 .lf-note p { position: static; margin: 0.5rem 0 0; padding: 0.5rem 0.75rem; border-left-width: 3px; font: 0.9rem / 1.45 var(--font-ui); }
 .vpane-wait .vp-bar { min-height: 5rem; align-items: start; }

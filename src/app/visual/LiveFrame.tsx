@@ -18,6 +18,8 @@ interface Props {
   /** `ts` has gone {@link SLOW_MS} without loading (the pane keeps this, and shows one {@link SlowNote}). */
   slow: boolean;
   onSlow: (ts: string) => void;
+  /** A live run holds the frame (nothing picked yet): the tag says when the page loads. */
+  hold?: boolean | undefined;
 }
 
 /**
@@ -25,7 +27,7 @@ interface Props {
  * frame loads, the capture's text silhouette shows; after 8 s, `onSlow` lets the pane show its "still loading" note.
  * The frame is always inert: the pane is a scaled picture of the page, and "Open capture" gives the interactive page.
  */
-export function LiveFrame({ ts, page, frames, loaded, onLoad, frame, slow, onSlow }: Props) {
+export function LiveFrame({ ts, page, frames, loaded, onLoad, frame, slow, onSlow, hold }: Props) {
   const box = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const el = box.current!;
@@ -45,7 +47,12 @@ export function LiveFrame({ ts, page, frames, loaded, onLoad, frame, slow, onSlo
     <div className="vp-shot lf" ref={box} data-state={state}>
       <span className="sr-only">{frame(ts).title}</span>
       {!done && page && <Silhouette page={page} />}
-      {!done && <span className="lf-tag mono">text outline · {mounted ? 'loading the capture…' : 'waiting'}</span>}
+      {!done && (
+        <span className="lf-tag mono">
+          text outline ·{' '}
+          {mounted ? 'loading the capture…' : hold ? <span className="vp-hold">the page itself loads when you pick a change or the run finishes</span> : 'waiting'}
+        </span>
+      )}
       {frames.map((f) => {
         const hidden = f !== ts;
         const { src, title } = frame(f);

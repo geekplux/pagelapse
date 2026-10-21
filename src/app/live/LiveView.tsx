@@ -46,6 +46,8 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const { status, captures, timeline, failed, error } = state;
   const { entries, trivialCaptures, snapshots } = timeline;
   const [pick, setPick] = useState(initialChange);
+  /** The user has picked a change or capture here (timeline, filmstrip, list, Previous / Next, Before / After). */
+  const [picked, setPicked] = useState(false);
   const [showTrivial, setShowTrivial] = useState(false);
   const all = useMemo(
     () => (showTrivial ? [...entries, ...trivialEntries(timeline)].sort((x, y) => (x.to < y.to ? -1 : 1)) : entries),
@@ -68,6 +70,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     if (!e) return;
     const next = ts ?? captureForChange(e, entry && shownAt && sideOf(entry, shownAt) === 'before' ? 'before' : 'after');
     setPick(pairOf(e));
+    setPicked(true);
     setAt({ key: pairOf(e), ts: next });
     onChange(viewQuery(e, next, m, LIVE_MODE));
   };
@@ -81,6 +84,10 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const side = entry && shownAt && sideOf(entry, shownAt) === 'before' ? 'before' : 'after';
   const changeSteps = all.map((e) => captureForChange(e, side));
   const running = status === 'captures' || status === 'snapshots';
+  // While a run fetches, the selection follows the newest change: no archived page loads for it until the user picks
+  // one (or opened a `?change=` link to it) or the run ends, so a run never loads pages nobody asked for.
+  const asked = picked || (!!initialChange && pick === initialChange && !!entry && pairOf(entry) === initialChange);
+  const hold = running && !asked;
   const text = progressText(state);
   const [listOpen, setListOpen] = useState(() => typeof matchMedia !== 'function' || matchMedia('(min-width: 40rem)').matches);
 
@@ -217,6 +224,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
               onSide={(s) => choose(entry, captureForChange(entry, s))}
               steps={shownAt && changeSteps.includes(shownAt) ? changeSteps : snapshots.map((x) => x.ts)}
               runActive={running}
+              hold={hold}
             />
           ) : (
             running && (

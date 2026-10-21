@@ -32,6 +32,8 @@ interface Props {
   /** Live: the captures Right/Left step through (neighbour preloads) and whether the run still fetches. */
   steps?: readonly string[];
   runActive?: boolean;
+  /** Live: the selection only follows the run (nothing picked yet), so no frame loads until a pick or the run's end. */
+  hold?: boolean;
 }
 
 const SIDES = [
@@ -54,7 +56,7 @@ const Label = ({ side, ts }: { side: Side; ts: string }) => {
  * Slider, Onion skin), Play, the picture(s), a caption strip with the links out to the captures, and honest states for
  * captures recorded without some styles or with no picture. A compare mode needs both pictures, else it shows Single.
  */
-export function VisualPane({ label, captures, archiveName, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false }: Props) {
+export function VisualPane({ label, captures, archiveName, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false, hold = false }: Props) {
   const [broken, setBroken] = useState<string[]>([]);
   const index = (ts: string) => captures.indexOf(ts);
   const pic = (ts: string) => {
@@ -67,7 +69,7 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
   const shown: Mode = lacking ? 'single' : mode;
   const side = sideOf(entry, at);
   const want = (shown === 'single' ? [pic(at)] : [pair.before, pair.after]).filter((p) => p.source === 'frame').map((p) => p.ts);
-  const pool = useFramePool(want, steps, { scope: shown, compare: shown !== 'single', runActive });
+  const pool = useFramePool(want, steps, { scope: shown, compare: shown !== 'single', runActive, hold });
   // Frames that went 8 s without loading; forgotten once evicted (a frame that comes back loads from scratch).
   const [slow, setSlow] = useState<string[]>([]);
   if (slow.some((ts) => !pool.frames.includes(ts))) setSlow(slow.filter((ts) => pool.frames.includes(ts)));
@@ -101,6 +103,7 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
         frame={frame}
         slow={slow.includes(p.ts)}
         onSlow={onSlow}
+        hold={hold}
       />
     ) : p.source === 'shot' ? (
       <Shot src={p.src} thumb={p.thumb ?? ''} alt={shotAlt(label, entry, p.ts)} onError={() => setBroken((b) => [...b, p.src])} />
