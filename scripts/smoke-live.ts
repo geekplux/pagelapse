@@ -98,6 +98,15 @@ export const liveFlows: readonly Flow[] = [
         const region = document.querySelector('p.sr-only[role="status"][aria-live="polite"]')!;
         new MutationObserver(() => w.said.push([performance.now(), region.textContent ?? ''])).observe(region, { childList: true, characterData: true, subtree: true });
       });
+      // Where the timeline starts, sampled through the runs: it must not jump by more than a status line.
+      await page.evaluate(() => {
+        const w = window as unknown as { tops: number[] };
+        w.tops = [];
+        setInterval(() => {
+          const t = document.querySelector('.tl-area')?.getBoundingClientRect().top;
+          if (t !== undefined) w.tops.push(Math.round(t + scrollY));
+        }, 50);
+      });
       const input = page.getByRole('textbox', { name: 'See how any page changed' });
       await input.fill('rust-lang.org');
       await input.press('Enter');
@@ -113,6 +122,9 @@ export const liveFlows: readonly Flow[] = [
       if (markers !== gitEntries) throw new Error(`${markers} markers, expected ${gitEntries} (stale markers from the first run?)`);
       const late = api.snaps(rust.url).filter((l) => l.start > switchedAt);
       if (late.length) throw new Error(`${late.length} requests for the first run after the second started`);
+      const tops = await page.evaluate(() => (window as unknown as { tops: number[] }).tops);
+      const jump = Math.max(...tops) - Math.min(...tops);
+      if (jump > 48) throw new Error(`the timeline moved by ${jump}px during the runs`);
       const max = api.maxInFlight(git.url);
       if (max > 2) throw new Error(`${max} snapshot requests in flight at once`);
       const done = await statusLine(page);
@@ -136,6 +148,7 @@ export const liveFlows: readonly Flow[] = [
           `request log (ms from start): ${api.snaps(git.url).slice(0, 6).map((l) => `${l.ts?.slice(0, 8)} ${l.start - api.log[0]!.start}-${(l.end ?? 0) - api.log[0]!.start}`).join(', ')} …`,
           `announced: ${said.map(([t, s]) => `${Math.round(t)} ms "${s}"`).join(' | ')}`,
           `deep link ${link} restored change 1`,
+          `timeline top moved ${jump}px over ${tops.length} samples`,
         ],
       };
     },

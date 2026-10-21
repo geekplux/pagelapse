@@ -1,18 +1,20 @@
 /* Live mode: the URL form (the header's hero), the run's status line, and the empty and error cards. */
-.url-form { flex: 1 1 24rem; display: grid; gap: 0.35rem; }
+.url-form { flex: 1 1 24rem; min-width: 0; display: grid; gap: 0.3rem; }
 @media (min-width: 60rem) { .url-form { margin-left: auto; max-width: 34rem; } }
-.url-form label { font: 600 var(--step--1) / 1.2 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); }
+.url-form label { font: 600 var(--step--1) / 1 var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); }
 .url-row { display: flex; gap: 0.5rem; }
 .url-row input {
-  flex: 1; min-width: 0; min-height: 2.75rem; padding: 0.4rem 0.75rem; border: 2px solid var(--ink); border-radius: 3px;
+  flex: 1; width: 0; min-width: 0; min-height: 2.5rem; padding: 0.4rem 0.75rem; border: 2px solid var(--ink); border-radius: 3px;
   background: var(--card); color: var(--ink); font: 1rem var(--font-mono);
 }
 .url-row input::placeholder { color: var(--ink-2); opacity: 1; }
 .url-row input[aria-invalid="true"] { border-style: dashed; }
-.btn-go { min-height: 2.75rem; background: var(--ink); color: var(--card); border-color: var(--ink); font-weight: 600; }
+.btn-go { min-height: 2.5rem; background: var(--ink); color: var(--card); border-color: var(--ink); font-weight: 600; }
 .url-error { font-size: 0.9rem; font-weight: 600; }
 /* Kept in the accessibility tree (an alert must exist before its text arrives); no gap while empty. */
-.url-error:empty { margin-top: -0.35rem; }
+.url-error:empty { margin-top: -0.3rem; }
+/* Phones: the form takes the tagline's place, so the picture's caption still clears the sticky Previous / Next bar. */
+@media (max-width: 39.99rem) { .tagline { display: none; } .site-header { padding-top: 0.75rem; } }
 
 .live-status { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-top: 1rem; padding-block: 0.6rem; border-block: 1px solid var(--rule); }
 .live-status p { flex: 1 1 20rem; font-size: 0.9rem; color: var(--ink-2); }
@@ -21,7 +23,9 @@
 .live-wait { padding: 1rem; border: 1px dashed var(--rule-strong); color: var(--ink-2); font: 1rem / 1.5 var(--font-read); }
 @media (min-width: 60rem) {
   .stage.live-stage { grid-template-columns: minmax(0, 1fr); grid-template-areas: "side" "tl" "list" "diff"; }
-  .live-stage .side { max-width: 48rem; }
+  /* Room for a card with a two-line summary, reserved from the start, so the timeline does not jump as changes arrive. */
+  .live-stage .side { max-width: 48rem; min-height: 17.5rem; }
+  .live-stage .live-wait { display: grid; place-content: center; }
 }
 
 .state-card { display: grid; gap: 0.6rem; margin-top: 1rem; padding: 1.25rem 1.5rem; border: 1px solid var(--rule-strong); border-left: 4px solid var(--ink); border-radius: 3px; background: var(--card); max-width: 48rem; }
