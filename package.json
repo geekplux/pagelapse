@@ -19,6 +19,7 @@
     "size": "node scripts/check-size.ts",
     "smoke": "node scripts/smoke.ts",
     "record:samples": "node scripts/record-samples.ts",
+    "record:visuals": "node scripts/record-visuals.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
