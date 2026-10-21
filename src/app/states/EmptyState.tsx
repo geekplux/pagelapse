@@ -1,8 +1,10 @@
 /** No captures at all: say so, offer the Archive's Save Page Now and a sample. */
-export function EmptyState({ url, onSample }: { url: string; onSample: () => void }) {
+export function EmptyState({ url, onSample, headingRef }: { url: string; onSample: () => void; headingRef?: ((el: HTMLElement | null) => void) | undefined }) {
   return (
     <section className="state-card" aria-labelledby="state-heading">
-      <h2 id="state-heading">No captures yet</h2>
+      <h3 id="state-heading" tabIndex={-1} ref={headingRef}>
+        No captures yet
+      </h3>
       <p>
         The Archive has no captures of <span className="mono">{url.replace(/^https?:\/\//, '')}</span> yet.
       </p>

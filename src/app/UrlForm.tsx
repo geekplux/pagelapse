@@ -13,7 +13,12 @@ export function UrlForm({ value, onSubmit }: { value: string; onSubmit: (url: st
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const check = validateTargetUrl(text);
-    setError(check.ok ? '' : check.message);
+    const next = check.ok ? '' : check.message;
+    if (next && next === error) {
+      // The same mistake again: clear the alert, then fill it on the next frame so it is announced again.
+      setError('');
+      requestAnimationFrame(() => setError(next));
+    } else setError(next);
     if (check.ok) onSubmit(check.url);
   };
   return (

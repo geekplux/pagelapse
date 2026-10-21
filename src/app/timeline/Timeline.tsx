@@ -25,7 +25,7 @@ interface Props {
   describedBy: string;
   /** Thumbnail of a capture, shown in the tooltip (samples). */
   thumbOf?: (ts: string) => string | undefined;
-  /** Live runs: captures still being fetched (grey hairlines) or that failed (dashed). */
+  /** Live runs: captures still being fetched (dotted, below the baseline only) or that failed (taller, dashed). */
   marks?: readonly { ts: string; failed: boolean }[];
 }
 
@@ -121,9 +121,14 @@ export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy
           <line key={i} className="tl-cap" x1={c.x} x2={c.x} y1={BASE - 6} y2={BASE + 6} />
         ),
       )}
-      {g.extra.map((m, i) => (
-        <line key={`m${i}`} className={m.failed ? 'tl-failed' : 'tl-pending'} x1={m.x} x2={m.x} y1={BASE - (m.failed ? 14 : 6)} y2={BASE + 6} />
-      ))}
+      {g.extra.map((m, i) =>
+        m.failed ? (
+          <line key={`m${i}`} className="tl-failed" x1={m.x} x2={m.x} y1={BASE - 14} y2={BASE + 6} />
+        ) : (
+          // Shape cue besides the lighter colour: below the baseline only, and dotted.
+          <line key={`m${i}`} className="tl-pending" x1={m.x} x2={m.x} y1={BASE + 1} y2={BASE + 9} />
+        ),
+      )}
       {g.points.map((p, i) => (
         <line key={i} className={`tl-stem${i === selected ? ' is-sel' : ''}`} x1={p.x} x2={p.x} y1={BASE} y2={p.y + (g.rs[i] ?? 0)} />
       ))}

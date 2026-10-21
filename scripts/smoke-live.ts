@@ -58,6 +58,33 @@ async function openLive(page: Page, baseUrl: string, url: string, status?: strin
   await page.locator(status ? `[data-live="${status}"]` : '[data-live]').waitFor({ timeout: 20_000 });
 }
 const statusLine = (page: Page) => page.locator('.live-status p').innerText();
+/** Where keyboard focus is, as a short selector-like description (`body` when it was lost, WCAG 2.4.3). */
+const focusAt = (page: Page) =>
+  page.evaluate(() => {
+    const a = document.activeElement;
+    if (!a || a === document.body) return 'body';
+    return `${a.tagName.toLowerCase()}${a.id ? `#${a.id}` : ''}${a.className ? `.${String(a.className).split(' ').join('.')}` : ''} "${(a.textContent ?? '').trim().slice(0, 40)}"`;
+  });
+/** Waits until focus is on an element matching `sel`; fails with where it is otherwise. */
+async function expectFocus(page: Page, sel: string, what: string): Promise<string> {
+  const ok = await page.waitForFunction((s) => document.activeElement?.matches(s), sel, { timeout: 5000 }).then(
+    () => true,
+    () => false,
+  );
+  const at = await focusAt(page);
+  if (!ok) throw new Error(`${what}: focus on ${at}, expected ${sel}`);
+  return `${what}: focus on ${at}`;
+}
+/** Focuses the status line's Cancel as soon as it appears (a ?url= load: nothing has focus until then). */
+const focusCancelOnSight = (page: Page) =>
+  page.addInitScript(() => {
+    new MutationObserver((_, obs) => {
+      const b = [...document.querySelectorAll<HTMLElement>('.live-status button')].find((x) => x.textContent === 'Cancel');
+      if (!b) return;
+      b.focus();
+      obs.disconnect();
+    }).observe(document, { childList: true, subtree: true });
+  });
 async function expectText(page: Page, sel: string, re: RegExp): Promise<string> {
   const t = (await page.locator(sel).first().innerText()).replace(/\s+/g, ' ').trim();
   if (!re.test(t)) throw new Error(`${sel}: "${t}" does not match ${re}`);
@@ -193,11 +220,46 @@ export const liveFlows: readonly Flow[] = [
       if (!/^Stopped after \d+ of 14 captures\.$/.test(text)) throw new Error(`status "${text}"`);
       // Answers that arrived before Cancel are cached; the ones Cancel aborted are fetched again.
       const fetched = new Set(api.snaps().filter((l) => l.end && l.end < cancelledAt - 100).map((l) => l.ts));
+      const onStop = await focusAt(page);
+      if (!onStop.includes('Start again')) throw new Error(`after Cancel, focus on ${onStop}, expected Start again`);
       await page.getByRole('button', { name: 'Start again' }).click();
+      // Start again goes away with the old run: focus moves to the new run's status line, not <body>.
+      const restarted = await expectFocus(page, '.live-status p', 'Start again');
+      // Focus on Cancel when the run ends (Cancel goes away): focus moves to the status line.
+      await page.getByRole('button', { name: 'Cancel' }).focus();
       await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
+      const finished = await expectFocus(page, '.live-status p', 'run ended on Cancel');
       const again = api.snaps().slice(after).filter((l) => fetched.has(l.ts));
       if (again.length) throw new Error(`${again.length} captures fetched twice`);
-      return { notes: [`${at} requests at Cancel, ${after} two seconds later; "${text}"`, `Start again fetched ${api.snaps().length - after} new captures, none twice`] };
+      return {
+        notes: [`${at} requests at Cancel, ${after} two seconds later; "${text}"`, `Start again fetched ${api.snaps().length - after} new captures, none twice`, restarted, finished],
+      };
+    },
+  },
+  {
+    name: 'live-slider-focus',
+    description: 'While the timeline slider has focus during a run, its value and range stay put as changes arrive; leaving it catches up',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await mockApi(page, { snapshot: (i) => (i < 4 ? {} : i < 11 ? { delay: 500 } : { delay: null }) });
+      await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
+      const slider = page.locator('.tl-slider');
+      await slider.waitFor({ timeout: 10_000 });
+      await slider.focus();
+      const values = () => slider.evaluate((el) => `${el.getAttribute('aria-valuenow')}/${el.getAttribute('aria-valuemax')}`);
+      const before = await values();
+      const max = Number(before.split('/')[1]);
+      // Wait until more changes have arrived than the slider shows (the changes list keeps growing).
+      await page.waitForFunction((n) => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]) > n, max, { timeout: 10_000 });
+      const during = await values();
+      if (during !== before) throw new Error(`slider changed from ${before} to ${during} without input`);
+      await page.keyboard.press('End');
+      const end = await values();
+      if (end !== `${max}/${max}`) throw new Error(`End went to ${end}, expected ${max}/${max}`);
+      await page.getByRole('textbox', { name: 'See how any page changed' }).focus();
+      const after = await values();
+      if (Number(after.split('/')[1]) <= max) throw new Error(`after leaving the slider: ${after}`);
+      return { notes: [`slider ${before} on focus, ${during} while changes arrived, ${end} after End, ${after} after leaving it`] };
     },
   },
   {
@@ -214,8 +276,10 @@ export const liveFlows: readonly Flow[] = [
       await page.getByRole('button', { name: 'Open a sample' }).click();
       await page.waitForSelector('[data-ready="true"]');
       if (!page.url().endsWith('?sample=git-scm')) throw new Error(`Open a sample -> ${page.url()}`);
+      const sampled = await expectFocus(page, '.chip[aria-pressed="true"][data-sample="git-scm"]', 'empty state Open a sample');
       await openLive(page, baseUrl, 'example.org/about', 'error');
-      return { notes: [await expectText(page, '.state-card', /^No captures yet The Archive has no captures of example\.org\/about yet\./), `Save it now -> ${save}`] };
+      if ((await focusAt(page)) !== 'body') throw new Error(`a ?url= load moved focus to ${await focusAt(page)}`);
+      return { notes: [await expectText(page, '.state-card', /^No captures yet The Archive has no captures of example\.org\/about yet\./), `Save it now -> ${save}`, sampled] };
     },
   },
   {
@@ -229,9 +293,16 @@ export const liveFlows: readonly Flow[] = [
       await openLive(page, baseUrl, 'example.org', 'error');
       await expectActions(page, ['Try again', 'Open a sample']);
       await page.getByRole('button', { name: 'Try again' }).click();
-      await page.waitForFunction(() => document.querySelector('[data-live="error"]'));
+      // Try again goes away with the old run: focus lands on the new run's status, then on the new card's heading.
+      const retried = await expectFocus(page, '#state-heading', 'error card Try again');
       if (api.log.length !== 2) throw new Error(`${api.log.length} captures requests after Try again, expected 2`);
-      return { notes: [await expectText(page, '.state-card', /^⚠ This site is not in the Archive The site asked/)] };
+      const text = await expectText(page, '.state-card', /^⚠ This site is not in the Archive The site asked/);
+      await page.getByRole('button', { name: 'Open a sample' }).click();
+      await page.waitForSelector('[data-ready="true"]');
+      const sampled = await expectFocus(page, '.chip[aria-pressed="true"]', 'error card Open a sample');
+      // Back to the card for the screenshot.
+      await openLive(page, baseUrl, 'example.org', 'error');
+      return { notes: [text, retried, sampled] };
     },
   },
   {
@@ -242,14 +313,24 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { snapshot: (i) => (i === 4 ? { error: 'archive_rate_limited' } : {}) });
+      await focusCancelOnSight(page);
       await openLive(page, baseUrl, 'git-scm.com', 'error');
+      // Cancel had focus when the error card replaced the status line: focus moves to the card's heading.
+      const moved = await expectFocus(page, '#state-heading', 'error replaced Cancel');
       const first = await expectText(page, '.state-card', /The Internet Archive asked us to slow down\. Try again in 40 s\./);
       const n = api.snaps().length;
       await sleep(1500);
       const later = await expectText(page, '.state-card', /Try again in 3[89] s\./);
       if (api.snaps().length !== n || n > 6) throw new Error(`${n} snapshot requests (then ${api.snaps().length}) after the rate limit`);
       await expectActions(page, ['Try again', 'Open a sample']);
-      return { notes: [first, `then: ${later.match(/Try again in \d+ s/)?.[0]}`, `${n} snapshot requests in all`] };
+      const retry = await page.getByRole('button', { name: 'Try again' }).getAttribute('aria-disabled');
+      if (retry !== 'true') throw new Error(`Try again is aria-disabled="${retry}" during the countdown`);
+      // Pressing it during the wait does nothing (Playwright's click() refuses an aria-disabled button: use the keyboard).
+      await page.getByRole('button', { name: 'Try again' }).focus();
+      await page.keyboard.press('Enter');
+      await sleep(300);
+      if (api.snaps().length !== n || !(await page.locator('[data-live="error"]').count())) throw new Error('Try again started a run during the countdown');
+      return { notes: [first, `then: ${later.match(/Try again in \d+ s/)?.[0]}`, `${n} snapshot requests in all`, moved, 'Try again aria-disabled during the countdown'] };
     },
   },
   {
@@ -261,6 +342,7 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       await mockApi(page, { snapshot: (i) => (i === 3 || i === 9 ? { error: 'archive_unavailable' } : {}) });
       await openLive(page, baseUrl, 'git-scm.com', 'done');
+      if ((await focusAt(page)) !== 'body') throw new Error(`a ?url= load moved focus to ${await focusAt(page)}`);
       const dashed = await page.locator('.tl-failed').count();
       if (dashed !== 2) throw new Error(`${dashed} dashed marks, expected 2`);
       const text = await statusLine(page);
@@ -298,13 +380,24 @@ export const liveFlows: readonly Flow[] = [
         focused: el === document.activeElement,
       }));
       if (m.invalid !== 'true' || !m.described.trim() || !m.focused) throw new Error(`field: ${JSON.stringify(m)}`);
+      // The same mistake again: the alert empties, then fills again, so it is announced again.
+      await page.evaluate(() => {
+        const w = window as unknown as { alerts: string[] };
+        w.alerts = [];
+        const el = document.getElementById('url-error')!;
+        new MutationObserver(() => w.alerts.push(el.textContent ?? '')).observe(el, { childList: true, characterData: true, subtree: true });
+      });
+      await input.press('Enter');
+      await page.waitForFunction(() => (window as unknown as { alerts: string[] }).alerts.some((t) => t.trim()), null, { timeout: 2000 });
+      const alerts = await page.evaluate(() => (window as unknown as { alerts: string[] }).alerts);
+      if (alerts[0]?.trim() !== '' || !alerts.at(-1)?.includes(m.described.trim().replace(/^⚠\s*/, ''))) throw new Error(`repeat alert ${JSON.stringify(alerts)}`);
       await page.goto(new URL('/?url=javascript%3Aalert(1)', baseUrl).href);
       await page.waitForSelector('[data-ready="true"]');
       if (!(await page.locator('#url-error').innerText()).trim()) throw new Error('no error for an invalid ?url=');
       await page.goto(new URL('/?url=ftp%3A%2F%2Fexample.org', baseUrl).href);
       await page.waitForSelector('[data-ready="true"]');
       if (api.log.length) throw new Error(`the API was called: ${api.log.map((l) => l.path).join(', ')}`);
-      return { notes: [`error: ${m.described.trim()}`, '0 API requests'] };
+      return { notes: [`error: ${m.described.trim()}`, `repeated submit re-announced (${alerts.length} alert mutations)`, '0 API requests'] };
     },
   },
 ];

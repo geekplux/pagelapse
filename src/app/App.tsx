@@ -24,6 +24,8 @@ interface Live {
   url: string;
   run: number;
   change?: string | undefined;
+  /** Move focus to the new run's status line (Start again, Try again: the pressed button goes away). */
+  focus?: boolean;
 }
 
 /** `?url=` starts a live run on load when it is a valid address (an invalid one is shown at the field instead). */
@@ -52,7 +54,7 @@ export function App() {
     setLive(null);
     progress.cancel();
     wanted.current = entry.id;
-    void entry.load().then((fixture) => {
+    return entry.load().then((fixture) => {
       // Last click wins if loads resolve out of order.
       if (wanted.current !== entry.id) return;
       setCurrent({ id: entry.id, fixture, change, at, view });
@@ -62,17 +64,24 @@ export function App() {
     });
   };
 
-  const startLive = (url: string) => {
-    setLive((l) => ({ url, run: (l?.run ?? 0) + 1 }));
+  const startLive = (url: string, focus = false) => {
+    setLive((l) => ({ url, run: (l?.run ?? 0) + 1, focus }));
     writeUrlState({ url });
   };
-  const openSample = () => load(samples.find((s) => s.id === defaultSample.id)!);
+  // "Open a sample" goes away with the live view: focus lands on the sample's chip, not on <body> (WCAG 2.4.3).
+  const openSample = () =>
+    void load(samples.find((s) => s.id === defaultSample.id)!).then(() =>
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if (!active || active === document.body) document.querySelector<HTMLElement>('.chip[aria-pressed="true"]')?.focus();
+      }),
+    );
 
   useEffect(() => {
     if (live) return;
     const { sample, change, at, view } = parseUrlState(location.search);
     const entry = samples.find((s) => s.id === sample);
-    if (!current && entry) load(entry, change, at, view, false);
+    if (!current && entry) void load(entry, change, at, view, false);
     // An unknown `?sample=` shows the default sample: say so in the address bar (keeping any resolved change).
     if (sample && !entry) writeUrlState({ ...parseUrlState(location.search), sample: defaultSample.id });
     // Runs once on mount: only the initial deep link is restored from the URL.
@@ -85,9 +94,9 @@ export function App() {
         hasDiff={!live && current !== null}
         samples={samples}
         selectedId={live ? '' : (current?.id ?? '')}
-        onSelect={(entry) => load(entry)}
+        onSelect={(entry) => void load(entry)}
         url={parseUrlState(location.search).url ?? ''}
-        onUrl={startLive}
+        onUrl={(url) => startLive(url)}
       />
       <main id="content" tabIndex={-1}>
         {live ? (
@@ -98,7 +107,8 @@ export function App() {
               initialChange={live.change}
               onChange={(change) => writeUrlState({ url: live.url, change })}
               announce={progress.push}
-              onRetry={() => startLive(live.url)}
+              focusStatus={live.focus}
+              onRetry={() => startLive(live.url, true)}
               onSample={openSample}
             />
           </Suspense>

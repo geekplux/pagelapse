@@ -138,8 +138,8 @@ main { flex: 1; }
 .tl-axis { stroke: var(--rule-strong); }
 .tl-cap { stroke: var(--ink-2); }
 .tl-trivial { fill: var(--paper); stroke: var(--mag-1); stroke-width: 1.5; }
-/* Live runs: a capture not fetched yet is a faint hairline; one that failed is a taller dashed one. */
-.tl-pending { stroke: var(--rule-strong); }
+/* Live runs: a capture not fetched yet is a short dotted mark below the baseline; one that failed is a taller dashed one. */
+.tl-pending { stroke: var(--rule-strong); stroke-width: 1.5; stroke-dasharray: 1 2; stroke-linecap: round; }
 .tl-failed { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 3 2; }
 .tl-stem { stroke: var(--rule-strong); }
 .tl-stem.is-sel { stroke: var(--ink); stroke-width: 1.5; }
