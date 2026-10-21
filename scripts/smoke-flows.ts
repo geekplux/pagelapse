@@ -11,7 +11,8 @@ import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
 import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
 import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
-import { changeForCapture, shotAlt, shotSrc } from '../src/app/visual/visualState.ts';
+import { changeForCapture, shotAlt, shotSrc, splitText } from '../src/app/visual/visualState.ts';
+import { PLAY_MS } from '../src/app/visual/usePlay.ts';
 
 export interface FlowContext {
   page: Page;
@@ -63,14 +64,14 @@ const defaultFixture = fixtures[0]!;
 type Fixture = (typeof fixtures)[number];
 const timelineOf = (f: Fixture) => buildTimeline(f.url, fixtureToSnapshots(f));
 const defaultTimeline = timelineOf(defaultFixture);
-const slider = (page: Page) => page.locator('[role="slider"]');
+const slider = (page: Page) => page.locator('.tl-slider');
 const settle = (page: Page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
 
 /** The slider value, its valuetext and the list's single `aria-current` all point at change `i` of `f`. */
 async function expectSelected(page: Page, f: Fixture, i: number): Promise<string> {
   const { entries } = timelineOf(f);
   const want = describeChange(entries[i]!, i, entries.length);
-  await page.locator(`[role="slider"][aria-valuenow="${i + 1}"]`).waitFor({ timeout: 2_000 });
+  await page.locator(`.tl-slider[aria-valuenow="${i + 1}"]`).waitFor({ timeout: 2_000 });
   const text = await slider(page).getAttribute('aria-valuetext');
   if (text !== want) throw new Error(`valuetext "${text}", expected "${want}"`);
   const current = await page.locator('.change').evaluateAll((bs) => bs.flatMap((b, j) => (b.getAttribute('aria-current') === 'true' ? [j] : [])));
@@ -94,11 +95,49 @@ async function noPageOverflow(page: Page): Promise<void> {
 /** The pane shows capture `ts` of `f` (its picture, or the "no picture" card), and the filmstrip marks that frame. */
 async function expectShown(page: Page, f: Fixture, ts: string): Promise<void> {
   const file = f.snapshots.find((s) => s.ts === ts)?.shot?.file;
-  const src = await page.locator('.vp-shot').getAttribute('src');
-  if (src !== (file ? shotSrc(f.id, file) : null)) throw new Error(`pane shows ${src}, expected the picture of ${ts}`);
+  const srcs = await page.locator('.vp-shot').evaluateAll((els) => els.map((e) => e.getAttribute('src')));
+  if (!srcs.includes(file ? shotSrc(f.id, file) : null)) throw new Error(`pane shows ${srcs.join(', ')}, expected the picture of ${ts}`);
   const current = await page.locator('.frame[aria-current="true"] time').getAttribute('datetime');
   if (current !== timestampToIso(ts)) throw new Error(`filmstrip marks ${current}, expected ${ts}`);
 }
+
+const featured = (() => {
+  const [from, to] = defaultFixture.featured!.split('-') as [string, string];
+  return { from, to };
+})();
+const picOf = (ts: string) => shotSrc(defaultFixture.id, defaultFixture.snapshots.find((s) => s.ts === ts)!.shot!.file!);
+const checkedMode = (page: Page) => page.locator('input[name="vp-mode"]:checked').getAttribute('value');
+
+/**
+ * Slider mode on the default sample's featured change: Before under After, both labelled by symbol, word and date in
+ * their own corner, After clipped at `v`%, and the divider's value and valuetext say so.
+ */
+async function expectSlider(page: Page, v: number): Promise<string> {
+  const m = await page.evaluate(() => ({
+    srcs: [...document.querySelectorAll('.vp-cmp .vp-shot')].map((i) => [i.getAttribute('src'), i.getAttribute('alt')]),
+    labels: [...document.querySelectorAll('.vp-label')].map((l) => [l.getAttribute('data-side'), l.textContent, Math.round(l.getBoundingClientRect().left)]),
+    clip: getComputedStyle(document.querySelector('.vp-clip')!).clipPath,
+    now: document.querySelector('.vp-split')?.getAttribute('aria-valuenow'),
+    text: document.querySelector('.vp-split')?.getAttribute('aria-valuetext'),
+  }));
+  const { from, to } = featured;
+  const want = [[picOf(from), shotAlt(defaultFixture.label, featured, from)], [picOf(to), shotAlt(defaultFixture.label, featured, to)]];
+  const problems = [
+    (await checkedMode(page)) !== 'slider' && 'Slider is not the checked mode',
+    JSON.stringify(m.srcs) !== JSON.stringify(want) && `pictures ${JSON.stringify(m.srcs)}`,
+    (m.labels[0]?.[0] !== 'before' || !String(m.labels[0][1]).startsWith(`− Before ${formatTimestampShort(from)}`)) && `before label ${m.labels[0]}`,
+    (m.labels[1]?.[0] !== 'after' || !String(m.labels[1][1]).startsWith(`+ After ${formatTimestampShort(to)}`)) && `after label ${m.labels[1]}`,
+    Number(m.labels[0]?.[2]) >= Number(m.labels[1]?.[2]) && 'Before is not left of After',
+    m.now !== String(v) && `divider at ${m.now}, expected ${v}`,
+    m.text !== splitText(v, featured) && `valuetext "${m.text}"`,
+    !m.clip.endsWith(` ${v}%)`) && `After clipped by "${m.clip}", expected ${v}%`,
+  ].filter(Boolean);
+  if (problems.length) throw new Error(problems.join('; '));
+  return `${m.text}; clip ${m.clip}`;
+}
+
+/** Index of the capture the filmstrip marks as shown. */
+const shownIndex = (page: Page) => page.locator('.frame').evaluateAll((fs) => fs.findIndex((f) => f.getAttribute('aria-current') === 'true'));
 
 /** Presses a currently non-pressed chip and checks the pressed state, heading and capture links all follow. */
 async function switchTo(page: Page, f: (typeof fixtures)[number]): Promise<string> {
@@ -599,12 +638,8 @@ export const flows: readonly Flow[] = [
       const timeToReadyMs = await openReady(page, baseUrl);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       const [from, to] = defaultFixture.featured!.split('-') as [string, string];
-      await expectShown(page, defaultFixture, to);
-      const alt = await page.locator('.vp-shot').getAttribute('alt');
-      if (alt !== shotAlt(defaultFixture.label, { from, to }, to) || !alt.includes('(After)')) throw new Error(`alt "${alt}"`);
+      const said = await expectSlider(page, 50);
       if ((await page.locator('.frame').count()) !== defaultFixture.snapshots.length) throw new Error('not one frame per capture');
-      const pressed = await page.locator('.vp-side[aria-pressed="true"]').textContent();
-      if (!pressed?.includes('After')) throw new Error(`pressed side "${pressed}"`);
       if (!page.url().endsWith('/') || new URL(page.url()).search) throw new Error(`first view rewrote the URL: ${page.url()}`);
       await page.waitForTimeout(500);
       const m = await page.evaluate(async () => {
@@ -632,7 +667,7 @@ export const flows: readonly Flow[] = [
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { timeToReadyMs, notes: [`featured ${from}-${to}`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, filmstrip thumbnails): ${m.fold.map(Math.round).join(', ')}`] };
+      return { timeToReadyMs, notes: [`featured ${from}-${to} in Slider mode: ${said}`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, filmstrip thumbnails): ${m.fold.map(Math.round).join(', ')}`] };
     },
   },
   {
@@ -700,7 +735,7 @@ export const flows: readonly Flow[] = [
     suffix: '-kbd',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      await openReady(page, baseUrl);
+      await openReady(page, baseUrl, '/?view=single');
       const stops = new Set<string>();
       for (let k = 0; k < 60 && !(await page.evaluate(() => document.activeElement?.classList.contains('frame'))); k++) {
         await page.keyboard.press('Tab');
@@ -722,7 +757,7 @@ export const flows: readonly Flow[] = [
     description: 'Timeline keys swap the picture and the filmstrip frame; Before / After flips sides and is kept while scrubbing (?at=)',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      await openReady(page, baseUrl);
+      await openReady(page, baseUrl, '/?view=single');
       const { entries } = defaultTimeline;
       await slider(page).focus();
       for (const [key, i] of [['Home', 0], ['ArrowRight', 1]] as const) {
@@ -738,6 +773,7 @@ export const flows: readonly Flow[] = [
       await expectShown(page, defaultFixture, entries[2]!.from);
       await openReady(page, baseUrl, page.url().replace(baseUrl, '/'));
       await expectShown(page, defaultFixture, entries[2]!.from);
+      await settle(page);
       return { notes: ['Home, Right swap pictures; Before kept on Right; ?at= restores it'] };
     },
   },
@@ -762,7 +798,7 @@ export const flows: readonly Flow[] = [
       // The diff has stops only when it has collapsed runs or long blocks; the rest always do.
       if (seen.length < 5 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
       // The first stop after the pane's controls is in the change card, beside the picture; the card holds no list.
-      await page.locator('.vpane .cap-out').focus();
+      await page.locator('.vpane .cap-out').last().focus();
       await page.keyboard.press('Tab');
       const next = await page.evaluate(() => `${document.activeElement?.closest('.side') ? 'side' : 'elsewhere'}: ${document.activeElement?.textContent?.trim().slice(0, 30)}`);
       if (!next.startsWith('side')) throw new Error(`after "Open capture": ${next}`);
@@ -861,7 +897,7 @@ export const flows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       const f = defaultFixture;
       const ts = f.snapshots.find((s) => s.shot?.status === 'partial')!.ts;
-      await openReady(page, baseUrl, `/?at=${ts}`);
+      await openReady(page, baseUrl, `/?at=${ts}&view=single`);
       await expectShown(page, f, ts);
       await page.locator('.vp-cap .vp-badge', { hasText: "The archive's copy is missing some styles or images" }).waitFor({ timeout: 2_000 });
       const labelled = await page.locator('.frame-partial').count();
@@ -884,6 +920,174 @@ export const flows: readonly Flow[] = [
       if (href !== viewCaptureUrl(f.source.archive, shot.ts, f.url)) throw new Error(`open capture link ${href}`);
       if ((await page.locator('.frame-none').count()) !== f.snapshots.filter((s) => !s.shot?.file).length) throw new Error('filmstrip "no picture" frames');
       return { notes: [`${shot.ts}: hatched card (${shot.shot!.reason}), link ${href}`] };
+    },
+  },
+  {
+    name: 'compare-slider',
+    description: 'The hero opens in Slider mode on the featured change: Before / After labelled by symbol, word, date and corner, divider at 50%',
+    schemes: ['light', 'dark'],
+    cvd: true,
+    async run({ page, baseUrl }) {
+      const timeToReadyMs = await openReady(page, baseUrl);
+      await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
+      await noPageOverflow(page);
+      return { timeToReadyMs, notes: [await expectSlider(page, 50)] };
+    },
+  },
+  {
+    name: 'compare-slider-keyboard',
+    description: 'Divider keys: Left x4, End, Home, PageUp, Enter (reset), Left x4; aria-valuenow, valuetext and the computed clip follow',
+    shot: 'compare-slider',
+    suffix: '-kbd',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      await page.locator('.vp-split').focus();
+      const notes: string[] = [];
+      for (const [keys, v] of [[['ArrowLeft', 'ArrowLeft', 'ArrowLeft', 'ArrowLeft'], 30], [['End'], 100], [['Home'], 0], [['PageUp'], 25], [['Enter'], 50], [['ArrowLeft', 'ArrowLeft', 'ArrowLeft', 'ArrowLeft'], 30]] as const) {
+        for (const k of keys) await page.keyboard.press(k);
+        notes.push(`${keys.join('+')}: ${await expectSlider(page, v)}`);
+      }
+      return { notes };
+    },
+  },
+  {
+    name: 'compare-slider-drag',
+    description: 'Dragging the divider (32 px hit area, pointer capture) follows the pointer, also past the picture edge; double-click resets',
+    viewports: ['desktop', 'mobile'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const box = (await page.locator('.vp-cmp').boundingBox())!;
+      const hit = (await page.locator('.vp-split').boundingBox())!;
+      if (hit.width < 32 || hit.height < 32) throw new Error(`hit area ${hit.width}x${hit.height}`);
+      await page.mouse.move(hit.x + hit.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 4, box.y + box.height / 2, { steps: 5 });
+      const quarter = await expectSlider(page, 25);
+      await page.mouse.move(box.x - 40, box.y + 10, { steps: 3 });
+      await page.mouse.up();
+      const edge = await expectSlider(page, 0);
+      await page.locator('.vp-split').dblclick();
+      return { notes: [`drag to 1/4: ${quarter}`, `past the edge: ${edge}`, `double-click: ${await expectSlider(page, 50)}`] };
+    },
+  },
+  {
+    name: 'compare-side',
+    description: 'Side by side: two labelled mats with their own captions and links, side by side on desktop and stacked on phones; ?view=side',
+    async run({ page, baseUrl, viewport }) {
+      await openReady(page, baseUrl);
+      await page.getByRole('radio', { name: 'Side by side' }).check();
+      const mats = await page.locator('.vp-pair .vp-mat').evaluateAll((ms) =>
+        ms.map((m) => ({ ...JSON.parse(JSON.stringify(m.getBoundingClientRect())), label: m.querySelector('.vp-label')?.textContent, links: m.querySelectorAll('.cap-out').length })),
+      );
+      const [a, b] = mats;
+      const problems = [
+        mats.length !== 2 && `${mats.length} mats`,
+        !a?.label?.startsWith('− Before') || !b?.label?.startsWith('+ After') ? `labels ${a?.label} / ${b?.label}` : '',
+        mats.some((m) => m.links !== 1) && 'not one capture link per mat',
+        viewport === 'desktop' && a && b && (a.top !== b.top || a.right > b.left) && 'mats are not side by side',
+        viewport === 'mobile' && a && b && a.bottom > b.top && 'mats are not stacked',
+        new URL(page.url()).searchParams.get('view') !== 'side' && `URL ${page.url()}`,
+      ].filter(Boolean);
+      if (problems.length) throw new Error(problems.join('; '));
+      await noPageOverflow(page);
+      return { notes: [`${a.label} | ${b.label}`, `URL ${new URL(page.url()).search}`] };
+    },
+  },
+  {
+    name: 'compare-onion',
+    description: 'Onion skin: "After opacity" range by keys (step 5) sets the top picture\'s opacity; Swap puts Before on top',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      await page.getByRole('radio', { name: 'Slider' }).focus();
+      await page.keyboard.press('ArrowRight');
+      if ((await checkedMode(page)) !== 'onion') throw new Error(`Right from Slider checked ${await checkedMode(page)}`);
+      const range = page.getByRole('slider', { name: 'After opacity' });
+      await range.focus();
+      for (const k of ['ArrowLeft', 'ArrowLeft', 'ArrowLeft']) await page.keyboard.press(k);
+      const top = () => page.evaluate(() => [getComputedStyle(document.querySelector('.vp-top')!).opacity, document.querySelector('.vp-top img')?.getAttribute('alt')]);
+      const [op, alt] = await top();
+      if (op !== '0.35' || !alt?.includes('(After)')) throw new Error(`top picture ${alt} at opacity ${op}, expected After at 0.35`);
+      await page.getByRole('button', { name: 'Swap' }).click();
+      const [op2, alt2] = await top();
+      if (op2 !== '0.35' || !alt2?.includes('(Before)') || !(await page.getByRole('slider', { name: 'Before opacity' }).count())) throw new Error(`after Swap: ${alt2} at ${op2}`);
+      return { notes: [`After at ${op}`, `Swap: Before on top at ${op2}`] };
+    },
+  },
+  {
+    name: 'compare-deeplink',
+    description: '?view=onion opens Onion skin and the mode persists across selection changes; an unknown view falls back to Slider and leaves the URL',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl, '/?view=onion');
+      if ((await checkedMode(page)) !== 'onion' || !(await page.locator('.vp-onion input[type="range"]').count())) throw new Error('?view=onion did not open Onion skin');
+      await slider(page).focus();
+      await page.keyboard.press('Home');
+      await expectSelected(page, defaultFixture, 0);
+      const q = new URL(page.url()).searchParams;
+      if ((await checkedMode(page)) !== 'onion' || q.get('view') !== 'onion') throw new Error(`after Home: mode ${await checkedMode(page)}, URL ${page.url()}`);
+      await openReady(page, baseUrl, '/?view=zoom');
+      if ((await checkedMode(page)) !== 'slider' || new URL(page.url()).searchParams.has('view')) throw new Error(`?view=zoom: mode ${await checkedMode(page)}, URL ${page.url()}`);
+      return { notes: [`onion kept on Home (${q.toString()})`, '?view=zoom -> Slider, view dropped'] };
+    },
+  },
+  {
+    name: 'compare-missing',
+    description: 'A compare mode on a change with a capture that has no picture shows Single, with the reason, and keeps the chosen mode',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const f = fixtures.find((x) => x.id === 'rust-lang')!;
+      const ts = f.snapshots.find((s) => s.shot?.status === 'failed')!.ts;
+      const e = timelineOf(f).entries.find((x) => x.to === ts || x.from === ts)!;
+      await openReady(page, baseUrl, `/?sample=${f.id}&change=${e.from}-${e.to}`);
+      const note = (await page.locator('.vp-note').textContent()) ?? '';
+      if (!note.includes('Slider needs a picture of both captures') || (await page.locator('.vp-cmp').count()) || (await checkedMode(page)) !== 'slider') throw new Error(`note "${note}"`);
+      return { notes: [note] };
+    },
+  },
+  {
+    name: 'play',
+    description: 'Play (never on its own) switches to Single and steps one capture per 1.2 s, silently; a key press stops it and says where; mid-play shot',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const button = page.locator('.vp-play');
+      const start = await shownIndex(page);
+      await page.waitForTimeout(PLAY_MS + 200);
+      if ((await shownIndex(page)) !== start || (await button.getAttribute('aria-pressed')) !== 'false') throw new Error('Play started on its own');
+      await button.click();
+      const from = await shownIndex(page);
+      const quiet = await page.locator('.diff-nav [aria-live]').getAttribute('aria-live');
+      if ((await button.textContent())?.trim() !== '❚❚ Pause' || (await button.getAttribute('aria-pressed')) !== 'true' || (await checkedMode(page)) !== 'single' || quiet !== 'off') throw new Error(`playing: "${await button.textContent()}", mode ${await checkedMode(page)}, nav live ${quiet}`);
+      await page.waitForTimeout(PLAY_MS * 3 + 300);
+      const at = await shownIndex(page);
+      if (at !== from + 3) throw new Error(`after 3 steps at #${at + 1}, expected #${from + 4}`);
+      if (await page.evaluate(() => document.activeElement?.matches('.vp-play')) === false) throw new Error('Play moved focus');
+      await page.keyboard.press('Shift');
+      await page.waitForTimeout(PLAY_MS + 200);
+      const status = (await page.locator('.vpane [role="status"]').textContent()) ?? '';
+      const named = await page.getByRole('button', { name: 'Play time-lapse', exact: true }).count();
+      if (named !== 1 || (await shownIndex(page)) !== at || (await button.getAttribute('aria-pressed')) !== 'false' || !status.startsWith('Stopped at capture')) throw new Error(`a key did not stop Play (status "${status}")`);
+      await button.click();
+      await page.waitForTimeout(PLAY_MS + 300);
+      return { notes: [`from #${from + 1} (start #${start + 1}) to #${at + 1} in 3 steps`, `stopped by a key: "${status}"`, 'shot mid-play'] };
+    },
+  },
+  {
+    name: 'play-reduced',
+    description: 'Under reduced motion Play still steps on request, with no cross-fade (no animations or transitions on the pictures)',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openReady(page, baseUrl);
+      await page.locator('.vp-play').click();
+      const from = await shownIndex(page);
+      await page.waitForTimeout(PLAY_MS + 300);
+      const m = await page.evaluate(() => ({ anims: document.querySelector('.vpane')!.getAnimations({ subtree: true }).length, prev: getComputedStyle(document.querySelector('.vp-frame')!).backgroundImage }));
+      if ((await shownIndex(page)) !== from + 1 || m.anims || m.prev !== 'none') throw new Error(`step ${from} -> ${await shownIndex(page)}, ${m.anims} animations, backdrop ${m.prev}`);
+      await page.locator('.vp-play').click();
+      return { notes: [`stepped #${from + 1} -> #${from + 2} with no animation`] };
     },
   },
   // Review-only: every recorded thumbnail of a sample with its status, to inspect the pictures by eye.
