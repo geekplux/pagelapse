@@ -1,0 +1,44 @@
+calm-audit hero 390: regions n/a · tab stops 14 · framed 6 · eyebrows 5 · accent fills 3 · picture 312 px (80%) top 548 · controls-to-picture 38 px
+calm-audit hero 1440: regions n/a · tab stops 18 · framed 6 · eyebrows 8 · accent fills 3 · picture 571 px (40%) top 285 · controls-to-picture 162 px
+calm-audit hero-wikipedia 390: regions n/a · tab stops 14 · framed 6 · eyebrows 4 · accent fills 3 · picture 312 px (80%) top 573 · controls-to-picture 6 px
+calm-audit hero-wikipedia 1440: regions n/a · tab stops 18 · framed 6 · eyebrows 7 · accent fills 3 · picture 571 px (40%) top 309 · controls-to-picture 180 px
+calm-audit compare-side 390: regions n/a · tab stops 12 · framed 6 · eyebrows 4 · accent fills 3 · picture 312 px (80%) top 548 · controls-to-picture 38 px
+calm-audit compare-side 1440: regions n/a · tab stops 19 · framed 6 · eyebrows 8 · accent fills 3 · picture 279 px (19%) top 285 · controls-to-picture 23 px
+calm-audit single 390: regions n/a · tab stops 14 · framed 7 · eyebrows 4 · accent fills 4 · picture 312 px (80%) top 595 · controls-to-picture 9 px
+calm-audit single 1440: regions n/a · tab stops 18 · framed 7 · eyebrows 7 · accent fills 4 · picture 571 px (40%) top 331 · controls-to-picture 208 px
+calm-audit text-diff 390: regions n/a · tab stops 5 · framed 2 · eyebrows 4 · accent fills 0 · picture 312 px (80%) top 548 · controls-to-picture 2433 px
+calm-audit text-diff 1440: regions n/a · tab stops 1 · framed 1 · eyebrows 2 · accent fills 0 · picture 571 px (40%) top 285 · controls-to-picture 162 px
+calm-audit live-running 390: regions n/a · tab stops 13 · framed 7 · eyebrows 4 · accent fills 3 · picture 312 px (80%) top 700 · controls-to-picture 153 px
+calm-audit live-running 1440: regions n/a · tab stops 18 · framed 7 · eyebrows 7 · accent fills 3 · picture 571 px (40%) top 409 · controls-to-picture 246 px
+calm-audit live-done 390: regions n/a · tab stops 10 · framed 7 · eyebrows 4 · accent fills 2 · picture 312 px (80%) top 630 · controls-to-picture 72 px
+calm-audit live-done 1440: regions n/a · tab stops 17 · framed 7 · eyebrows 7 · accent fills 3 · picture 571 px (40%) top 391 · controls-to-picture 238 px
+calm-audit live-empty 390: regions n/a · tab stops 11 · framed 2 · eyebrows 3 · accent fills 1
+calm-audit live-empty 1440: regions n/a · tab stops 11 · framed 2 · eyebrows 3 · accent fills 1
+calm-audit live-no-meaningful 390: regions n/a · tab stops 7 · framed 2 · eyebrows 4 · accent fills 1
+calm-audit live-no-meaningful 1440: regions n/a · tab stops 8 · framed 2 · eyebrows 5 · accent fills 1
+calm-audit live-error-ratelimited 390: regions n/a · tab stops 11 · framed 2 · eyebrows 3 · accent fills 1
+calm-audit live-error-ratelimited 1440: regions n/a · tab stops 11 · framed 2 · eyebrows 3 · accent fills 1
+calm-audit live-invalid-url 390: regions n/a · tab stops 14 · framed 6 · eyebrows 4 · accent fills 3 · picture 312 px (80%) top 593 · controls-to-picture 7 px
+calm-audit live-invalid-url 1440: regions n/a · tab stops 18 · framed 6 · eyebrows 8 · accent fills 3 · picture 571 px (40%) top 308 · controls-to-picture 162 px
+calm-audit:hero mobile headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:hero wide headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:hero-wikipedia mobile headings: H1:pagelapsePagelapse | H2:Wikipedia: Internet Archive | H3:How it looked | H3:Change 9 of 13 · minor 2022·02 | H3:Filmstrip | H3:Timeline | H3:What the text says, 2022·02·02
+calm-audit:hero-wikipedia wide headings: H1:pagelapsePagelapse | H2:Wikipedia: Internet Archive | H3:How it looked | H3:Change 9 of 13 · minor 2022·02 | H3:Filmstrip | H3:Timeline | H3:What the text says, 2022·02·02
+calm-audit:compare-side mobile headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:compare-side wide headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:single mobile headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:single wide headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:text-diff mobile headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:text-diff wide headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:live-running mobile headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:How it looked | H3:Change 4 of 4 · minor 2016·01· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2016·01·14
+calm-audit:live-running wide headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:How it looked | H3:Change 4 of 4 · minor 2016·01· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2016·01·14
+calm-audit:live-done mobile headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:live-done wide headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:live-empty mobile headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:No captures yet
+calm-audit:live-empty wide headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:No captures yet
+calm-audit:live-no-meaningful mobile undefined
+calm-audit:live-no-meaningful wide headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:Nothing meaningful changed | H3:Filmstrip | H3:Timeline
+calm-audit:live-error-ratelimited mobile headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:⚠ The Archive needs a pause
+calm-audit:live-error-ratelimited wide headings: H1:pagelapsePagelapse | H2:git-scm.com | H3:⚠ The Archive needs a pause
+calm-audit:live-invalid-url mobile headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure
+calm-audit:live-invalid-url wide headings: H1:pagelapsePagelapse | H2:git-scm.com home page | H3:How it looked | H3:Change 9 of 9 · major 2025·04· | H3:Filmstrip | H3:Timeline | H3:What the text says, 2025·04·04 | H4:Structure

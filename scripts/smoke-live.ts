@@ -53,7 +53,7 @@ async function stubReplay(page: Page, delay: (ts: string) => number | null = () 
   return log;
 }
 
-async function mockApi(
+export async function mockApi(
   page: Page,
   opts: {
     data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; snapshot?: (i: number) => Plan; frame?: (ts: string) => number | null;
@@ -107,7 +107,7 @@ async function mockApi(
  * Waits until every replay frame under `sel` has fired `load`, brings them into the viewport (headless Chrome paints
  * an out-of-process frame only there) and gives them 500 ms to paint, so the flow's screenshot shows the pages.
  */
-async function framesPainted(page: Page, sel: string): Promise<string> {
+export async function framesPainted(page: Page, sel: string): Promise<string> {
   const n = await page.locator(`${sel} iframe`).count();
   await page.waitForFunction(
     (s) => {
@@ -124,7 +124,7 @@ async function framesPainted(page: Page, sel: string): Promise<string> {
 }
 
 const liveUrl = (url: string) => `/?url=${encodeURIComponent(url)}`;
-async function openLive(page: Page, baseUrl: string, url: string, status?: string): Promise<void> {
+export async function openLive(page: Page, baseUrl: string, url: string, status?: string): Promise<void> {
   await page.goto(new URL(liveUrl(url), baseUrl).href, { waitUntil: 'domcontentloaded' });
   await page.locator(status ? `[data-live="${status}"]` : '[data-live]').waitFor({ timeout: 20_000 });
 }

@@ -14,14 +14,17 @@ import { type Browser, chromium } from 'playwright-core';
 import { encodeWebp } from './lib/webp.ts';
 import { CVD_VARIANTS, assertAxeClean, setCvdFilter } from './smoke-a11y.ts';
 import { type FlowResult, flows as baseFlows } from './smoke-flows.ts';
+import { calmFlows } from './smoke-calm.ts';
 import { liveFlows, replayLog, summaryFlows } from './smoke-live.ts';
 
-const flows = [...baseFlows, ...liveFlows, ...summaryFlows];
+const flows = [...baseFlows, ...liveFlows, ...summaryFlows, ...calmFlows];
 
 const CHROME = '/usr/bin/google-chrome';
 const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
   mobile: { width: 390, height: 844 },
+  /** The calm-layout audit's desktop size (D35); only flows that ask for it run here. */
+  wide: { width: 1440, height: 900 },
 } as const;
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost']);
 
@@ -177,10 +180,11 @@ interface FlowReport extends FlowResult {
 async function main(): Promise<number> {
   const wanted = values.flows?.split(',').map((f) => f.trim()).filter(Boolean);
   const selected = wanted
-    ? wanted.map((name) => {
-        const flow = flows.find((f) => f.name === name);
-        if (!flow) throw new Error(`unknown flow "${name}" (known: ${flows.map((f) => f.name).join(', ')})`);
-        return flow;
+    ? wanted.flatMap((name) => {
+        // `calm-audit` names the group `calm-audit:*`.
+        const group = flows.filter((f) => f.name === name || f.name.startsWith(`${name}:`));
+        if (!group.length) throw new Error(`unknown flow "${name}" (known: ${flows.map((f) => f.name).join(', ')})`);
+        return group;
       })
     : flows.filter((f) => !f.selfTest);
 
@@ -204,7 +208,7 @@ async function main(): Promise<number> {
   const runs = selected.flatMap((flow) => (flow.schemes ?? ['light']).map((scheme) => ({ flow, scheme })));
   for (const { flow, scheme } of runs) {
     for (const [viewport, size] of Object.entries(VIEWPORTS) as [keyof typeof VIEWPORTS, { width: number; height: number }][]) {
-      if (flow.viewports && !flow.viewports.includes(viewport)) continue;
+      if (flow.viewports ? !flow.viewports.includes(viewport) : viewport === 'wide') continue;
       // One context at a time; each flow/viewport/scheme gets a clean one.
       const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1, colorScheme: scheme });
       await context.route('**/*', (route) => {
@@ -237,13 +241,13 @@ async function main(): Promise<number> {
         );
         // Every flow ends with an axe pass on the state it left behind.
         report.notes = [...(report.notes ?? []), await assertAxeClean(page)];
-        const base = `${flow.shot ?? flow.name}-${viewport}${scheme === 'dark' ? '-dark' : ''}`;
+        const base = `${flow.shot ?? flow.name}-${flow.widthTag ? size.width : viewport}${scheme === 'dark' ? '-dark' : ''}`;
         const file = join(outDir, `${base}${flow.suffix ?? ''}.${values.format}`);
         // Element shots get a 16 px margin of page around them.
         const box = flow.clip ? await page.locator(flow.clip).boundingBox() : null;
         const clip = box && { x: Math.max(0, box.x - 16), y: Math.max(0, box.y - 16), width: box.width + 32, height: box.height + 32 };
         const shoot = async (path: string) => {
-          const png = await page.screenshot({ fullPage: true, ...(clip && { clip }) });
+          const png = await page.screenshot({ fullPage: !flow.firstView, ...(clip && { clip }) });
           writeFileSync(path, values.format === 'webp' ? await encodeWebp(page, png, { quality: 0.8 }) : png);
         };
         await shoot(file);

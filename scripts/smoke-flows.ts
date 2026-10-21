@@ -17,7 +17,7 @@ import { PLAY_MS } from '../src/app/visual/usePlay.ts';
 export interface FlowContext {
   page: Page;
   baseUrl: string;
-  viewport: 'desktop' | 'mobile';
+  viewport: 'desktop' | 'mobile' | 'wide';
   scheme: Theme;
 }
 
@@ -44,7 +44,11 @@ export interface Flow {
   clip?: string;
   /** The flow mocks API error answers: Chrome's "Failed to load resource" console errors for `/api/*` are expected. */
   apiErrors?: boolean;
-  /** Viewports to run in (default: desktop and mobile). */
+  /** Name shots by viewport width (`hero-1440`), not by viewport name. */
+  widthTag?: boolean;
+  /** Shoot what is on screen (the first viewport, or where the flow scrolled to), not the full page. */
+  firstView?: boolean;
+  /** Viewports to run in (default: desktop and mobile; `wide` is 1440×900). */
   viewports?: FlowContext['viewport'][];
   run: (ctx: FlowContext) => Promise<FlowResult>;
 }
