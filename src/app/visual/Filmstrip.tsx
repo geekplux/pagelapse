@@ -1,11 +1,12 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
-import type { SampleFixture } from '../../core/types.ts';
 import { scrollWithin } from '../keepInView.ts';
 import { Ts } from '../Ts.tsx';
-import { frameNo, shotSrc } from './visualState.ts';
+import { Silhouette } from './Silhouette.tsx';
+import { type CaptureView, frameNo } from './visualState.ts';
 
 interface Props {
-  fixture: SampleFixture;
+  /** One per capture, oldest first: a recorded thumbnail, a text silhouette (live) or no picture. */
+  items: readonly CaptureView[];
   /** The capture shown in the pane. */
   at: string;
   trivial: ReadonlySet<string>;
@@ -23,8 +24,8 @@ const STEP: Record<string, (i: number, n: number) => number> = {
  * The contact sheet: one numbered, dated thumbnail per capture. A single tab stop with roving focus
  * (Left/Right/Home/End); Enter or Space shows that capture. The shown frame is `aria-current`, outlined and carets.
  */
-export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
-  const { snapshots } = fixture;
+export function Filmstrip({ items: snapshots, at, trivial, onSelect }: Props) {
+  const outlines = snapshots.some((s) => s.page);
   const sel = snapshots.findIndex((s) => s.ts === at);
   // The roving tab stop; it snaps back to the shown frame whenever the selection changes.
   const [roving, setRoving] = useState({ sel, i: sel });
@@ -54,7 +55,7 @@ export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
       <div className="film-head">
         <h3 id="film-heading">Filmstrip</h3>
         <p className="captures-source" id="film-hint">
-          {snapshots.length} captures, oldest first. Arrow keys move along the strip; Enter shows a capture.
+          {snapshots.length} captures, oldest first.{outlines && ' Thumbnails are text outlines of each capture, not pictures.'} Arrow keys move along the strip; Enter shows a capture.
         </p>
       </div>
       {/* Safari drops list semantics when list-style is none, so the role is not redundant here. */}
@@ -72,8 +73,10 @@ export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
               onClick={() => onSelect(s.ts)}
               onFocus={() => setFocus(i)}
             >
-              {s.shot?.file ? (
-                <img src={shotSrc(fixture.id, s.shot.file, true)} width={320} height={200} alt="" loading="lazy" decoding="async" />
+              {s.thumb ? (
+                <img src={s.thumb} width={320} height={200} alt="" loading="lazy" decoding="async" />
+              ) : s.page ? (
+                <Silhouette page={s.page} />
               ) : (
                 <span className="frame-none">no picture</span>
               )}
@@ -85,7 +88,7 @@ export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
                     <span aria-hidden="true">▯ </span>trivial
                   </span>
                 )}
-                {s.shot?.status === 'partial' && (
+                {s.status === 'partial' && (
                   <span className="frame-partial">
                     <span aria-hidden="true">◐ </span>partial
                   </span>

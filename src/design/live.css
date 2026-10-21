@@ -22,9 +22,8 @@
 @keyframes live-pulse { to { background: var(--ink); } }
 .live-wait { padding: 1rem; border: 1px dashed var(--rule-strong); color: var(--ink-2); font: 1rem / 1.5 var(--font-read); }
 @media (min-width: 60rem) {
-  .stage.live-stage { grid-template-columns: minmax(0, 1fr); grid-template-areas: "side" "tl" "list" "diff"; }
   /* Room for a card with a two-line summary, reserved from the start, so the timeline does not jump as changes arrive. */
-  .live-stage .side { max-width: 48rem; min-height: 17.5rem; }
+  .live-stage .side { min-height: 17.5rem; }
   .live-stage .live-wait { display: grid; place-content: center; }
 }
 

@@ -24,15 +24,17 @@ interface Live {
   url: string;
   run: number;
   change?: string | undefined;
+  at?: string | undefined;
+  view?: string | undefined;
   /** Move focus to the new run's status line (Start again, Try again: the pressed button goes away). */
   focus?: boolean;
 }
 
 /** `?url=` starts a live run on load when it is a valid address (an invalid one is shown at the field instead). */
 function initialLive(): Live | null {
-  const { url, change } = parseUrlState(location.search);
+  const { url, change, at, view } = parseUrlState(location.search);
   const check = url ? validateTargetUrl(url) : null;
-  return check?.ok ? { url: check.url, run: 0, change } : null;
+  return check?.ok ? { url: check.url, run: 0, change, at, view } : null;
 }
 
 export function App() {
@@ -105,7 +107,9 @@ export function App() {
               key={live.run}
               url={live.url}
               initialChange={live.change}
-              onChange={(change) => writeUrlState({ url: live.url, change })}
+              initialAt={live.at}
+              initialMode={live.view}
+              onChange={(q) => writeUrlState({ url: live.url, ...q })}
               announce={progress.push}
               focusStatus={live.focus}
               onRetry={() => startLive(live.url, true)}

@@ -1,17 +1,25 @@
 import { useState } from 'react';
-import { ARCHIVES } from '../../archive/archives.ts';
 import { formatTimestampLong } from '../../core/timestamp.ts';
-import { viewCaptureUrl } from '../../core/url.ts';
-import type { SampleFixture, TimelineEntry } from '../../core/types.ts';
+import type { TimelineEntry } from '../../core/types.ts';
 import { Ts } from '../Ts.tsx';
 import { CompareSlider } from './CompareSlider.tsx';
+import { LiveFrame } from './LiveFrame.tsx';
 import { ModePicker } from './ModePicker.tsx';
 import { OnionSkin } from './OnionSkin.tsx';
 import { Shot } from './Shot.tsx';
-import { MODES, type Mode, type Side, captureForChange, frameNo, shotAlt, shotSrc, sideOf } from './visualState.ts';
+import { useFramePool } from './useFramePool.ts';
+import { type CaptureView, MODES, type Mode, type Side, captureForChange, frameNo, shotAlt, sideOf } from './visualState.ts';
 
 interface Props {
-  fixture: SampleFixture;
+  /** The page, for alt text: `git-scm.com home page`. */
+  label: string;
+  /** Every capture, oldest first (frame numbers). */
+  captures: readonly string[];
+  /** Where the pictures come from, for the caption: `Arquivo.pt`. */
+  archiveName: string;
+  /** A capture in the archive's own viewer. */
+  link: (ts: string) => string;
+  view: (ts: string) => CaptureView;
   entry: TimelineEntry;
   /** The capture shown in Single mode. */
   at: string;
@@ -19,7 +27,11 @@ interface Props {
   mode: Mode;
   onMode: (mode: Mode) => void;
   onSide: (side: Side) => void;
-  play: { playing: boolean; toggle: () => void };
+  /** Samples only: live frames would each load a whole archived page per step. */
+  play?: { playing: boolean; toggle: () => void } | undefined;
+  /** Live: the captures Right/Left step through (neighbour preloads) and whether the run still fetches. */
+  steps?: readonly string[];
+  runActive?: boolean;
 }
 
 const SIDES = [
@@ -42,54 +54,69 @@ const Label = ({ side, ts }: { side: Side; ts: string }) => {
  * Slider, Onion skin), Play, the picture(s), a caption strip with the links out to the captures, and honest states for
  * captures recorded without some styles or with no picture. A compare mode needs both pictures, else it shows Single.
  */
-export function VisualPane({ fixture, entry, at, trivial, mode, onMode, onSide, play }: Props) {
+export function VisualPane({ label, captures, archiveName, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false }: Props) {
   const [broken, setBroken] = useState<string[]>([]);
-  const index = (ts: string) => fixture.snapshots.findIndex((s) => s.ts === ts);
+  const index = (ts: string) => captures.indexOf(ts);
   const pic = (ts: string) => {
-    const shot = fixture.snapshots[index(ts)]?.shot;
-    const full = shot?.file ? shotSrc(fixture.id, shot.file) : '';
-    return { ts, shot, src: broken.includes(full) ? '' : full, broken: !!full && broken.includes(full), thumb: shot?.file ? shotSrc(fixture.id, shot.file, true) : '' };
+    const v = view(ts);
+    return broken.includes(v.src) ? { ...v, source: 'none' as const, broken: true } : { ...v, broken: false };
   };
   type Pic = ReturnType<typeof pic>;
   const pair = { before: pic(entry.from), after: pic(entry.to) };
-  const lacking = mode === 'single' ? undefined : SIDES.find(([s]) => !pair[s].src);
+  const lacking = mode === 'single' ? undefined : SIDES.find(([s]) => pair[s].source === 'none');
   const shown: Mode = lacking ? 'single' : mode;
   const side = sideOf(entry, at);
+  const want = (shown === 'single' ? [pic(at)] : [pair.before, pair.after]).filter((p) => p.source === 'frame').map((p) => p.ts);
+  const pool = useFramePool(want, steps, { scope: shown, compare: shown !== 'single', runActive });
   // Polite news of Play starting and stopping only; the steps themselves are silent.
+  const playing = !!play?.playing;
   const [said, setSaid] = useState({ playing: false, text: '' });
-  if (said.playing !== play.playing) {
+  if (said.playing !== playing) {
     const where = `${frameNo(index(at))}, ${formatTimestampLong(at)}`;
-    setSaid({ playing: play.playing, text: play.playing ? `Playing the time-lapse from capture ${where}. Any key stops it.` : `Stopped at capture ${where}.` });
+    setSaid({ playing, text: playing ? `Playing the time-lapse from capture ${where}. Any key stops it.` : `Stopped at capture ${where}.` });
   }
 
+  const frame = (ts: string) => ({ src: view(ts).src, title: shotAlt(label, entry, ts, 'replayed by the Internet Archive') });
   const shot = (p: Pic) =>
-    p.src ? (
-      <Shot src={p.src} thumb={p.thumb} alt={shotAlt(fixture.label, entry, p.ts)} onError={() => setBroken((b) => [...b, p.src])} />
+    p.source === 'frame' ? (
+      <LiveFrame
+        ts={p.ts}
+        page={p.page}
+        frames={shown === 'single' ? pool.frames : pool.frames.filter((f) => f === p.ts)}
+        loaded={pool.loaded}
+        onLoad={pool.onLoad}
+        frame={frame}
+        link={link(p.ts)}
+        inert={shown !== 'single'}
+      />
+    ) : p.source === 'shot' ? (
+      <Shot src={p.src} thumb={p.thumb ?? ''} alt={shotAlt(label, entry, p.ts)} onError={() => setBroken((b) => [...b, p.src])} />
     ) : (
       <div className="vp-shot vp-none">
         <p>
           <span aria-hidden="true">▢ </span>No picture of this capture
         </p>
-        <p className="mono">{p.broken ? 'The picture could not be loaded.' : p.shot?.reason}</p>
+        <p className="mono">{p.broken ? 'The picture could not be loaded.' : p.reason}</p>
       </div>
     );
-  const caption = (ps: Pic[], hidden = ps.reduce((n, p) => n + (p.shot?.redacted ?? 0), 0)) => (
+  const caption = (ps: Pic[], hidden = ps.reduce((n, p) => n + (p.redacted ?? 0), 0)) => (
     <figcaption className="vp-cap mono">
       <span>{ps.map((p) => frameNo(index(p.ts))).join(' → ')}</span>
       {ps.length === 1 && <Ts ts={ps[0]!.ts} />}
       <span className="vp-src">
-        {ARCHIVES[(fixture.visual ?? fixture.source).archive].name} capture{ps.length > 1 && 's'}, top of page{shown === 'single' && trivial && ', trivial edit'}
+        {ps[0]!.source === 'frame' ? `Live replay from ${archiveName}; it may lack some styles or images` : `${archiveName} capture${ps.length > 1 ? 's' : ''}, top of page`}
+        {shown === 'single' && trivial && ', trivial edit'}
         {hidden > 0 && `, ${hidden} items hidden before recording`}
       </span>
       {ps.map((p) => (
-        <a key={p.ts} className="cap-out" href={viewCaptureUrl(fixture.source.archive, p.ts, fixture.url)} target="_blank" rel="noopener noreferrer">
+        <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
           {ps.length > 1 ? `Open ${SIDES.find(([s]) => s === sideOf(entry, p.ts))![2]}` : 'Open capture'}
           <span className="sr-only">{ps.length > 1 && ' capture'} (opens in a new tab)</span>
         </a>
       ))}
       {ps.map(
         (p) =>
-          p.shot?.status === 'partial' && (
+          p.status === 'partial' && (
             <span key={p.ts} className="vp-badge">
               <span aria-hidden="true">◐ </span>Partial{ps.length > 1 && ` (${formatTimestampLong(p.ts)})`}: the archive's copy is missing some styles or images.
             </span>
@@ -103,11 +130,13 @@ export function VisualPane({ fixture, entry, at, trivial, mode, onMode, onSide, 
       <div className="vp-bar">
         <h3 id="vpane-heading">How it looked</h3>
         <ModePicker mode={mode} onMode={onMode} />
-        <button type="button" className="btn vp-play" data-play data-playing={play.playing || undefined} onClick={play.toggle}>
-          <span aria-hidden="true">{play.playing ? '❚❚ ' : '▶ '}</span>
-          {play.playing ? 'Pause' : 'Play'}
-          <span className="sr-only"> time-lapse</span>
-        </button>
+        {play && (
+          <button type="button" className="btn vp-play" data-play data-playing={playing || undefined} onClick={play.toggle}>
+            <span aria-hidden="true">{playing ? '❚❚ ' : '▶ '}</span>
+            {playing ? 'Pause' : 'Play'}
+            <span className="sr-only"> time-lapse</span>
+          </button>
+        )}
         {shown === 'single' && (
           // A named group of two toggle buttons, not a <fieldset>: no form is submitted.
           // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role

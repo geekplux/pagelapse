@@ -1,15 +1,20 @@
-import { type FocusEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type FocusEvent, type KeyboardEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ARCHIVES } from '../../archive/archives.ts';
 import { trivialEntries } from '../../core/timeline.ts';
+import type { TimelineEntry } from '../../core/types.ts';
 import { viewCaptureUrl } from '../../core/url.ts';
 import { ChangesList } from '../ChangesList.tsx';
 import { ChangeCard, DiffView } from '../diff/DiffView.tsx';
 import { EmptyState } from '../states/EmptyState.tsx';
 import { ErrorCard } from '../states/ErrorCard.tsx';
 import { LoadingStatus } from '../states/LoadingStatus.tsx';
+import { stepIndex, tsToMs } from '../timeline/scale.ts';
 import { Legend } from '../timeline/Legend.tsx';
 import { Timeline } from '../timeline/Timeline.tsx';
-import { changeIndex } from '../urlState.ts';
-import { pairOf } from '../visual/visualState.ts';
+import { type UrlState, changeIndex } from '../urlState.ts';
+import { Filmstrip } from '../visual/Filmstrip.tsx';
+import { VisualPane } from '../visual/VisualPane.tsx';
+import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pairOf, parseMode, sideOf, viewQuery } from '../visual/visualState.ts';
 import { progressText } from './liveState.ts';
 import { useLiveTimeline } from './useLiveTimeline.ts';
 
@@ -17,7 +22,10 @@ interface Props {
   url: string;
   /** `?change=` to select once it has arrived; until then the latest change is shown. */
   initialChange?: string | undefined;
-  onChange: (change: string) => void;
+  /** `?at=` and `?view=` to show first (Single when missing). */
+  initialAt?: string | undefined;
+  initialMode?: string | undefined;
+  onChange: (q: Pick<UrlState, 'change' | 'at' | 'view'>) => void;
   /** Polite live region text (the caller throttles it, across runs, to one update per 2 s). */
   announce: (text: string) => void;
   /** Focus the status line on mount (the run was started by a button that is now gone). */
@@ -27,12 +35,13 @@ interface Props {
 }
 
 const years = (a?: string, b?: string) => (a && b ? `${a.slice(0, 4)}–${b.slice(0, 4)}` : '');
+const IA = ARCHIVES['internet-archive'];
 
 /**
  * A live run as an index card: status line (or empty and error states), then the stage without pictures (they come
  * in phase 15): the selected change, the timeline growing capture by capture, the changes list and the diff.
  */
-export function LiveView({ url, initialChange, onChange, announce, focusStatus, onRetry, onSample }: Props) {
+export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
   const { state, cancel } = useLiveTimeline(url);
   const { status, captures, timeline, failed, error } = state;
   const { entries, trivialCaptures, snapshots } = timeline;
@@ -50,13 +59,27 @@ export function LiveView({ url, initialChange, onChange, announce, focusStatus, 
   }, [captures, snapshots, failed]);
   const selected = changeIndex(all, pick);
   const entry = all[selected];
-  const select = (i: number) => {
-    const e = all[i];
+  // The capture shown in Single mode, while its change is selected; else the change's After.
+  const [at, setAt] = useState(initialAt && initialChange ? { key: initialChange, ts: initialAt } : undefined);
+  const shownAt = entry && at?.key === pairOf(entry) ? at.ts : entry?.to;
+  const [mode, setMode] = useState<Mode>(() => parseMode(initialMode) ?? LIVE_MODE);
+  /** Selects change `e`, showing capture `ts` (default: the same side as now). */
+  const choose = (e?: TimelineEntry, ts?: string, m = mode) => {
     if (!e) return;
+    const next = ts ?? captureForChange(e, entry && shownAt && sideOf(entry, shownAt) === 'before' ? 'before' : 'after');
     setPick(pairOf(e));
-    onChange(pairOf(e));
+    setAt({ key: pairOf(e), ts: next });
+    onChange(viewQuery(e, next, m, LIVE_MODE));
   };
+  const select = (i: number) => choose(all[i]);
   const page = (ts: string) => snapshots.find((s) => s.ts === ts)!;
+  const pages = useMemo(() => new Map(snapshots.map((s) => [s.ts, s])), [snapshots]);
+  const view = (ts: string) => liveView(url, ts, pages.get(ts));
+  // The filmstrip: every capture that has joined the timeline or failed, as a text silhouette (no image requests).
+  const items = useMemo(() => captures.slice(0, state.next).map((c) => liveView(url, c.ts, pages.get(c.ts))), [captures, state.next, url, pages]);
+  const trivialSet = useMemo(() => new Set(trivialCaptures), [trivialCaptures]);
+  const side = entry && shownAt && sideOf(entry, shownAt) === 'before' ? 'before' : 'after';
+  const changeSteps = all.map((e) => captureForChange(e, side));
   const running = status === 'captures' || status === 'snapshots';
   const text = progressText(state);
   const [listOpen, setListOpen] = useState(() => typeof matchMedia !== 'function' || matchMedia('(min-width: 40rem)').matches);
@@ -108,7 +131,7 @@ export function LiveView({ url, initialChange, onChange, announce, focusStatus, 
   const [frozen, setFrozen] = useState<{ timeline: typeof shown; marks: typeof marks } | null>(null);
   const strip = frozen ?? { timeline: shown, marks };
   const stripSelected = changeIndex(strip.timeline.entries, pick);
-  const isSlider = (e: FocusEvent) => e.target instanceof Element && e.target.matches('.tl-slider');
+  const isSlider = (e: FocusEvent | KeyboardEvent) => e.target instanceof Element && e.target.matches('.tl-slider');
   const onSliderFocus = (e: FocusEvent) => {
     if (!isSlider(e) || !running || !entry) return;
     setPick(pairOf(entry));
@@ -117,11 +140,19 @@ export function LiveView({ url, initialChange, onChange, announce, focusStatus, 
   const onSliderBlur = (e: FocusEvent) => {
     if (isSlider(e)) setFrozen(null);
   };
-  const selectOnStrip = (i: number) => {
-    const e = strip.timeline.entries[i];
-    if (!e) return;
-    setPick(pairOf(e));
-    onChange(pairOf(e));
+  const selectOnStrip = (i: number) => choose(strip.timeline.entries[i]);
+  // A key on the frozen slider first catches up with what arrived meanwhile (so End reaches the newest change) and
+  // says how many changes are new: the value and range only ever change on the user's input.
+  const onSliderKey = (e: KeyboardEvent) => {
+    if (!frozen || !isSlider(e) || (frozen.timeline === shown && frozen.marks === marks)) return;
+    const fresh = shown.entries.length - frozen.timeline.entries.length;
+    setFrozen({ timeline: shown, marks });
+    const i = stepIndex(e.key, changeIndex(shown.entries, pick), shown.entries.map((x) => tsToMs(x.to)));
+    if (i === null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    choose(shown.entries[i]);
+    if (fresh > 0) announce(`${fresh} new change${fresh === 1 ? '' : 's'} since you focused the timeline.`);
   };
 
   const span = years(captures[0]?.ts, captures.at(-1)?.ts);
@@ -159,14 +190,46 @@ export function LiveView({ url, initialChange, onChange, announce, focusStatus, 
       )}
       {captures.length > 0 && (
         <div className="stage live-stage">
+          {entry && shownAt ? (
+            <VisualPane
+              label={url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+              captures={captures.map((c) => c.ts)}
+              archiveName={IA.name}
+              link={(ts) => viewCaptureUrl(IA.id, ts, url)}
+              view={view}
+              entry={entry}
+              at={shownAt}
+              trivial={trivialSet.has(shownAt)}
+              mode={mode}
+              onMode={(m) => {
+                setMode(m);
+                onChange(viewQuery(entry, shownAt, m, LIVE_MODE));
+              }}
+              onSide={(s) => choose(entry, captureForChange(entry, s))}
+              steps={shownAt && changeSteps.includes(shownAt) ? changeSteps : snapshots.map((x) => x.ts)}
+              runActive={running}
+            />
+          ) : (
+            running && (
+              <section className="vpane" aria-labelledby="vpane-heading">
+                <div className="vp-bar">
+                  <h3 id="vpane-heading">How it looked</h3>
+                </div>
+                <div className="vp-mat">
+                  <p className="vp-shot live-wait">The page as the Internet Archive kept it shows here once the first change is found.</p>
+                </div>
+              </section>
+            )
+          )}
           {entry ? (
             <div className="side">
-              <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={(ts) => viewCaptureUrl('internet-archive', ts, url)} onSelect={select} />
+              <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)} onSelect={select} />
             </div>
           ) : (
             running && <p className="side live-wait">The first change shows here as soon as two captures have been compared.</p>
           )}
-          <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur}>
+          <Filmstrip items={items} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
+          <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
             <h3 id="timeline-heading">Timeline</h3>
             <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial}>
               {marks.length > failed.length && (

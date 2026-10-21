@@ -135,3 +135,19 @@
   .vp-split:focus-visible .vp-knob { background: Highlight; color: HighlightText; }
   .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border-color: CanvasText; }
 }
+
+/* Live replay (phase 15): the archive's 1280×800 page scaled into the mat (`--k` from a ResizeObserver), its text
+   silhouette underneath until it loads, preloading neighbours hidden in the same box. */
+.lf { position: relative; overflow: hidden; }
+.lf iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; background: #fff; transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
+.lf iframe:not([data-loaded]), .lf iframe[data-hidden] { visibility: hidden; }
+.sil { display: block; width: 100%; height: 100%; background: var(--card); }
+.sil rect { fill: var(--rule); }
+.sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--rule-strong); }
+.frame .sil { aspect-ratio: 16 / 10; height: auto; border: 1px solid var(--rule-strong); }
+.frame[aria-current="true"] .sil { border: 3px solid var(--ink); }
+.lf-tag, .lf-note p { position: absolute; left: 8px; bottom: 8px; padding: 0.2rem 0.5rem; border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--card); color: var(--ink); font-size: 0.75rem; }
+.lf-note p { right: 8px; padding: 0.5rem 0.75rem; border-left-width: 3px; font: 0.9rem / 1.45 var(--font-ui); }
+.vpane .live-wait { display: grid; place-content: center; padding: 1rem; text-align: center; }
+.vp-bar { min-height: 2.25rem; }
+@media (forced-colors: active) { .sil rect { fill: CanvasText; } }

@@ -41,6 +41,8 @@ describe('visualState', () => {
     expect(viewQuery(entries[1]!, caps[3]!)).toEqual({ change: `${caps[1]}-${caps[3]}`, at: undefined, view: undefined });
     expect(viewQuery(entries[1]!, caps[1]!, 'onion')).toEqual({ change: `${caps[1]}-${caps[3]}`, at: caps[1], view: 'onion' });
     expect(viewQuery(entries[1]!, caps[3]!, 'slider').view).toBeUndefined();
+    expect(viewQuery(entries[1]!, caps[3]!, 'slider', 'single').view).toBe('slider');
+    expect(viewQuery(entries[1]!, caps[3]!, 'single', 'single').view).toBeUndefined();
   });
 
   it('parses compare modes', () => {

@@ -14,7 +14,7 @@ import { type UrlState, changeIndex } from './urlState.ts';
 import { Filmstrip } from './visual/Filmstrip.tsx';
 import { usePlay } from './visual/usePlay.ts';
 import { VisualPane } from './visual/VisualPane.tsx';
-import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, pairOf, parseMode, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
+import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, pairOf, parseMode, sampleView, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
 
 interface Props {
   fixture: SampleFixture;
@@ -86,6 +86,8 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     const file = snapshots.find((s) => s.ts === ts)?.shot?.file;
     return file && shotSrc(fixture.id, file, true);
   };
+  const viewOf = (ts: string) => sampleView(fixture, ts);
+  const items = useMemo(() => snapshots.map((s) => sampleView(fixture, s.ts)), [fixture, snapshots]);
   // The changes list starts collapsed on narrow screens, behind its "All changes (N)" summary.
   const [listOpen, setListOpen] = useState(() => typeof matchMedia !== 'function' || matchMedia('(min-width: 40rem)').matches);
 
@@ -132,7 +134,11 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
         {entry && (
           <>
             <VisualPane
-              fixture={fixture}
+              label={fixture.label}
+              captures={captures}
+              archiveName={ARCHIVES[(fixture.visual ?? fixture.source).archive].name}
+              link={capUrl}
+              view={viewOf}
               entry={entry}
               at={view.at}
               trivial={trivial.has(view.at)}
@@ -146,7 +152,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
             </div>
           </>
         )}
-        <Filmstrip fixture={fixture} at={view.at} trivial={trivial} onSelect={(ts) => showCapture(ts)} />
+        <Filmstrip items={items} at={view.at} trivial={trivial} onSelect={(ts) => showCapture(ts)} />
         <div className="tl-area">
           <h3 id="timeline-heading">Timeline</h3>
           <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={toggleTrivial} />

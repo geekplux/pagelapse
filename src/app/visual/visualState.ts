@@ -1,5 +1,7 @@
 // Pure selection logic of the visual pane: which capture a change shows, and which change a capture belongs to.
 import { formatTimestampLong } from '../../core/timestamp.ts';
+import { replayFrameUrl } from '../../core/url.ts';
+import type { ExtractedPage, SampleFixture, ShotRef } from '../../core/types.ts';
 
 /** A change as the pane sees it: its baseline (`from`) and its new capture (`to`). */
 interface Pair {
@@ -45,14 +47,17 @@ export const MODES: readonly [Mode, string][] = [['single', 'Single'], ['side', 
 export const DEFAULT_MODE: Mode = 'slider';
 export const parseMode = (v?: string): Mode | undefined => MODES.find(([m]) => m === v)?.[0];
 
+/** Live runs open in Single: one archived page per selection, a compare mode on request (D24). */
+export const LIVE_MODE: Mode = 'single';
+
 /**
  * The `change` / `at` / `view` query for a view. `at` is left out when it is the change's After capture, `view` when
- * it is the default mode.
+ * it is the default mode (`def`: Slider for samples, Single for live runs).
  */
-export const viewQuery = (e: Pair, at: string, mode: Mode = DEFAULT_MODE) => ({
+export const viewQuery = (e: Pair, at: string, mode: Mode = DEFAULT_MODE, def: Mode = DEFAULT_MODE) => ({
   change: pairOf(e),
   at: at === e.to ? undefined : at,
-  view: mode === DEFAULT_MODE ? undefined : mode,
+  view: mode === def ? undefined : mode,
 });
 
 const clamp = (v: number) => Math.min(100, Math.max(0, Math.round(v)));
@@ -76,6 +81,33 @@ export const splitText = (v: number, e: Pair) => `${v}% before (${monthYear(e.fr
 /** Same-origin URL of a recorded picture (`public/samples/<id>/`), full size or thumbnail. */
 export const shotSrc = (sampleId: string, file: string, thumb = false) => `/samples/${sampleId}/${file}${thumb ? '.thumb' : ''}.webp`;
 
+/**
+ * One capture as the pane and filmstrip show it: a recorded picture (`shot`, samples), the archive's live replay in a
+ * frame (`frame`, live runs, with the extracted text for its silhouette), or no picture (`none`).
+ */
+export interface CaptureView {
+  ts: string;
+  source: 'shot' | 'frame' | 'none';
+  /** Picture URL (`shot`) or replay URL (`frame`). */
+  src: string;
+  thumb?: string;
+  page?: ExtractedPage;
+  status?: ShotRef['status'];
+  reason?: string | undefined;
+  redacted?: number | undefined;
+}
+
+/** A sample capture's recorded picture. */
+export function sampleView(f: SampleFixture, ts: string): CaptureView {
+  const shot = f.snapshots.find((s) => s.ts === ts)?.shot;
+  if (!shot?.file) return { ts, source: 'none', src: '', reason: shot?.reason };
+  return { ts, source: 'shot', src: shotSrc(f.id, shot.file), thumb: shotSrc(f.id, shot.file, true), status: shot.status, redacted: shot.redacted };
+}
+
+/** A live capture: the Internet Archive's `if_` replay, or no picture when its text could not be fetched. */
+export const liveView = (url: string, ts: string, page?: ExtractedPage): CaptureView =>
+  page ? { ts, source: 'frame', src: replayFrameUrl('internet-archive', ts, url), page } : { ts, source: 'none', src: '', reason: 'This capture could not be fetched.' };
+
 /** Frame number as shown on the filmstrip, `#01`. */
 export const frameNo = (i: number) => `#${String(i + 1).padStart(2, '0')}`;
 
@@ -92,7 +124,7 @@ export function showingText(captures: readonly string[], e: Pair, at: string, tr
 }
 
 /** Alt text of the pane's picture: `git-scm.com home page as captured 18 December 2025 (After), top of page`. */
-export const shotAlt = (label: string, e: Pair, at: string) => {
+export const shotAlt = (label: string, e: Pair, at: string, what = 'top of page') => {
   const side = sideOf(e, at);
-  return `${label} as captured ${formatTimestampLong(at)}${side ? ` (${SIDE_WORD[side]})` : ''}, top of page`;
+  return `${label} as captured ${formatTimestampLong(at)}${side ? ` (${SIDE_WORD[side]})` : ''}, ${what}`;
 };
