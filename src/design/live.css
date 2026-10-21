@@ -11,7 +11,8 @@
 .url-row input[aria-invalid="true"] { border-style: dashed; }
 .btn-go { min-height: 2.75rem; background: var(--ink); color: var(--card); border-color: var(--ink); font-weight: 600; }
 .url-error { font-size: 0.9rem; font-weight: 600; }
-.url-error:empty { display: none; }
+/* Kept in the accessibility tree (an alert must exist before its text arrives); no gap while empty. */
+.url-error:empty { margin-top: -0.35rem; }
 
 .live-status { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-top: 1rem; padding-block: 0.6rem; border-block: 1px solid var(--rule); }
 .live-status p { flex: 1 1 20rem; font-size: 0.9rem; color: var(--ink-2); }
