@@ -2,8 +2,8 @@ STATE: IN-PROGRESS
 
 # Status: Pagelapse
 
-- Current phase: 16 (`phase-16-ai-summaries`) starting
-- Blockers: none
+- Current phase: 16 verified; PR being opened
+- Blockers: none blocking. Non-blocking: Workers AI token for baking sample summaries (optional; `pnpm bake:summaries` with `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` in `.dev.vars`). Samples show rule-based "auto summary" until then.
 
 | Phase | Branch | PR | State | Verify rounds |
 |---|---|---|---|---|
@@ -22,7 +22,7 @@ STATE: IN-PROGRESS
 | 13 | phase-13-worker-archive-api | [#14](https://github.com/geekplux/pagelapse/pull/14) | PR open (PASS) | 2 |
 | 14 | phase-14-live-mode | [#15](https://github.com/geekplux/pagelapse/pull/15) | PR open (PASS) | 1 |
 | 15 | phase-15-live-visual | [#16](https://github.com/geekplux/pagelapse/pull/16) | PR open (PASS) | 2 |
-| 16 | phase-16-ai-summaries | - | not started | 0 |
+| 16 | phase-16-ai-summaries | (opening) | verified PASS | 1 |
 | 17 | phase-17-oss-packaging | - | not started | 0 |
 | 18 | phase-18-showcase-launch | - | not started | 0 |
 | 19 | phase-19-deploy | - | not started | 0 |
@@ -33,4 +33,4 @@ Follow-ups:
 - Record a real Internet Archive CDX listing for `test/fixtures/api/` (current one is synthetic; IA unreachable from this box).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-21 (PR #16 opened)
+Last updated: 2026-10-21 (phase 16 verified)
