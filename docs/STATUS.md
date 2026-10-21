@@ -2,7 +2,7 @@ STATE: IN-PROGRESS
 
 # Status: Pagelapse
 
-- Current phase: 14 (`phase-14-live-mode`) starting
+- Current phase: 14 verified; PR being opened
 - Blockers: none
 
 | Phase | Branch | PR | State | Verify rounds |
@@ -20,7 +20,7 @@ STATE: IN-PROGRESS
 | 11 | phase-11-visual-pane | [#12](https://github.com/geekplux/pagelapse/pull/12) | PR open (PASS) | 3 |
 | 12 | phase-12-compare-play | [#13](https://github.com/geekplux/pagelapse/pull/13) | PR open (PASS) | 1 |
 | 13 | phase-13-worker-archive-api | [#14](https://github.com/geekplux/pagelapse/pull/14) | PR open (PASS) | 2 |
-| 14 | phase-14-live-mode | - | not started | 0 |
+| 14 | phase-14-live-mode | (opening) | verified PASS | 1 |
 | 15 | phase-15-live-visual | - | not started | 0 |
 | 16 | phase-16-ai-summaries | - | not started | 0 |
 | 17 | phase-17-oss-packaging | - | not started | 0 |
@@ -33,4 +33,4 @@ Follow-ups:
 - Record a real Internet Archive CDX listing for `test/fixtures/api/` (current one is synthetic; IA unreachable from this box).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-21 (PR #14 opened)
+Last updated: 2026-10-21 (phase 14 verified)
