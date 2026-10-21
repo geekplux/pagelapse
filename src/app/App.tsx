@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { SampleFixture } from '../core/types.ts';
 import { defaultSample, type SampleEntry, samples } from '../samples/index.ts';
 import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
-import { LiveView } from './live/LiveView.tsx';
 import { TimelineView } from './TimelineView.tsx';
 import { validateTargetUrl } from '../core/url.ts';
 import { parseUrlState, writeUrlState } from './urlState.ts';
@@ -15,6 +14,9 @@ interface Current {
   at?: string | undefined;
   view?: string | undefined;
 }
+
+/** Live mode loads on first use, so the sample first view does not carry it. */
+const LiveView = lazy(() => import('./live/LiveView.tsx').then((m) => ({ default: m.LiveView })));
 
 /** A live run; a new `run` number remounts the view, which aborts the previous run (no stale markers). */
 interface Live {
@@ -84,15 +86,17 @@ export function App() {
       />
       <main id="content" tabIndex={-1}>
         {live ? (
-          <LiveView
-            key={live.run}
-            url={live.url}
-            initialChange={live.change}
-            onChange={(change) => writeUrlState({ url: live.url, change })}
-            announce={setAnnouncement}
-            onRetry={() => startLive(live.url)}
-            onSample={openSample}
-          />
+          <Suspense fallback={<p className="loading mono">Starting…</p>}>
+            <LiveView
+              key={live.run}
+              url={live.url}
+              initialChange={live.change}
+              onChange={(change) => writeUrlState({ url: live.url, change })}
+              announce={setAnnouncement}
+              onRetry={() => startLive(live.url)}
+              onSample={openSample}
+            />
+          </Suspense>
         ) : current ? (
           <TimelineView
             key={current.id}
