@@ -1,0 +1,6 @@
+# Copy to .dev.vars (gitignored) for local secrets. Nothing is required: the built-in samples and the
+# archive API run with no keys and no Cloudflare login.
+#
+# Optional, phase 16 (bake AI summaries into samples):
+# CLOUDFLARE_ACCOUNT_ID=
+# CLOUDFLARE_API_TOKEN=
