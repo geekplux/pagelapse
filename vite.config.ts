@@ -27,8 +27,8 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts', 'worker/**/*.test.ts'],
     setupFiles: ['test/setup/no-network.ts'],
-    // Let palette.test.ts read tokens.css?raw (Vitest blanks CSS by default).
-    css: { include: [/tokens\.css/] },
+    // Let the design tests read src/design/*.css?raw (Vitest blanks CSS by default).
+    css: { include: [/src\/design\/[a-z]+\.css/] },
     // Shared, RAM-tight machine: keep the worker pool small.
     maxWorkers: 2,
   },

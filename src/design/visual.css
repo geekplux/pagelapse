@@ -1,79 +1,66 @@
-/* The stage: the picture of the page is the hero, the selected change's card beside it; filmstrip, timeline,
-   changes list and diff below, full width. DOM order (pane, side, filmstrip, timeline, changes list, diff) is the
-   visual and keyboard order; the grid areas place each part. The changes list is the timeline's text alternative,
-   so it sits right after the timeline, never in the side column. At 1280×800 the picture, the summary and the
-   filmstrip fit above the fold (a long URL or caption can push the bottom of the thumbnails just below it). */
-.stage { display: grid; gap: 1.25rem 2.25rem; margin-top: 1rem; }
-.stage > * { min-width: 0; }
+/* The stage. Regions in DOM order, which is the visual and keyboard order: the hero (title, then the picture with the
+   selected change beside it), the scrub strip (filmstrip over timeline), the folded lists, the diff. The picture is
+   the focal point: about two thirds of the width on desktop; the change line is top-aligned with it and the controls
+   row ends at its bottom edge. The scrub strip belongs to the focal point, so it sits closer (24 px) than the rest. */
+.stage { display: grid; gap: var(--space-4); }
+@media (min-width: 60rem) { main { padding-top: var(--space-4); } }
+.stage > *, .hero > * { min-width: 0; }
+.lists, .diff-panel { margin-top: var(--space-3); }
+.lists { display: grid; gap: var(--space-3); justify-items: start; }
+.hero { display: grid; gap: var(--space-3) var(--space-5); }
+.scrub { display: grid; gap: var(--space-2); }
 @media (min-width: 60rem) {
-  .stage { grid-template-columns: minmax(0, 52fr) minmax(0, 48fr); grid-template-areas: "pane side" "film film" "tl tl" "list list" "diff diff"; }
-  .vpane { grid-area: pane; }
-  /* The card is short, so it fits beside the picture; it is never a scroll box of its own. When its text is longer,
-     enlarged or spaced out, it makes the row taller and pushes the filmstrip down, never clipped or painted over it. */
-  .side { grid-area: side; display: flex; flex-direction: column; gap: 0.75rem; }
-  .tl-area { grid-area: tl; }
-  .film { grid-area: film; }
-  .stage .changes-pane { grid-area: list; }
-  .diff-panel { grid-area: diff; }
-  /* The full list, in two columns where there is room; it never scrolls inside a box of its own. */
-  .stage .changes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr)); column-gap: 2.25rem; }
-  /* Compact chrome beside the picture. */
-  .side .change-panel { gap: 0.45rem; padding-top: 0.75rem; }
-  .side .panel-kicker { margin-bottom: 0.35rem; }
-  .side .panel-links { column-gap: 1rem; }
-  .side .diff-nav { padding-block: 0.4rem; }
+  .hero { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .hero > .sheet-head, .hero > .state-card { grid-column: 1 / -1; }
+  /* The side column is never a scroll box: longer, enlarged or spaced-out text makes the row taller instead. */
+  .side { display: flex; flex-direction: column; }
+  .side .change-panel { flex: 1; }
+  .controls { margin-top: auto; }
 }
-/* Phones: the side column dissolves so the Previous / Next bar can stick to the bottom while the diff is read.
-   Focus scrolls stop above that bar, and the picture's "Open capture" link sits on the caption's first line,
-   so the bar never covers it or its focus ring. */
-@media (max-width: 39.99rem) {
-  html { scroll-padding-bottom: 4.5rem; }
-  .side { display: contents; }
-  .stage .diff-nav { order: 1; }
-  .vp-cap .vp-src { order: 1; }
-  .vp-cap .vp-badge { order: 2; }
-}
-.stage h3, .sheet .vp-bar h3 { margin: 0; }
+.stage h3 { margin: 0; }
 
-.vp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-bottom: 0.5rem; }
-.vp-bar h3 { margin-right: auto; }
-/* Compare: native radios as a segmented control; the radio covers its segment, so its focus ring outlines it. */
-.vp-modes { display: inline-flex; align-items: center; min-width: 0; margin: 0; padding: 0; border: 0; }
-.vp-mode { position: relative; display: inline-flex; align-items: center; justify-content: center; min-height: 2.25rem; padding: 0.25rem 0.55rem; border: 1px solid var(--rule-strong); background: var(--card); color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); white-space: nowrap; cursor: pointer; }
-.vp-mode + .vp-mode { border-left: 0; }
-.vp-mode input { position: absolute; inset: 0; margin: 0; appearance: none; cursor: pointer; }
-.vp-mode:has(:focus-visible) { z-index: 1; }
-/* Phones: Play sits beside the heading; the four segments share the next line, wrapping their words if needed. */
+/* One controls row: Play, Previous / Next, Compare (and Before / After in Single), then "Change details". */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.controls > .vp-modes, .controls > .change-details { flex-basis: 100%; }
+/* Phones: once the row has scrolled away above, Previous / Next sticks to the bottom of the screen (its slot keeps
+   its size, so nothing moves), and focus scrolls stop above it. */
 @media (max-width: 39.99rem) {
-  .vp-modes { order: 1; width: 100%; }
-  .vp-mode { flex: 1 1 0; padding-inline: 0.3rem; font-size: 0.8rem; white-space: normal; text-align: center; }
+  html { scroll-padding-bottom: calc(var(--space-6) + var(--space-2)); }
+  .nav-slot { min-height: 2.5rem; }
+  .diff-nav[data-stuck] { position: fixed; z-index: 1; inset: auto 0 0; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--paper); border-top: 1px solid var(--rule-strong); }
 }
-.vp-play { min-height: 2.25rem; white-space: nowrap; }
+
+/* Compare: a disclosure button naming the mode, then native radios as quiet text segments. */
+.vp-compare::after { content: " ▾" / ""; }
+.vp-compare[aria-expanded="true"]::after { content: " ▴" / ""; }
+.vp-modes:not([hidden]) { display: flex; }
+.vp-modes { flex-wrap: wrap; gap: 0 var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
+.vp-mode { position: relative; display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--ink-2); font: 500 0.9rem/1 var(--font-ui); white-space: nowrap; cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 0.45em; }
+.vp-mode input { position: absolute; inset: 0; margin: 0; appearance: none; cursor: pointer; }
+.vp-play { white-space: nowrap; }
 /* Playing, or swapped: a heavier ink border and bold text, besides the changed label. */
 .vp-play[data-playing], .vp-onion .btn[aria-pressed="true"] { border: 2px solid var(--ink); font-weight: 700; }
-.vp-sides { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--card); }
-.vp-side { min-height: 2.25rem; padding: 0.25rem 0.75rem; border: 0; background: none; color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); cursor: pointer; }
-.vp-side + .vp-side { border-left: 1px solid var(--rule-strong); }
+.vp-sides { display: inline-flex; }
+.vp-side { min-height: 2.5rem; padding: var(--space-1) var(--space-3); border: 1px solid var(--rule-strong); background: none; color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 0.45em; }
+.vp-side + .vp-side { border-left: 0; }
 .vp-side b, .vp-label b { font-family: var(--font-mono); }
 .vp-side [data-op="added"], .vp-label [data-op="added"] { color: var(--added); }
 .vp-side [data-op="removed"], .vp-label [data-op="removed"] { color: var(--removed); }
-/* Pressed or checked: inverted and bold, not hue alone. */
-.vp-mode:has(:checked) { background: var(--ink); color: var(--card); font-weight: 700; }
-.vp-side[aria-pressed="true"] { background: var(--ink); color: var(--card); font-weight: 700; }
-.vp-side[aria-pressed="true"] b { color: inherit; }
+/* Pressed or checked: ink, bold and underlined; never a fill, never hue alone. */
+:is(.vp-mode:has(:checked), .vp-side[aria-pressed="true"]) { color: var(--ink); font-weight: 700; text-decoration-color: var(--ink); }
 
 /* The mounted print: a card mat, a strong hairline, the picture at 16:10 with its size reserved. */
-.vp-mat { position: relative; margin: 0; padding: 8px; background: var(--card); border: 1px solid var(--rule-strong); border-radius: 2px; box-shadow: 0 18px 40px -28px rgb(31 27 22 / 0.55); }
+.vp-mat { position: relative; margin: 0; padding: var(--space-2); background: var(--card); border: 1px solid var(--rule-strong); border-radius: 2px; box-shadow: 0 18px 40px -28px var(--shadow); }
 .vp-shot { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: var(--paper) center / cover no-repeat; }
 .vp-none {
-  display: grid; place-content: center; gap: 0.4rem; padding: 1rem; text-align: center; color: var(--ink-2);
+  display: grid; place-content: center; gap: var(--space-2); padding: var(--space-3); text-align: center; color: var(--ink-2);
   background: repeating-linear-gradient(135deg, var(--card) 0 9px, var(--rule) 9px 10px); border: 1px dashed var(--rule-strong);
 }
 .vp-none p:first-child { color: var(--ink); font: 600 var(--step-1) / 1.3 var(--font-display); }
-.vp-none p { padding: 0.15rem 0.5rem; background: var(--card); }
-.vp-label { position: absolute; z-index: 1; top: 16px; left: 16px; padding: 0.3rem 0.6rem; background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); max-width: calc(50% - 20px); overflow-wrap: anywhere; }
-.vp-label[data-side="after"] { left: auto; right: 16px; }
-@media (max-width: 39.99rem) { .vp-label { padding: 0.2rem 0.4rem; font-size: 0.7rem; } }
+.vp-none p { padding: var(--space-1) var(--space-2); background: var(--card); }
+.vp-label { position: absolute; z-index: 1; top: var(--space-3); left: var(--space-3); padding: var(--space-1) var(--space-2); background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); max-width: calc(50% - 20px); overflow-wrap: anywhere; }
+.vp-label[data-side="after"] { left: auto; right: var(--space-3); }
+@media (max-width: 39.99rem) { .vp-label { padding: 0 var(--space-1); font-size: 0.7rem; } }
 
 /* Compare: the two pictures share one 16:10 cell. Slider clips After at --split; onion skin fades the top one. */
 .vp-cmp { position: relative; display: grid; }
@@ -81,14 +68,14 @@
 .vp-clip { clip-path: inset(0 0 0 var(--split)); }
 .vp-top { opacity: var(--op); }
 /* The divider: a 32 px wide drag strip with its own touch handling, a 2 px ink line on a card halo, a card knob. */
-.vp-split { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - 16px); width: 32px; display: grid; place-items: center; touch-action: none; cursor: ew-resize; }
-.vp-split::before { content: ""; position: absolute; top: 0; bottom: 0; left: 15px; width: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); }
+.vp-split { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - var(--space-3)) /* spacing-allow: the divider follows --split */; width: 32px; display: grid; place-items: center; touch-action: none; cursor: ew-resize; }
+.vp-split::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin-inline: auto; width: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); }
 .vp-knob { position: relative; display: grid; place-items: center; width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 50%; background: var(--card); color: var(--ink); box-shadow: 0 0 0 2px var(--card); font: 700 0.85rem/1 var(--font-mono); }
 .vp-split:focus-visible .vp-knob { background: var(--ink); color: var(--card); }
-.vp-onion { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; padding-top: 0.5rem; font: 0.85rem var(--font-ui); }
+.vp-onion { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-top: var(--space-2); font: 0.85rem var(--font-ui); }
 .vp-onion input { vertical-align: middle; accent-color: var(--ink); }
 .vp-onion input[type=range] { min-height: 24px; }
-.vp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.vp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 @media (max-width: 39.99rem) { .vp-pair { grid-template-columns: 1fr; } }
 /* A new picture fades in over the previous one (none under reduced motion). */
 .vp-frame { background: center / cover no-repeat; }
@@ -97,40 +84,36 @@
   .vp-frame[data-fade] .vp-shot { animation: vp-fade 120ms ease-out; }
 }
 @keyframes vp-fade { from { opacity: 0; } }
-.vp-cap { display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; padding-top: 0.4rem; color: var(--ink-2); font-size: 0.78rem; }
+/* One caption line: frame, date, the link out; honest badges below it. */
+.vp-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); padding-top: var(--space-2); color: var(--ink-2); font-size: 0.8rem; }
 .vp-cap > :first-child { color: var(--ink); font-weight: 700; }
-.vp-cap a { margin-left: auto; color: var(--ink); padding-block: 0.35em; }
+.vp-cap a { margin-left: auto; color: var(--ink); padding-block: var(--space-1); }
 .vp-cap a + a { margin-left: 0; }
-/* Wider screens: a long provenance line wraps in its own box between the date and "Open capture", so the caption
-   stays at most two lines and the filmstrip stays near the fold. */
-@media (min-width: 40rem) { .vp-cap .vp-src { flex: 1 1 0; min-width: 10rem; } }
-.vp-note { margin: 0 0 0.5rem; }
-.vp-badge { margin-top: 0.2rem; }
-.vp-badge, .vp-note { flex-basis: 100%; font-family: var(--font-ui); color: var(--ink); padding: 0.35rem 0.6rem; border: 1px solid var(--rule-strong); border-left-width: 3px; border-radius: 2px; background: var(--card); font-size: 0.85rem; }
+.vp-note { margin-bottom: var(--space-2); }
+.vp-badge, .vp-note { flex-basis: 100%; font-family: var(--font-ui); color: var(--ink); padding: var(--space-1) var(--space-2); border-left: 3px solid var(--rule-strong); font-size: 0.85rem; }
 
-/* The contact sheet: numbered frames; the shown one has a thick ink outline and a caret above it. */
-.film-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1.25rem; }
-.film-head .captures-source { margin-top: 0; }
-.film-strip { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(4.4rem, 1fr); gap: 0.5rem; margin-top: 0.25rem; padding: 0.9rem 0.25rem 0.4rem; list-style: none; overflow-x: auto; }
+/* The contact sheet: numbered frames; the shown one has a thick ink outline (on a paper gap, so it holds against any
+   thumbnail edge) and a caret above it. */
+.film-strip { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(4.4rem, 1fr); gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-2) var(--space-2); list-style: none; overflow-x: auto; }
 @media (prefers-reduced-motion: no-preference) { .film-strip { scroll-behavior: smooth; } }
-.frame { position: relative; display: grid; gap: 0.3rem; width: 100%; padding: 0; border: 0; background: none; color: var(--ink-2); text-align: left; cursor: pointer; }
+.frame { position: relative; display: grid; gap: var(--space-1); width: 100%; padding: 0; border: 0; background: none; color: var(--ink-2); text-align: left; cursor: pointer; }
 .frame img, .frame-none { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; border: 1px solid var(--rule-strong); }
 .frame-none { display: grid; place-content: center; border-style: dashed; font: 0.72rem var(--font-mono); }
 .frame[data-trivial] img { filter: grayscale(1) contrast(0.75); }
 .frame:hover img { border-color: var(--ink); }
 .frame[aria-current="true"] { color: var(--ink); }
-.frame[aria-current="true"] :is(img, .frame-none) { border: 3px solid var(--ink); }
-.frame[aria-current="true"]::before { content: "▼" / ""; position: absolute; top: -0.95rem; left: calc(50% - 0.4em); font-size: 0.7rem; line-height: 1; color: var(--ink); }
+.frame[aria-current="true"] :is(img, .frame-none, .sil) { outline: 3px solid var(--ink); outline-offset: 2px; }
+.frame[aria-current="true"]::before { content: "▼" / ""; position: absolute; top: calc(-1 * var(--space-3)); left: 0; right: 0; text-align: center; font-size: 0.7rem; line-height: 1; color: var(--ink); }
 .frame[aria-current="true"] .frame-cap { font-weight: 700; }
-.frame-cap { display: flex; flex-wrap: wrap; gap: 0 0.35rem; font-size: 0.7rem; line-height: 1.35; }
+.frame-cap { display: flex; flex-wrap: wrap; gap: 0 var(--space-1); font-size: 0.7rem; line-height: 1.35; }
 .frame-trivial, .frame-partial { font-style: italic; }
 
-.tl-tip img { width: 160px; height: auto; border: 1px solid var(--card); }
+.tl-tip img { width: 160px; height: auto; border: 1px solid var(--rule); }
 
 @media (forced-colors: active) {
-  .frame[aria-current="true"] :is(img, .frame-none) { border-color: Highlight; }
+  .frame[aria-current="true"] :is(img, .frame-none, .sil) { outline-color: Highlight; }
   .frame[aria-current="true"]::before { color: CanvasText; }
-  :is(.vp-side[aria-pressed="true"], .vp-mode:has(:checked)) { forced-color-adjust: none; background: CanvasText; color: Canvas; }
+  :is(.vp-side[aria-pressed="true"], .vp-mode:has(:checked)) { text-decoration-color: CanvasText; }
   .vp-split::before { forced-color-adjust: none; background: CanvasText; box-shadow: 0 0 0 2px Canvas; }
   .vp-split:focus-visible .vp-knob { background: Highlight; color: HighlightText; }
   .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border-color: CanvasText; }
@@ -139,21 +122,21 @@
 /* Live replay (phase 15): the archive's 1280×800 page scaled into the mat (`--k` from a ResizeObserver), its text
    silhouette underneath until it loads, preloading neighbours hidden in the same box. */
 .lf { position: relative; overflow: hidden; }
-.lf iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; background: #fff; transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
+.lf iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; background: var(--replay-bg); transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
 .lf iframe:not([data-loaded]), .lf iframe[data-hidden] { visibility: hidden; }
 .sil { display: block; width: 100%; height: 100%; background: var(--card); }
 .sil rect { fill: var(--rule); }
 .sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--rule-strong); }
+/* While a run fetches, the pane's outline is quieter than the strip filling in below it. */
+:is([data-live="captures"], [data-live="snapshots"]) .vpane .sil { opacity: 0.6; }
 .frame-pending .frame-none { border-style: dotted; }
 .frame .sil { aspect-ratio: 16 / 10; height: auto; border: 1px solid var(--rule-strong); }
-.frame[aria-current="true"] .sil { border: 3px solid var(--ink); }
-.lf-tag, .lf-note p { position: absolute; left: 8px; bottom: 8px; padding: 0.2rem 0.5rem; border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--card); color: var(--ink); font-size: 0.75rem; }
-/* The tag stays inside the picture at any width (the held-run explanation is a long one). */
-.lf-tag { max-width: calc(100% - 16px); }
+.lf-tag, .lf-note p { position: absolute; left: var(--space-2); bottom: var(--space-2); padding: var(--space-1) var(--space-2); border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--card); color: var(--ink); font-size: 0.75rem; }
+/* The tag stays inside the picture at any width; on phones it keeps to one line (the full text stays readable to
+   assistive tech), so it never covers more than a sliver of the outline. */
+.lf-tag { max-width: calc(100% - 2 * var(--space-2)); }
+@media (max-width: 39.99rem) { .lf-tag { max-width: 60%; padding-block: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
 /* The pane's one "still loading" note sits below the picture(s) in normal flow, so nothing covers or clips it. */
-.lf-note p { position: static; margin: 0.5rem 0 0; padding: 0.5rem 0.75rem; border-left-width: 3px; font: 0.9rem / 1.45 var(--font-ui); }
-.vpane-wait .vp-bar { min-height: 5rem; align-items: start; }
-.vpane-wait .vp-mat { padding-bottom: 3.75rem; }
-.vpane .live-wait { display: grid; place-content: center; padding: 1rem; text-align: center; }
-.vp-bar { min-height: 2.25rem; }
+.lf-note p { position: static; margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-width: 0 0 0 3px; font: 0.9rem / 1.45 var(--font-ui); background: none; }
+.vpane .live-wait { display: grid; place-content: center; padding: var(--space-3); text-align: center; }
 @media (forced-colors: active) { .sil rect, .sil [data-kind] { fill: CanvasText; } .sil { background: Canvas; } }

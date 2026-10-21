@@ -9,10 +9,16 @@ interface Props {
   children?: ReactNode;
 }
 
-/** The timeline's legend (`#timeline-legend`, the slider's description) and the "Show trivial edits" toggle. */
+/**
+ * The timeline's key, folded behind "Key · N trivial hidden": the legend (`#timeline-legend`, also the slider's
+ * description, which works while folded) and the "Show trivial edits" toggle.
+ */
 export function Legend({ changes, trivial, showTrivial, onTrivial, children }: Props) {
   return (
-    <>
+    <details className="fold tl-key">
+      <summary>
+        Key{trivial > 0 && ` · ${trivial} trivial ${showTrivial ? 'shown' : 'hidden'}`}
+      </summary>
       <p className="captures-source tl-legend" id="timeline-legend">
         <span>
           {changes} meaningful changes. Bigger, bolder marks changed more:{' '}
@@ -34,6 +40,6 @@ export function Legend({ changes, trivial, showTrivial, onTrivial, children }: P
           <input type="checkbox" checked={showTrivial} onChange={(e) => onTrivial(e.currentTarget.checked)} /> Show trivial edits
         </label>
       )}
-    </>
+    </details>
   );
 }

@@ -29,6 +29,18 @@
   --step-3: 1.953rem;
   --step-4: 2.441rem;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* The one spacing scale (PLAN section 4 "Calm layout", D32; spacing.test.ts allows nothing else). */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 40px;
+  --space-6: 64px;
+  /* The one accent is ink (D33): a solid fill for the view's one primary action; selection is outline, underline or caret. */
+  --accent: var(--ink);
+  /* Non-palette colours: the print's drop shadow, and the backdrop of a replayed page (pages assume white). */
+  --shadow: rgb(31 27 22 / 0.55);
+  --replay-bg: white;
 }
 
 @media (prefers-color-scheme: dark) {

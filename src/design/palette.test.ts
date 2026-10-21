@@ -40,6 +40,13 @@ describe.each(THEMES)('%s theme', (theme) => {
     expect(contrast(p.ink, p.card)).toBeGreaterThanOrEqual(4.5);
   });
 
+  // The selected filmstrip frame: a 3 px ink outline on a 2 px paper gap. The ring clears 3:1 on the paper around it,
+  // and against any thumbnail edge, white or black, the ring or its gap does (the dark theme's ink alone is ~1.2:1 on white).
+  it.each(['#FFFFFF', '#000000'])('selected-frame outline holds on a %s thumbnail edge', (edge) => {
+    expect(contrast(p.ink, p.paper)).toBeGreaterThanOrEqual(3);
+    expect(Math.max(contrast(p.ink, edge), contrast(p.paper, edge))).toBeGreaterThanOrEqual(3);
+  });
+
   it('magnitude ramp is monotone in lightness, moving away from the card', () => {
     const ls = (['mag-1', 'mag-2', 'mag-3', 'mag-4'] as const).map((t) => lightness(p[t]));
     const dir = theme === 'light' ? -1 : 1;

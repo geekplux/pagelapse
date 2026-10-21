@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type { Block, SnapshotPage, TimelineEntry } from '../../core/types.ts';
 import { formatTimestampLong } from '../../core/timestamp.ts';
 import { statsLine } from '../describe.ts';
@@ -43,10 +43,12 @@ function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
 }
 
 /**
- * The selected change in the stage's side column: header, capture links, summary, stats, Previous / Next.
- * Previous / Next's live region also says which capture the pane shows (`showing`); `quiet` silences it during Play.
+ * The selected change in the stage's side column: the change line (dates, magnitude, summary and its source), then one
+ * controls row: Play (`lead`), Previous / Next, the pane's `tools`, and "Change details" (stats, capture links, Copy
+ * link). Previous / Next's live region also says which capture the pane shows (`showing`); `quiet` silences it during
+ * Play. On phones Previous / Next sticks to the bottom of the screen once the row has scrolled away above.
  */
-export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing, quiet }: Omit<Props, 'from' | 'to'> & { showing?: string; quiet?: boolean }) {
+export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing, quiet, lead, tools }: Omit<Props, 'from' | 'to'> & { showing?: string | undefined; quiet?: boolean; lead?: ReactNode; tools?: ReactNode }) {
   const pair = `${entry.from}-${entry.to}`;
   // The confirmation belongs to the change it was given for.
   const [copied, setCopied] = useState({ pair: '', text: '' });
@@ -72,59 +74,89 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
     setSaid({ key, text: showing ? `${text}, showing ${showing}` : text });
   }
 
-  // Previous / Next is a sibling of the panel, so on phones it can stick to the bottom of the whole stage.
+  // Stuck once its in-flow slot has scrolled out above the viewport (CSS fixes it to the bottom on phones only).
+  const slot = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const el = slot.current;
+    if (!el || typeof IntersectionObserver !== 'function') return;
+    const io = new IntersectionObserver(([e]) => {
+      if (!e) return;
+      const out = !e.isIntersecting && e.boundingClientRect.top < 0;
+      // The slot keeps the bar's in-flow width while the bar is fixed, so the row does not reflow.
+      el.style.minWidth = out ? `${e.boundingClientRect.width}px` : '';
+      setStuck(out);
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <>
-      <section className="change-panel" aria-labelledby="change-heading">
-        <h3 id="change-heading">
-          <span className="panel-kicker mono">
-            Change {index + 1} of {count} ·{' '}
-            <span className="change-mag" data-magnitude={entry.significance.magnitude}>
-              {entry.significance.magnitude}
-            </span>
-          </span>{' '}
-          <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
-          <span className="sr-only"> to </span> <Ts ts={entry.to} />
-        </h3>
-        <p className="panel-summary">
-          {entry.aiSummary ?? entry.ruleSummary} <span className="source-label mono">{entry.aiSummary ? 'AI summary' : 'auto summary'}</span>
-        </p>
-        <p className="panel-stats mono">{statsLine(entry.record)}</p>
-        <p className="panel-links">
-          {[entry.from, entry.to].map((ts) => (
-            <a key={ts} className="cap-out" href={captureUrl(ts)} target="_blank" rel="noopener noreferrer">
-              View capture <Ts ts={ts} />
-              <span className="sr-only"> (opens in a new tab)</span>
-            </a>
-          ))}
-          <button type="button" className="btn" onClick={copy}>
-            Copy link
-          </button>
-          {/* An explicit status role is the most widely announced live region; <output> support varies. */}
-          {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-          <span role="status">{copied.pair === pair ? copied.text : ''}</span>
-        </p>
-      </section>
-      <nav className="diff-nav" aria-label="Previous and next change">
-        <button type="button" className="btn" aria-disabled={index === 0} onClick={() => index > 0 && onSelect(index - 1)}>
-          <span aria-hidden="true">‹ </span>Previous
-        </button>
-        {/* Quiet while Play steps, so the time-lapse does not chatter. */}
-        <span className="mono" aria-live={quiet ? 'off' : 'polite'}>
-          <span aria-hidden="true">
-            {index + 1} / {count}
+    <section className="change-panel" aria-labelledby="change-heading">
+      <h3 id="change-heading">
+        <span className="panel-kicker mono">
+          <span className="sr-only">Change {index + 1} of {count}, </span>
+          <span className="change-mag" data-magnitude={entry.significance.magnitude}>
+            {entry.significance.magnitude}
           </span>
-          <span className="sr-only">{said.text}</span>
-        </span>
-        <button type="button" className="btn" aria-disabled={index === count - 1} onClick={() => index < count - 1 && onSelect(index + 1)}>
-          Next<span aria-hidden="true"> ›</span>
-        </button>
-      </nav>
-    </>
+        </span>{' '}
+        <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
+        <span className="sr-only"> to </span> <Ts ts={entry.to} />
+      </h3>
+      <p className="panel-summary">
+        {entry.aiSummary ?? entry.ruleSummary} <span className="source-label mono">{entry.aiSummary ? 'AI summary' : 'auto summary'}</span>
+      </p>
+      <div className="controls">
+        {lead}
+        <div className="nav-slot" ref={slot}>
+          <nav className="diff-nav" aria-label="Previous and next change" data-stuck={stuck || undefined}>
+            <button type="button" className="btn" aria-disabled={index === 0} onClick={() => index > 0 && onSelect(index - 1)}>
+              <span aria-hidden="true">‹ </span>Previous
+            </button>
+            {/* Quiet while Play steps, so the time-lapse does not chatter. */}
+            <span className="mono" aria-live={quiet ? 'off' : 'polite'}>
+              <span aria-hidden="true">
+                {index + 1} / {count}
+              </span>
+              <span className="sr-only">{said.text}</span>
+            </span>
+            <button type="button" className="btn" aria-disabled={index === count - 1} onClick={() => index < count - 1 && onSelect(index + 1)}>
+              Next<span aria-hidden="true"> ›</span>
+            </button>
+          </nav>
+        </div>
+        {tools}
+        <details className="fold change-details">
+          <summary>Change details</summary>
+          <p className="panel-stats mono">{statsLine(entry.record)}</p>
+          <p className="panel-links">
+            {[entry.from, entry.to].map((ts) => (
+              <a key={ts} className="cap-out" href={captureUrl(ts)} target="_blank" rel="noopener noreferrer">
+                View capture <Ts ts={ts} />
+                <span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            ))}
+            <button type="button" className="btn" onClick={copy}>
+              Copy link
+            </button>
+            {/* An explicit status role is the most widely announced live region; <output> support varies. */}
+            {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+            <span role="status">{copied.pair === pair ? copied.text : ''}</span>
+          </p>
+        </details>
+      </div>
+    </section>
   );
 }
 
-/** The selected change's text, marked up like a proofreader's galley: structure, legend, then the diff. */
+/** "title changed; headings: 4 added, 3 removed, 1 renamed": what the folded Structure list holds. */
+function structureCounts({ diff, record: r }: TimelineEntry): string {
+  const n = [[r.headingsAdded.length, 'added'], [r.headingsRemoved.length, 'removed'], [r.headingsRenamed?.length ?? 0, 'renamed']] as const;
+  const headings = n.filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`).join(', ');
+  return [diff.titleChanged && 'title changed', headings && `headings: ${headings}`].filter(Boolean).join('; ');
+}
+
+/** The selected change's text, marked up like a proofreader's galley: Structure and Key (folded), then the diff. */
 export function DiffView({ entry, from, to }: Pick<Props, 'entry' | 'from' | 'to'>) {
   const pair = `${entry.from}-${entry.to}`;
   const rows = useMemo(() => collapseUnchanged(entry.diff.ops), [entry]);
@@ -137,14 +169,14 @@ export function DiffView({ entry, from, to }: Pick<Props, 'entry' | 'from' | 'to
   ];
 
   return (
-    <section className="diff-panel" id="diff" tabIndex={-1} aria-labelledby="diff-heading">
+    <section className="diff-panel" id="diff" tabIndex={-1} aria-labelledby="diff-heading" data-region="text">
       <h3 id="diff-heading">
         What the text says, <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
         <span className="sr-only"> to </span> <Ts ts={entry.to} />
       </h3>
       {structure.length > 0 && (
-        <>
-          <h4 className="diff-sub">Structure</h4>
+        <details className="fold">
+          <summary>Structure: {structureCounts(entry)}</summary>
           <ul className="diff-structure">
             {structure.map(([op, text]) => (
               <li key={text} data-op={op}>
@@ -152,15 +184,17 @@ export function DiffView({ entry, from, to }: Pick<Props, 'entry' | 'from' | 'to
               </li>
             ))}
           </ul>
-        </>
+        </details>
       )}
-      <p className="diff-legend">
-        <span>Key:</span>
-        <span><b aria-hidden="true" data-op="added">+</b> added, <span className="w-ins">underlined</span></span>
-        <span><b aria-hidden="true" data-op="removed">−</b> removed, <span className="w-del">struck through</span></span>
-        <span><b aria-hidden="true" data-op="modified">~</b> changed</span>
-        <span><b aria-hidden="true" data-op="moved">↕</b> moved</span>
-      </p>
+      <details className="fold">
+        <summary>Key</summary>
+        <p className="diff-legend">
+          <span><b aria-hidden="true" data-op="added">+</b> added, <span className="w-ins">underlined</span></span>
+          <span><b aria-hidden="true" data-op="removed">−</b> removed, <span className="w-del">struck through</span></span>
+          <span><b aria-hidden="true" data-op="modified">~</b> changed</span>
+          <span><b aria-hidden="true" data-op="moved">↕</b> moved</span>
+        </p>
+      </details>
       <div className="diff-body" key={pair}>
         {rows.map((row, i) =>
           'gap' in row ? <Gap key={i} ops={row.gap} b={to.blocks} /> : <DiffBlock key={i} op={row.op} a={from.blocks} b={to.blocks} />,

@@ -134,7 +134,7 @@ export function App() {
       <p className="sr-only" role="status" aria-live="polite">
         {announcement}
       </p>
-      <AppFooter source={live ? undefined : current?.fixture.source} />
+      <AppFooter sample={live ? undefined : current?.fixture} />
     </>
   );
 }

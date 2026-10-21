@@ -2,7 +2,7 @@ import { Wordmark } from '../design/Wordmark.tsx';
 import { SamplePicker } from './SamplePicker.tsx';
 import { UrlForm } from './UrlForm.tsx';
 
-/** Skip link, wordmark and tagline, the URL form (the hero), then the sample picker. */
+/** Skip links, then one row: the wordmark, the URL form, the sample toggles (the tagline is in the footer). */
 type Props = Parameters<typeof SamplePicker>[0] & {
   /** Whether a sample is shown, so `#diff` (the change panel or its empty state) exists. */
   hasDiff: boolean;
@@ -13,7 +13,7 @@ type Props = Parameters<typeof SamplePicker>[0] & {
 
 export function AppHeader({ hasDiff, url, onUrl, ...props }: Props) {
   return (
-    <header className="site-header">
+    <header className="site-header" data-region="header">
       <a className="skip-link" href="#content">
         Skip to content
       </a>
@@ -22,15 +22,12 @@ export function AppHeader({ hasDiff, url, onUrl, ...props }: Props) {
           Skip to diff
         </a>
       )}
-      <div className="masthead">
-        <h1>
-          <a href="/" className="home-link">
-            <Wordmark />
-          </a>
-        </h1>
-        <p className="tagline">How a web page changed over the years, one meaningful edit at a time.</p>
-        <UrlForm value={url} onSubmit={onUrl} />
-      </div>
+      <h1>
+        <a href="/" className="home-link">
+          <Wordmark />
+        </a>
+      </h1>
+      <UrlForm value={url} onSubmit={onUrl} />
       <SamplePicker {...props} />
     </header>
   );

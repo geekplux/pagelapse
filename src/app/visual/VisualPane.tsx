@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useCallback, useState } from 'react';
 import { formatTimestampLong } from '../../core/timestamp.ts';
 import type { TimelineEntry } from '../../core/types.ts';
 import { Ts } from '../Ts.tsx';
@@ -15,8 +15,6 @@ interface Props {
   label: string;
   /** Every capture, oldest first (frame numbers). */
   captures: readonly string[];
-  /** Where the pictures come from, for the caption: `Arquivo.pt`. */
-  archiveName: string;
   /** A capture in the archive's own viewer. */
   link: (ts: string) => string;
   view: (ts: string) => CaptureView;
@@ -34,6 +32,8 @@ interface Props {
   runActive?: boolean;
   /** Live: the selection only follows the run (nothing picked yet), so no frame loads until a pick or the run's end. */
   hold?: boolean;
+  /** The side column, given the pane's controls: Play (`lead`), then the compare picker and Before / After (`tools`). */
+  side: (lead: ReactNode, tools: ReactNode) => ReactNode;
 }
 
 const SIDES = [
@@ -52,11 +52,12 @@ const Label = ({ side, ts }: { side: Side; ts: string }) => {
 };
 
 /**
- * The page itself, as a mounted print: the compare mode (Single with its `− Before | + After` toggle, Side by side,
- * Slider, Onion skin), Play, the picture(s), a caption strip with the links out to the captures, and honest states for
- * captures recorded without some styles or with no picture. A compare mode needs both pictures, else it shows Single.
+ * The page itself, as a mounted print: the picture(s) in the compare mode (Single, Side by side, Slider, Onion skin), a
+ * one-line caption (frame, date, the link out in Single and Side by side) and honest states for captures recorded
+ * without some styles or with no picture. A compare mode needs both pictures, else it shows Single. Its controls (Play,
+ * the compare picker, Single's `− Before | + After` toggle) go to the side column's controls row, after the picture.
  */
-export function VisualPane({ label, captures, archiveName, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false, hold = false }: Props) {
+export function VisualPane({ label, captures, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false, hold = false, side: renderSide }: Props) {
   const [broken, setBroken] = useState<string[]>([]);
   const index = (ts: string) => captures.indexOf(ts);
   const pic = (ts: string) => {
@@ -115,21 +116,20 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
         <p className="mono">{p.broken ? 'The picture could not be loaded.' : p.reason}</p>
       </div>
     );
-  const caption = (ps: Pic[], hidden = ps.reduce((n, p) => n + (p.redacted ?? 0), 0)) => (
+  // Frame and date, the link out (Single and each Side by side mat; the compare pair's links are in Change details),
+  // and the honest badges. Archive name and recording notes are in the footer's "About these captures".
+  const caption = (ps: Pic[]) => (
     <figcaption className="vp-cap mono">
       <span>{ps.map((p) => frameNo(index(p.ts))).join(' → ')}</span>
       {ps.length === 1 && <Ts ts={ps[0]!.ts} />}
-      <span className="vp-src">
-        {ps[0]!.source === 'frame' ? `Live replay from ${archiveName}; it may lack some styles or images` : `${archiveName} capture${ps.length > 1 ? 's' : ''}, top of page`}
-        {shown === 'single' && trivial && ', trivial edit'}
-        {hidden > 0 && `, ${hidden} items hidden before recording`}
-      </span>
-      {ps.map((p) => (
-        <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
-          {ps.length > 1 ? `Open ${SIDES.find(([s]) => s === sideOf(entry, p.ts))![2]}` : 'Open capture'}
-          <span className="sr-only">{ps.length > 1 && ' capture'} (opens in a new tab)</span>
-        </a>
-      ))}
+      {shown === 'single' && trivial && <span>trivial edit</span>}
+      {(shown === 'single' || shown === 'side') &&
+        ps.map((p) => (
+          <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
+            {shown === 'side' ? `Open ${SIDES.find(([s]) => s === sideOf(entry, p.ts))![2]}` : 'Open capture'}
+            <span className="sr-only">{shown === 'side' && ' capture'} (opens in a new tab)</span>
+          </a>
+        ))}
       {ps.map(
         (p) =>
           p.status === 'partial' && (
@@ -140,34 +140,48 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
       )}
     </figcaption>
   );
+  const sideKey = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const other = e.key === 'ArrowLeft' ? e.currentTarget.previousElementSibling : e.key === 'ArrowRight' ? e.currentTarget.nextElementSibling : null;
+    if (!(other instanceof HTMLButtonElement)) return;
+    e.preventDefault();
+    e.currentTarget.tabIndex = -1;
+    other.tabIndex = 0;
+    other.focus();
+  };
+  const tools = (
+    <>
+      <ModePicker mode={mode} onMode={onMode} />
+      {shown === 'single' && (
+        // A named group of two toggle buttons, not a <fieldset>: no form is submitted.
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
+        <div className="vp-sides" role="group" aria-label="Show the change's capture">
+          {SIDES.map(([s, sym, word, op]) => (
+            // One tab stop for the pair (Left / Right moves between them), like the filmstrip.
+            <button key={s} type="button" className="vp-side" aria-pressed={side === s} tabIndex={(side ?? 'after') === s ? 0 : -1} onClick={() => onSide(s)} onKeyDown={sideKey}>
+              <b aria-hidden="true" data-op={op}>
+                {sym}
+              </b>{' '}
+              {word} <Ts ts={captureForChange(entry, s)} />
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+  const lead = play && (
+    <button type="button" className="btn vp-play" data-play data-playing={playing || undefined} onClick={play.toggle}>
+      <span aria-hidden="true">{playing ? '❚❚ ' : '▶ '}</span>
+      {playing ? 'Pause' : 'Play'}
+      <span className="sr-only"> time-lapse</span>
+    </button>
+  );
 
   return (
+    <>
     <section className="vpane" aria-labelledby="vpane-heading" data-mode={shown}>
-      <div className="vp-bar">
-        <h3 id="vpane-heading">How it looked</h3>
-        <ModePicker mode={mode} onMode={onMode} />
-        {play && (
-          <button type="button" className="btn vp-play" data-play data-playing={playing || undefined} onClick={play.toggle}>
-            <span aria-hidden="true">{playing ? '❚❚ ' : '▶ '}</span>
-            {playing ? 'Pause' : 'Play'}
-            <span className="sr-only"> time-lapse</span>
-          </button>
-        )}
-        {shown === 'single' && (
-          // A named group of two toggle buttons, not a <fieldset>: no form is submitted.
-          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-          <div className="vp-sides" role="group" aria-label="Show the change's capture">
-            {SIDES.map(([s, sym, word, op]) => (
-              <button key={s} type="button" className="vp-side" aria-pressed={side === s} onClick={() => onSide(s)}>
-                <b aria-hidden="true" data-op={op}>
-                  {sym}
-                </b>{' '}
-                {word} <Ts ts={captureForChange(entry, s)} />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <h3 id="vpane-heading" className="sr-only">
+        How it looked
+      </h3>
       {/* Always mounted, so the note is announced when a compare mode falls back to Single. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <div role="status">
@@ -211,5 +225,7 @@ export function VisualPane({ label, captures, archiveName, link, view, entry, at
         {said.text}
       </span>
     </section>
+    {renderSide(lead, tools)}
+    </>
   );
 }

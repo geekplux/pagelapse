@@ -54,12 +54,13 @@ export function Filmstrip({ items: snapshots, at, trivial, onSelect, pending = 0
 
   return (
     <div className="film">
-      <div className="film-head">
-        <h3 id="film-heading">Filmstrip</h3>
-        <p className="captures-source" id="film-hint">
-          {snapshots.length} captures, oldest first.{outlines && ' Thumbnails are text outlines of each capture, not pictures.'} Arrow keys move along the strip; Enter shows a capture.
-        </p>
-      </div>
+      <h3 id="film-heading" className="sr-only">
+        Filmstrip
+      </h3>
+      {/* The strip's help: the focused frame's description (and the footer's "Keyboard shortcuts"), not visible text. */}
+      <p id="film-hint" hidden>
+        {snapshots.length} captures, oldest first.{outlines && ' Thumbnails are text outlines of each capture, not pictures.'} Arrow keys move along the strip; Enter shows a capture.
+      </p>
       {/* Safari drops list semantics when list-style is none, so the role is not redundant here. */}
       {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles, jsx-a11y/no-noninteractive-element-interactions */}
       <ol className="film-strip" role="list" aria-labelledby="film-heading" ref={list} onKeyDown={onKeyDown}>

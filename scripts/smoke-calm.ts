@@ -48,7 +48,7 @@ function measure() {
   const regions = [...document.querySelectorAll<HTMLElement>('[data-region]')];
   const radios = new Set<string>();
   const stops = els.filter((el) => {
-    if (el.tabIndex < 0 || (el as HTMLButtonElement).disabled || el.matches('.skip-link, a:not([href])') || !seen(el)) return false;
+    if (el.tabIndex < 0 || (el as HTMLButtonElement).disabled || el.matches('.skip-link, .home-link, a:not([href])') || !seen(el)) return false;
     if (!(el instanceof HTMLInputElement && el.type === 'radio')) return true;
     if (radios.has(el.name)) return false;
     radios.add(el.name);

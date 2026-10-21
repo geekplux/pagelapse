@@ -1,4 +1,4 @@
-import { type FocusEvent, type KeyboardEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type FocusEvent, type KeyboardEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ARCHIVES } from '../../archive/archives.ts';
 import { trivialEntries, withAiSummaries } from '../../core/timeline.ts';
 import type { TimelineEntry } from '../../core/types.ts';
@@ -39,8 +39,9 @@ const years = (a?: string, b?: string) => (a && b ? `${a.slice(0, 4)}–${b.slic
 const IA = ARCHIVES['internet-archive'];
 
 /**
- * A live run as an index card: status line (or empty and error states), then the stage without pictures (they come
- * in phase 15): the selected change, the timeline growing capture by capture, the changes list and the diff.
+ * A live run: the hero (title, then the empty or error card, or the replay pane and the selected change), the scrub
+ * strip captioned by the run's status line (filmstrip and timeline growing capture by capture), the folded changes
+ * list and the diff.
  */
 export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
   const { state, cancel } = useLiveTimeline(url);
@@ -92,7 +93,6 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const asked = picked || (!!initialChange && pick === initialChange && !!entry && pairOf(entry) === initialChange);
   const hold = running && !asked;
   const text = progressText(state);
-  const [listOpen, setListOpen] = useState(() => typeof matchMedia !== 'function' || matchMedia('(min-width: 40rem)').matches);
 
   // Progress for screen readers: the part before " · " (AC 22).
   useEffect(() => announce(text.split(' · ')[0]!), [announce, text]);
@@ -176,122 +176,131 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
 
   const span = years(captures[0]?.ts, captures.at(-1)?.ts);
   const quiet = status === 'done' && !entries.length && snapshots.length > 0;
+  const card = (lead?: ReactNode, tools?: ReactNode) =>
+    entry && (
+    <ChangeCard
+      entry={entry}
+      index={selected}
+      count={all.length}
+      captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)}
+      onSelect={select}
+      showing={shownAt && showingText(captures.map((c) => c.ts), entry, shownAt, trivialSet.has(shownAt))}
+      lead={lead}
+      tools={tools}
+    />
+  );
   return (
     <article className="sheet" aria-labelledby="live-label" data-live={status} ref={article}>
-      <div className="sheet-head">
-        <h2 id="live-label">{url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</h2>
-        <p className="sheet-url">
-          <a className="mono" href={url}>
-            {url}
-          </a>
-        </p>
-        <p className="sheet-meta mono">
-          <span>Live</span>
-          {captures.length > 0 && <span>{captures.length} captures</span>}
-          {span && <span>{span}</span>}
-        </p>
-      </div>
-      {error?.code === 'no_captures' ? (
-        <EmptyState url={url} onSample={onSample} headingRef={setTarget} />
-      ) : error ? (
-        <ErrorCard error={error} onRetry={onRetry} onSample={onSample} announce={announce} headingRef={setTarget} />
-      ) : (
-        <LoadingStatus text={text} running={running} onCancel={cancel} onRetry={status === 'cancelled' ? onRetry : undefined} textRef={setTarget} />
-      )}
-      {quiet && !showTrivial && (
-        <section className="state-card" aria-labelledby="quiet-heading">
-          <h3 id="quiet-heading">Nothing meaningful changed</h3>
-          <p>
-            {snapshots.length} captures, {years(snapshots[0]?.ts, snapshots.at(-1)?.ts)}: nothing meaningful changed. {trivialCaptures.length} trivial
-            edits hidden (dates, counters, whitespace).
-          </p>
-        </section>
-      )}
-      {captures.length > 0 && (
-        <div className="stage live-stage">
-          {entry && shownAt ? (
-            <VisualPane
-              label={url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-              captures={captures.map((c) => c.ts)}
-              archiveName={IA.name}
-              link={(ts) => viewCaptureUrl(IA.id, ts, url)}
-              view={view}
-              entry={entry}
-              at={shownAt}
-              trivial={trivialSet.has(shownAt)}
-              mode={mode}
-              onMode={(m) => {
-                setMode(m);
-                onChange(viewQuery(entry, shownAt, m, LIVE_MODE));
-              }}
-              onSide={(s) => choose(entry, captureForChange(entry, s))}
-              steps={shownAt && changeSteps.includes(shownAt) ? changeSteps : snapshots.map((x) => x.ts)}
-              runActive={running}
-              hold={hold}
-            />
-          ) : (
-            running && (
-              <section className="vpane vpane-wait" aria-labelledby="vpane-heading">
-                <div className="vp-bar">
-                  <h3 id="vpane-heading">How it looked</h3>
-                </div>
-                <div className="vp-mat">
-                  <p className="vp-shot live-wait">The page as the Internet Archive kept it shows here once the first change is found.</p>
-                </div>
-              </section>
-            )
-          )}
-          {entry ? (
-            <div className="side">
-              <ChangeCard
-                entry={entry}
-                index={selected}
-                count={all.length}
-                captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)}
-                onSelect={select}
-                showing={shownAt && showingText(captures.map((c) => c.ts), entry, shownAt, trivialSet.has(shownAt))}
-              />
-            </div>
-          ) : (
-            running && <p className="side live-wait">The first change shows here as soon as two captures have been compared.</p>
-          )}
-          <Filmstrip items={items} pending={captures.length - items.length} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
-          <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
-            <h3 id="timeline-heading">Timeline</h3>
-            <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial}>
-              {marks.length > failed.length && (
-                <span>
-                  <i className="mark-pending" /> not fetched yet
-                </span>
-              )}
-              {failed.length > 0 && (
-                <span>
-                  <i className="mark-failed" /> {failed.length} could not be fetched
-                </span>
-              )}
-            </Legend>
-            {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-            <span className="sr-only" role="status">
-              {news}
-            </span>
-            <Timeline
-              timeline={strip.timeline}
-              marks={strip.marks}
-              selected={stripSelected}
-              onSelect={selectOnStrip}
-              labelledBy="timeline-heading"
-              describedBy="timeline-legend"
-            />
+      <div className="stage live-stage">
+        <div className="hero" data-region="hero">
+          <div className="sheet-head">
+            <h2 id="live-label">{url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</h2>
+            <p className="sheet-meta mono">
+              Live{captures.length > 0 && ` · ${captures.length} captures`}
+              {span && ` · ${span}`}
+            </p>
           </div>
-          {entry && (
-            <details className="changes-pane" open={listOpen} onToggle={(e) => setListOpen(e.currentTarget.open)}>
+          {error?.code === 'no_captures' ? (
+            <EmptyState url={url} onSample={onSample} headingRef={setTarget} />
+          ) : (
+            error && <ErrorCard error={error} onRetry={onRetry} onSample={onSample} announce={announce} headingRef={setTarget} />
+          )}
+          {quiet && !showTrivial && (
+            <section className="state-card" aria-labelledby="quiet-heading">
+              <h3 id="quiet-heading">Nothing meaningful changed</h3>
+              <p>
+                {snapshots.length} captures, {years(snapshots[0]?.ts, snapshots.at(-1)?.ts)}: nothing meaningful changed. {trivialCaptures.length} trivial
+                edits hidden (dates, counters, whitespace).
+              </p>
+            </section>
+          )}
+          {captures.length > 0 &&
+            (entry && shownAt ? (
+              <VisualPane
+                label={url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                captures={captures.map((c) => c.ts)}
+                link={(ts) => viewCaptureUrl(IA.id, ts, url)}
+                view={view}
+                entry={entry}
+                at={shownAt}
+                trivial={trivialSet.has(shownAt)}
+                mode={mode}
+                onMode={(m) => {
+                  setMode(m);
+                  onChange(viewQuery(entry, shownAt, m, LIVE_MODE));
+                }}
+                onSide={(s) => choose(entry, captureForChange(entry, s))}
+                steps={shownAt && changeSteps.includes(shownAt) ? changeSteps : snapshots.map((x) => x.ts)}
+                runActive={running}
+                hold={hold}
+                side={(lead, tools) => <div className="side">{card(lead, tools)}</div>}
+              />
+            ) : (
+              running && (
+                <>
+                  <section className="vpane vpane-wait" aria-labelledby="vpane-heading">
+                    <h3 id="vpane-heading" className="sr-only">
+                      How it looked
+                    </h3>
+                    <figure className="vp-mat">
+                      <p className="vp-shot live-wait">The page as the Internet Archive kept it shows here once the first change is found.</p>
+                      <figcaption className="vp-cap mono">&nbsp;</figcaption>
+                    </figure>
+                  </section>
+                  <p className="side live-wait">The first change shows here as soon as two captures have been compared.</p>
+                </>
+              )
+            ))}
+        </div>
+        {(!error || captures.length > 0) && (
+          <div className="scrub" data-region="scrub">
+            {!error && <LoadingStatus text={text} running={running} progress={captures.length ? [state.next, captures.length] : undefined} onCancel={cancel} onRetry={status === 'cancelled' ? onRetry : undefined} textRef={setTarget} />}
+            {captures.length > 0 && (
+              <>
+                <Filmstrip items={items} pending={captures.length - items.length} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
+                <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
+                  <h3 id="timeline-heading" className="sr-only">
+                    Timeline
+                  </h3>
+                  {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+                  <span className="sr-only" role="status">
+                    {news}
+                  </span>
+                  <Timeline
+                    timeline={strip.timeline}
+                    marks={strip.marks}
+                    selected={stripSelected}
+                    onSelect={selectOnStrip}
+                    labelledBy="timeline-heading"
+                    describedBy="timeline-legend"
+                  />
+                  <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial}>
+                    {marks.length > failed.length && (
+                      <span>
+                        <i className="mark-pending" /> not fetched yet
+                      </span>
+                    )}
+                    {failed.length > 0 && (
+                      <span>
+                        <i className="mark-failed" /> {failed.length} could not be fetched
+                      </span>
+                    )}
+                  </Legend>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        {entry && (
+          <div className="lists" data-region="changes">
+            <details className="fold changes-pane">
               <summary id="changes-heading">All changes ({all.length})</summary>
               <ChangesList entries={all} selected={selected} onSelect={select} />
             </details>
-          )}
-          {entry && <DiffView entry={entry} from={page(entry.from)} to={page(entry.to)} />}
-        </div>
-      )}
+          </div>
+        )}
+        {entry && <DiffView entry={entry} from={page(entry.from)} to={page(entry.to)} />}
+      </div>
     </article>
   );
 }
