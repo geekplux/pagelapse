@@ -2,7 +2,7 @@ STATE: IN-PROGRESS
 
 # Status: Pagelapse
 
-- Current phase: 12 verified; PR being opened
+- Current phase: 13 (`phase-13-worker-archive-api`) starting
 - Blockers: none
 
 | Phase | Branch | PR | State | Verify rounds |
@@ -18,7 +18,7 @@ STATE: IN-PROGRESS
 | 9 | phase-9-rename-pagelapse | [#10](https://github.com/geekplux/pagelapse/pull/10) | PR open (PASS) | 1 |
 | 10 | phase-10-sample-pictures | [#11](https://github.com/geekplux/pagelapse/pull/11) | PR open (PASS) | 1 |
 | 11 | phase-11-visual-pane | [#12](https://github.com/geekplux/pagelapse/pull/12) | PR open (PASS) | 3 |
-| 12 | phase-12-compare-play | (opening) | verified PASS | 1 |
+| 12 | phase-12-compare-play | [#13](https://github.com/geekplux/pagelapse/pull/13) | PR open (PASS) | 1 |
 | 13 | phase-13-worker-archive-api | - | not started | 0 |
 | 14 | phase-14-live-mode | - | not started | 0 |
 | 15 | phase-15-live-visual | - | not started | 0 |
@@ -32,4 +32,4 @@ Follow-ups:
 - Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-21 (phase 12 verified)
+Last updated: 2026-10-21 (PR #13 opened)
