@@ -129,6 +129,29 @@ async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<st
   return `${f.id}: ${f.snapshots.length} captures linked to ${replay}`;
 }
 
+/**
+ * The list's `aria-current` change is fully visible inside the list's scroll box (below its sticky summary) and the
+ * side column, once any smooth scroll has settled; the page itself has not scrolled from `pageY`.
+ */
+async function currentInList(page: Page, pageY = 0): Promise<string> {
+  let m = { ok: false, text: '' };
+  for (let k = 0; k < 20 && !m.ok; k++) {
+    if (k) await page.waitForTimeout(100);
+    m = await page.evaluate((y) => {
+      const r = (el: Element) => el.getBoundingClientRect();
+      const item = r(document.querySelector('.changes .change[aria-current="true"]')!);
+      const box = r(document.querySelector('.changes-pane')!);
+      const side = r(document.querySelector('.stage .side')!);
+      const top = Math.max(box.top, side.top, r(document.querySelector('.changes-pane summary')!).bottom);
+      const bottom = Math.min(box.bottom, side.bottom);
+      const at = `item ${Math.round(item.top)}-${Math.round(item.bottom)} in ${Math.round(top)}-${Math.round(bottom)}, page scrollY ${scrollY}`;
+      return { ok: item.top >= top - 0.5 && item.bottom <= bottom + 0.5 && scrollY === y, text: at };
+    }, pageY);
+  }
+  if (!m.ok) throw new Error(`selected change hidden in the list: ${m.text}`);
+  return m.text;
+}
+
 /** Opens the "All changes (N)" disclosure (collapsed on mobile). */
 async function openChanges(page: Page): Promise<void> {
   const pane = page.locator('.changes-pane');
@@ -567,7 +590,7 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-default',
-    description: 'The hero: featured change picture, filmstrip, summary above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
+    description: 'The hero: featured change picture, summary and filmstrip thumbnails above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
     shot: 'hero',
     schemes: ['light', 'dark'],
     cvd: true,
@@ -594,7 +617,7 @@ export const flows: readonly Flow[] = [
           cls,
           bytes: pics.reduce((n, r) => n + r.encodedBodySize, 0),
           count: pics.length,
-          fold: [box('.vp-mat').bottom, box('.panel-summary').bottom, box('#timeline-heading').top],
+          fold: [box('.vp-mat').bottom, box('.panel-summary').bottom, box('.frame :is(img, .frame-none)').bottom],
           paneWidth: box('.vp-mat').width,
         };
       });
@@ -608,7 +631,65 @@ export const flows: readonly Flow[] = [
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { timeToReadyMs, notes: [`featured ${from}-${to}`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, timeline): ${m.fold.map(Math.round).join(', ')}`] };
+      return { timeToReadyMs, notes: [`featured ${from}-${to}`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, filmstrip thumbnails): ${m.fold.map(Math.round).join(', ')}`] };
+    },
+  },
+  {
+    name: 'changes-list-follows',
+    description: 'Desktop: the selected change is visible inside the scrolling changes list after load, Previous, the filmstrip and the timeline; the page never scrolls',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const { entries } = defaultTimeline;
+      const notes = [`load: ${await currentInList(page)}`];
+      // Dispatched clicks: a real click would let Playwright scroll the page to the target first.
+      await page.locator('.diff-nav .btn').first().dispatchEvent('click');
+      await expectSelected(page, defaultFixture, entries.length - 2);
+      notes.push(`Previous: ${await currentInList(page)}`);
+      await page.locator('.frame').first().dispatchEvent('click');
+      await expectSelected(page, defaultFixture, 0);
+      notes.push(`filmstrip #01: ${await currentInList(page)}`);
+      // Focusing the timeline scrolls the page to it; the End key itself must not scroll the page further.
+      await slider(page).focus();
+      // Wait out the page's smooth scroll to the timeline.
+      let y = -1;
+      for (let k = 0; k < 30 && y !== (y = await page.evaluate(() => scrollY)); k++) await page.waitForTimeout(100);
+      await page.keyboard.press('End');
+      await expectSelected(page, defaultFixture, entries.length - 1);
+      notes.push(`timeline End: ${await currentInList(page, y)}`);
+      return { notes };
+    },
+  },
+  {
+    name: 'visual-mobile-link',
+    description: 'Phones: the picture\'s "Open capture" link and its focus ring clear the sticky Previous / Next bar on first view and when focused, at 390 and 320 px',
+    viewports: ['mobile'],
+    async run({ page, baseUrl }) {
+      const notes: string[] = [];
+      for (const [width, height] of [[390, 844], [320, 844], [320, 568]] as const) {
+        await page.setViewportSize({ width, height });
+        await openReady(page, baseUrl);
+        await settle(page);
+        // Short screens cannot show the caption on first view; there the link must come clear when tabbed to.
+        if (height < 700) {
+          for (let k = 0; k < 40 && !(await page.evaluate(() => document.activeElement?.matches('.vpane .cap-out'))); k++) await page.keyboard.press('Tab');
+          if (!(await page.evaluate(() => document.activeElement?.matches('.vpane .cap-out')))) throw new Error('could not tab to "Open capture"');
+          await page.waitForTimeout(400);
+        }
+        const hit = await page.evaluate(() => {
+          const a = document.querySelector('.vpane .cap-out')!.getBoundingClientRect();
+          const nav = document.querySelector('.diff-nav')!.getBoundingClientRect();
+          const el = document.elementFromPoint(a.left + a.width / 2, a.top + a.height / 2);
+          return { ok: !!el?.closest('.vpane .cap-out'), got: el ? `${el.tagName.toLowerCase()}.${el.className}` : 'nothing', bottom: a.bottom, navTop: nav.top };
+        });
+        const label = `${width}x${height}${height < 700 ? ' focused' : ' first view'}`;
+        // 4 px: the 2 px outline at a 2 px offset.
+        if (!hit.ok || hit.bottom + 4 > hit.navTop) throw new Error(`${label}: hit-test at "Open capture" gives ${hit.got}; link ends ${Math.round(hit.bottom)}, bar starts ${Math.round(hit.navTop)}`);
+        notes.push(`${label}: link ends ${Math.round(hit.bottom)}, bar starts ${Math.round(hit.navTop)}`);
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await openReady(page, baseUrl);
+      return { notes };
     },
   },
   {
@@ -661,11 +742,11 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-tab-order',
-    description: 'Desktop: the stage tabs in visual order, pane controls then the change card and changes list, then timeline, filmstrip, diff',
+    description: 'Desktop: the stage tabs in visual order, pane controls then the change card and changes list, then filmstrip, timeline, diff',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
-      const parts = ['vpane', 'side', 'tl-area', 'film', 'diff-panel'];
+      const parts = ['vpane', 'side', 'film', 'tl-area', 'diff-panel'];
       const seen: string[] = [];
       for (let k = 0; k < 120; k++) {
         await page.keyboard.press('Tab');
@@ -689,7 +770,7 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-zoom-spacing',
-    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the side column scrolls instead of spilling onto the timeline; the list keeps >= 8rem',
+    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the side column scrolls instead of spilling onto the filmstrip; the list keeps >= 8rem',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await page.setViewportSize({ width: 1024, height: 768 });
@@ -701,9 +782,9 @@ export const flows: readonly Flow[] = [
       const m = await page.evaluate(() => {
         const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
         const side = document.querySelector<HTMLElement>('.stage .side')!;
-        const tl = r('.tl-area').top;
+        const tl = r('.film').top;
         const box = side.getBoundingClientRect();
-        // Content taller than the column must be clipped and scrolled, never painted over the timeline.
+        // Content taller than the column must be clipped and scrolled, never painted over the filmstrip below.
         const spill = side.scrollHeight > side.clientHeight && getComputedStyle(side).overflowY === 'visible' ? 1 : 0;
         return {
           twoColumn: box.left > r('.vpane').right,
@@ -718,14 +799,14 @@ export const flows: readonly Flow[] = [
       });
       const problems = [
         !m.twoColumn && 'the stage is not two columns at 1024 px',
-        m.sideBottom > m.tl + 0.5 && `side column ends at ${Math.round(m.sideBottom)}, timeline starts at ${Math.round(m.tl)}`,
-        m.paneBottom > m.tl + 0.5 && `pane ends at ${Math.round(m.paneBottom)}, timeline starts at ${Math.round(m.tl)}`,
+        m.sideBottom > m.tl + 0.5 && `side column ends at ${Math.round(m.sideBottom)}, filmstrip starts at ${Math.round(m.tl)}`,
+        m.paneBottom > m.tl + 0.5 && `pane ends at ${Math.round(m.paneBottom)}, filmstrip starts at ${Math.round(m.tl)}`,
         m.list < 8 * m.rem - 0.5 && `changes list only ${Math.round(m.list)}px tall`,
         m.spill > 0 && 'the side column overflows visibly',
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { notes: [`side ends ${Math.round(m.sideBottom)} <= timeline ${Math.round(m.tl)}; list ${Math.round(m.list)}px; side scrolls: ${m.scrolls}`] };
+      return { notes: [`side ends ${Math.round(m.sideBottom)} <= filmstrip ${Math.round(m.tl)}; list ${Math.round(m.list)}px; side scrolls: ${m.scrolls}`] };
     },
   },
   {

@@ -23,7 +23,7 @@ interface Props {
   onChange: (q: Pick<UrlState, 'change' | 'at'>) => void;
 }
 
-/** The sample as an index card: the stage (picture and selected change), timeline, filmstrip, diff and all captures. */
+/** The sample as an index card: the stage (picture and selected change), filmstrip, timeline, diff and all captures. */
 export function TimelineView({ fixture, initialChange, initialAt, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
@@ -116,6 +116,7 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
             </div>
           </>
         )}
+        <Filmstrip fixture={fixture} at={view.at} trivial={trivial} onSelect={(ts) => showCapture(ts)} />
         <div className="tl-area">
           <h3 id="timeline-heading">Timeline</h3>
           <p className="captures-source tl-legend" id="timeline-legend">
@@ -147,7 +148,6 @@ export function TimelineView({ fixture, initialChange, initialAt, onChange }: Pr
             </p>
           )}
         </div>
-        <Filmstrip fixture={fixture} at={view.at} trivial={trivial} onSelect={(ts) => showCapture(ts)} />
         {entry && <DiffView entry={entry} from={page(entry.from)!} to={page(entry.to)!} />}
       </div>
       <p className="sheet-desc">{fixture.description}</p>

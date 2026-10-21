@@ -1,5 +1,6 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import type { SampleFixture } from '../../core/types.ts';
+import { scrollWithin } from '../keepInView.ts';
 import { Ts } from '../Ts.tsx';
 import { frameNo, shotSrc } from './visualState.ts';
 
@@ -36,8 +37,7 @@ export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
   useEffect(() => {
     const box = list.current;
     const el = buttons()[sel]?.parentElement;
-    if (!box || !el || (el.offsetLeft >= box.scrollLeft && el.offsetLeft + el.offsetWidth <= box.scrollLeft + box.clientWidth)) return;
-    box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2 });
+    if (box && el) scrollWithin(box, el, 'x');
   }, [sel]);
 
   const onKeyDown = (e: KeyboardEvent) => {
@@ -51,10 +51,12 @@ export function Filmstrip({ fixture, at, trivial, onSelect }: Props) {
 
   return (
     <div className="film">
-      <h3 id="film-heading">Filmstrip</h3>
-      <p className="captures-source" id="film-hint">
-        {snapshots.length} captures, oldest first. Arrow keys move along the strip; Enter shows a capture.
-      </p>
+      <div className="film-head">
+        <h3 id="film-heading">Filmstrip</h3>
+        <p className="captures-source" id="film-hint">
+          {snapshots.length} captures, oldest first. Arrow keys move along the strip; Enter shows a capture.
+        </p>
+      </div>
       {/* Safari drops list semantics when list-style is none, so the role is not redundant here. */}
       {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles, jsx-a11y/no-noninteractive-element-interactions */}
       <ol className="film-strip" role="list" aria-labelledby="film-heading" ref={list} onKeyDown={onKeyDown}>

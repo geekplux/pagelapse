@@ -1,9 +1,10 @@
-/* The stage: the picture of the page is the hero, the selected change beside it; timeline, filmstrip and diff below.
-   DOM order (pane, side, timeline, filmstrip, diff) is the visual and keyboard order; the grid areas place each part. */
-.stage { display: grid; gap: 1.5rem 2.25rem; margin-top: 1.25rem; }
+/* The stage: the picture of the page is the hero, the selected change beside it; filmstrip, timeline and diff below.
+   DOM order (pane, side, filmstrip, timeline, diff) is the visual and keyboard order; the grid areas place each part.
+   At 1280×800 the picture, the summary and the filmstrip's thumbnails fit above the fold. */
+.stage { display: grid; gap: 1.25rem 2.25rem; margin-top: 1rem; }
 .stage > * { min-width: 0; }
 @media (min-width: 60rem) {
-  .stage { grid-template-columns: minmax(0, 58fr) minmax(0, 42fr); grid-template-areas: "pane side" "tl tl" "film film" "diff diff"; }
+  .stage { grid-template-columns: minmax(0, 52fr) minmax(0, 48fr); grid-template-areas: "pane side" "film film" "tl tl" "diff diff"; }
   .vpane { grid-area: pane; }
   /* Size-contained: the picture alone sets the stage's height. The changes list scrolls in what is left, and when
      text is enlarged or spaced out the whole column scrolls rather than spill onto the timeline. The padding, offset
@@ -13,17 +14,30 @@
   .film { grid-area: film; }
   .diff-panel { grid-area: diff; }
   /* The open list takes what is left and scrolls inside it, but never below 8rem: then the column scrolls instead. */
-  .side .changes-pane { flex: 0 0 auto; overflow-y: auto; }
+  .side .changes-pane { flex: 0 0 auto; overflow-y: auto; scroll-padding-top: 1.75rem; }
+  /* The "All changes" summary stays put while the list scrolls under it. */
+  .side .changes-pane summary { position: sticky; top: 0; z-index: 1; background: var(--card); border-bottom: 1px solid var(--rule); }
   .side .changes-pane[open] { flex: 1 1 0; min-height: 8rem; }
+  /* Compact chrome beside the picture, so the column holds the change, Previous / Next and >= 8rem of list. */
+  .side { gap: 0.75rem; }
+  .side .change-panel { gap: 0.45rem; padding-top: 0.75rem; }
+  .side .panel-kicker { margin-bottom: 0.35rem; }
+  .side .panel-links { column-gap: 1rem; }
+  .side .diff-nav { padding-block: 0.4rem; }
 }
-/* Phones: the side column dissolves so the Previous / Next bar can stick to the bottom while the diff is read. */
+/* Phones: the side column dissolves so the Previous / Next bar can stick to the bottom while the diff is read.
+   Focus scrolls stop above that bar, and the picture's "Open capture" link sits on the caption's first line,
+   so the bar never covers it or its focus ring. */
 @media (max-width: 39.99rem) {
+  html { scroll-padding-bottom: 4.5rem; }
   .side { display: contents; }
   .stage .diff-nav { order: 1; }
+  .vp-cap .vp-src { order: 1; }
+  .vp-cap .vp-badge { order: 2; }
 }
 .stage h3, .sheet .vp-bar h3 { margin: 0; }
 
-.vp-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.6rem; }
+.vp-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-bottom: 0.5rem; }
 .vp-sides { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 3px; background: var(--card); }
 .vp-side { min-height: 2.25rem; padding: 0.25rem 0.75rem; border: 0; background: none; color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); cursor: pointer; }
 .vp-side + .vp-side { border-left: 1px solid var(--rule-strong); }
@@ -35,7 +49,7 @@
 .vp-side[aria-pressed="true"] b { color: inherit; }
 
 /* The mounted print: a card mat, a strong hairline, the picture at 16:10 with its size reserved. */
-.vp-mat { position: relative; margin: 0; padding: 10px; background: var(--card); border: 1px solid var(--rule-strong); border-radius: 2px; box-shadow: 0 18px 40px -28px rgb(31 27 22 / 0.55); }
+.vp-mat { position: relative; margin: 0; padding: 8px; background: var(--card); border: 1px solid var(--rule-strong); border-radius: 2px; box-shadow: 0 18px 40px -28px rgb(31 27 22 / 0.55); }
 .vp-shot { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: var(--paper) center / cover no-repeat; }
 .vp-none {
   display: grid; place-content: center; gap: 0.4rem; padding: 1rem; text-align: center; color: var(--ink-2);
@@ -43,15 +57,17 @@
 }
 .vp-none p:first-child { color: var(--ink); font: 600 var(--step-1) / 1.3 var(--font-display); }
 .vp-none p { padding: 0.15rem 0.5rem; background: var(--card); }
-.vp-label { position: absolute; top: 18px; left: 18px; padding: 0.3rem 0.6rem; background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); }
-.vp-cap { display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; padding-top: 0.55rem; color: var(--ink-2); font-size: 0.78rem; }
+.vp-label { position: absolute; top: 16px; left: 16px; padding: 0.3rem 0.6rem; background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); }
+.vp-cap { display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; padding-top: 0.4rem; color: var(--ink-2); font-size: 0.78rem; }
 .vp-cap > :first-child { color: var(--ink); font-weight: 700; }
 .vp-cap a { margin-left: auto; color: var(--ink); padding-block: 0.35em; }
 .vp-badge { flex-basis: 100%; margin: 0.2rem 0 0; font-family: var(--font-ui); color: var(--ink); padding: 0.35rem 0.6rem; border: 1px solid var(--rule-strong); border-left-width: 3px; border-radius: 2px; background: var(--card); font-size: 0.85rem; }
 
 /* The contact sheet: numbered frames; the shown one has a thick ink outline and a caret above it. */
-.film-strip { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(4.4rem, 1fr); gap: 0.5rem; margin-top: 0.5rem; padding: 0.9rem 0.25rem 0.4rem; list-style: none; overflow-x: auto; }
-@media (prefers-reduced-motion: no-preference) { .film-strip { scroll-behavior: smooth; } }
+.film-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1.25rem; }
+.film-head .captures-source { margin-top: 0; }
+.film-strip { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(4.4rem, 1fr); gap: 0.5rem; margin-top: 0.25rem; padding: 0.9rem 0.25rem 0.4rem; list-style: none; overflow-x: auto; }
+@media (prefers-reduced-motion: no-preference) { .film-strip, .changes-pane { scroll-behavior: smooth; } }
 .frame { position: relative; display: grid; gap: 0.3rem; width: 100%; padding: 0; border: 0; background: none; color: var(--ink-2); text-align: left; cursor: pointer; }
 .frame img, .frame-none { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; border: 1px solid var(--rule-strong); }
 .frame-none { display: grid; place-content: center; border-style: dashed; font: 0.72rem var(--font-mono); }

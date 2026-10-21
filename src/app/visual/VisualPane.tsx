@@ -78,7 +78,7 @@ export function VisualPane({ fixture, entry, at, trivial, onSide }: Props) {
         <figcaption className="vp-cap mono">
           <span>{frameNo(i)}</span>
           <Ts ts={at} />
-          <span>
+          <span className="vp-src">
             {ARCHIVES[(fixture.visual ?? fixture.source).archive].name} capture, top of page{trivial && ', trivial edit'}
             {shot?.redacted ? `, ${shot.redacted} items hidden before recording` : ''}
           </span>
