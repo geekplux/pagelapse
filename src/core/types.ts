@@ -78,6 +78,39 @@ export interface FixtureSnapshot {
   title: string;
   blockIds: number[];
   truncated?: boolean;
+  /** Recorded picture of this capture (optional; see `SampleVisual`). */
+  shot?: ShotRef;
+}
+
+/**
+ * A capture's recorded picture: `public/samples/<id>/<file>.webp` (960×600) and `<file>.thumb.webp` (320×200).
+ * `partial`: the archive's copy missed stylesheets or images; `failed`: no picture (`file` absent).
+ */
+export interface ShotRef {
+  /** `"<ts>-<first 8 hex of sha256(full webp)>"`. */
+  file?: string;
+  status: 'ok' | 'partial' | 'failed';
+  /** Archive subresources that failed to load. */
+  missing?: { css: number; img: number };
+  /** How the recorder decided the page was done: network quiet, or the hard time cap. */
+  settle: 'quiet' | 'cap';
+  /** Elements hidden before the screenshot (e.g. monetary figures). */
+  redacted?: number;
+  /** Why the shot failed, e.g. "http 404" or "blank page". */
+  reason?: string;
+}
+
+/** How a fixture's pictures were recorded: top of page only, at a fixed viewport. */
+export interface SampleVisual {
+  archive: ArchiveId;
+  recordedAt: string;
+  recorder: string;
+  viewport: { w: 1280; h: 800 };
+  full: { w: 960; h: 600 };
+  thumb: { w: 320; h: 200 };
+  format: 'webp';
+  attribution: string;
+  notes?: string[];
 }
 
 /** A summary stored in a fixture, keyed by `"<fromTs>-<toTs>"`. */
@@ -98,6 +131,9 @@ export interface SampleFixture {
   blocks: FixtureBlock[];
   snapshots: FixtureSnapshot[];
   summaries?: Record<string, FixtureSummary>;
+  /** The curated change the first view opens on, `"<fromTs>-<toTs>"` (both are snapshot timestamps). */
+  featured?: string;
+  visual?: SampleVisual;
 }
 
 /**

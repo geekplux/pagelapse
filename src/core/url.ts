@@ -80,6 +80,11 @@ export function rawCaptureUrl(archive: ArchiveId, ts: string, url: string): stri
   return replayUrl(archive, ts, 'id_', url);
 }
 
+/** URL that replays a capture as the page looked, for an iframe (IA `if_`, Arquivo.pt `mp_`). */
+export function replayFrameUrl(archive: ArchiveId, ts: string, url: string): string {
+  return replayUrl(archive, ts, ARCHIVES[archive].frame, url);
+}
+
 /** URL of a capture in the archive's own viewer, for "open in archive" links. */
 export function viewCaptureUrl(archive: ArchiveId, ts: string, url: string): string {
   return replayUrl(archive, ts, '', url);

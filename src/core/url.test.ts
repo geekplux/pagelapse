@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pairKey, rawCaptureUrl, validateTargetUrl, viewCaptureUrl } from './url.ts';
+import { pairKey, rawCaptureUrl, replayFrameUrl, validateTargetUrl, viewCaptureUrl } from './url.ts';
 
 describe('validateTargetUrl', () => {
   it.each([
@@ -57,6 +57,12 @@ describe('capture URLs', () => {
     expect(rawCaptureUrl('arquivo-pt', '20140317091200', url)).toBe(
       'https://arquivo.pt/wayback/20140317091200id_/https://example.org/',
     );
+  });
+
+  it('builds frame replay URLs: IA if_, Arquivo.pt mp_', () => {
+    expect(replayFrameUrl('internet-archive', '20140317091200', url)).toBe('https://web.archive.org/web/20140317091200if_/https://example.org/');
+    expect(replayFrameUrl('arquivo-pt', '20140317091200', url)).toBe('https://arquivo.pt/wayback/20140317091200mp_/https://example.org/');
+    expect(() => replayFrameUrl('arquivo-pt', '2014', url)).toThrow(RangeError);
   });
 
   it('rejects malformed timestamps', () => {

@@ -41,6 +41,23 @@ describe('parseSampleFixture', () => {
     expect(parseSampleFixture(f).summaries?.['20140317091200-20160602143000']?.source).toBe('rule');
   });
 
+  const visual = {
+    archive: 'arquivo-pt', recordedAt: '2026-10-20', recorder: 'test', viewport: { w: 1280, h: 800 },
+    full: { w: 960, h: 600 }, thumb: { w: 320, h: 200 }, format: 'webp', attribution: 'Test.', notes: ['Two rows hidden.'],
+  };
+  const shot = (ts: string) => ({ file: `${ts}-0123abcd`, status: 'partial', settle: 'quiet', missing: { css: 1, img: 0 }, redacted: 2 });
+
+  it('accepts pictures: visual, shots (a failed one without a file) and a featured pair', () => {
+    const f = clone();
+    Object.assign(f, { visual, featured: '20140317091200-20180101000000' });
+    f.snapshots[0]!.shot = shot('20140317091200');
+    f.snapshots[1]!.shot = { status: 'failed', settle: 'cap', reason: 'blank page' };
+    const p = parseSampleFixture(f);
+    expect(p.snapshots[0]!.shot).toEqual(shot('20140317091200'));
+    expect(p.snapshots[1]!.shot).toEqual({ status: 'failed', settle: 'cap', reason: 'blank page' });
+    expect(p).toMatchObject({ visual, featured: '20140317091200-20180101000000' });
+  });
+
   const malformed: Array<[string, (f: ReturnType<typeof clone>) => void, string]> = [
     ['wrong schema', (f) => (f.schema = 2), '$.schema'],
     ['missing blocks', (f) => delete f.blocks, '$.blocks'],
@@ -63,6 +80,13 @@ describe('parseSampleFixture', () => {
     ['no snapshots', (f) => (f.snapshots = []), '$.snapshots'],
     ['bad summary key', (f) => (f.summaries = { nope: { text: 'x', source: 'rule' } }), '$.summaries["nope"]'],
     ['not an object', (f) => (f.source = null), '$.source'],
+    ['bad shot file pattern', (f) => (f.snapshots[0]!.shot = { ...shot('20140317091200'), file: 'x.webp' }), '$.snapshots[0].shot.file'],
+    ['shot file of another capture', (f) => (f.snapshots[1]!.shot = shot('20140317091200')), '$.snapshots[1].shot.file'],
+    ['ok shot without a file', (f) => (f.snapshots[0]!.shot = { status: 'ok', settle: 'quiet' }), '$.snapshots[0].shot.file'],
+    ['unknown shot status', (f) => (f.snapshots[0]!.shot = { ...shot('20140317091200'), status: 'great' }), '$.snapshots[0].shot.status'],
+    ['wrong picture dimensions', (f) => (f.visual = { ...visual, full: { w: 1280, h: 800 } }), '$.visual.full'],
+    ['featured not a pair of the fixture', (f) => (f.featured = '20140317091200-20990101000000'), '$.featured'],
+    ['featured pair reversed', (f) => (f.featured = '20180101000000-20140317091200'), '$.featured'],
   ];
 
   it.each(malformed)('rejects %s', (_name, mutate, path) => {

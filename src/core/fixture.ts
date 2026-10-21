@@ -9,6 +9,8 @@ import {
   type FixtureSummary,
   type HeadingLevel,
   type SampleFixture,
+  type SampleVisual,
+  type ShotRef,
   type SnapshotPage,
 } from './types.ts';
 
@@ -23,6 +25,7 @@ export class FixtureError extends Error {
 }
 
 const PAIR_KEY_RE = /^(\d{14})-(\d{14})$/;
+const SHOT_FILE_RE = /^\d{14}-[0-9a-f]{8}$/;
 
 type Obj = Record<string, unknown>;
 
@@ -84,7 +87,55 @@ function parseSnapshot(v: unknown, path: string, blockCount: number): FixtureSna
     if (typeof o.truncated !== 'boolean') throw new FixtureError(`${path}.truncated`, 'expected a boolean');
     snap.truncated = o.truncated;
   }
+  if (o.shot !== undefined) snap.shot = parseShot(o.shot, `${path}.shot`, ts);
   return snap;
+}
+
+const count = (v: unknown, path: string): number => {
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) throw new FixtureError(path, 'expected a count >= 0');
+  return v;
+};
+
+function parseShot(v: unknown, path: string, ts: string): ShotRef {
+  const o = obj(v, path);
+  const shot: ShotRef = {
+    status: oneOf(o.status, ['ok', 'partial', 'failed'] as const, `${path}.status`),
+    settle: oneOf(o.settle, ['quiet', 'cap'] as const, `${path}.settle`),
+  };
+  if (o.file !== undefined || shot.status !== 'failed') {
+    const file = str(o.file, `${path}.file`);
+    if (!SHOT_FILE_RE.test(file) || !file.startsWith(ts)) throw new FixtureError(`${path}.file`, 'expected "<ts>-<8 hex>"');
+    shot.file = file;
+  }
+  if (o.missing !== undefined) {
+    const m = obj(o.missing, `${path}.missing`);
+    shot.missing = { css: count(m.css, `${path}.missing.css`), img: count(m.img, `${path}.missing.img`) };
+  }
+  if (o.redacted !== undefined) shot.redacted = count(o.redacted, `${path}.redacted`);
+  if (o.reason !== undefined) shot.reason = str(o.reason, `${path}.reason`);
+  return shot;
+}
+
+function size<W extends number, H extends number>(v: unknown, path: string, w: W, h: H): { w: W; h: H } {
+  const o = obj(v, path);
+  if (o.w !== w || o.h !== h) throw new FixtureError(path, `expected ${w}×${h}`);
+  return { w, h };
+}
+
+function parseVisual(v: unknown, path: string): SampleVisual {
+  const o = obj(v, path);
+  const visual: SampleVisual = {
+    archive: oneOf(o.archive, ARCHIVE_IDS, `${path}.archive`),
+    recordedAt: str(o.recordedAt, `${path}.recordedAt`),
+    recorder: str(o.recorder, `${path}.recorder`),
+    viewport: size(o.viewport, `${path}.viewport`, 1280, 800),
+    full: size(o.full, `${path}.full`, 960, 600),
+    thumb: size(o.thumb, `${path}.thumb`, 320, 200),
+    format: oneOf(o.format, ['webp'] as const, `${path}.format`),
+    attribution: str(o.attribution, `${path}.attribution`),
+  };
+  if (o.notes !== undefined) visual.notes = arr(o.notes, `${path}.notes`).map((n, i) => str(n, `${path}.notes[${i}]`));
+  return visual;
 }
 
 function parseSummary(v: unknown, path: string): FixtureSummary {
@@ -140,6 +191,13 @@ export function parseSampleFixture(json: unknown): SampleFixture {
       fixture.summaries[key] = parseSummary(value, `$.summaries["${key}"]`);
     }
   }
+  if (o.featured !== undefined) {
+    const [, from, to] = PAIR_KEY_RE.exec(str(o.featured, '$.featured')) ?? [];
+    const has = (ts?: string) => snapshots.some((s) => s.ts === ts);
+    if (!has(from) || !has(to) || from! >= to!) throw new FixtureError('$.featured', 'expected "<fromTs>-<toTs>" of two snapshots');
+    fixture.featured = o.featured as string;
+  }
+  if (o.visual !== undefined) fixture.visual = parseVisual(o.visual, '$.visual');
   return fixture;
 }
 
