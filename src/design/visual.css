@@ -18,8 +18,14 @@
   .side { display: flex; flex-direction: column; }
   .side .change-panel { flex: 1; }
   .controls { margin-top: auto; }
+  /* "Change details" opens downward: the space it takes is added below the picture (DiffView sets --details-h), so
+     the row grows and the controls row stays put instead of rising (not in Side by side, where the change follows). */
+  .hero:has(.change-details[open]):not(:has(> .vpane[data-mode="side"])) > .vpane { margin-bottom: var(--details-h, 0) /* spacing-allow: the measured height of the open details */; }
+  .hero > .live-status { grid-column: 1 / -1; }
 }
 .stage h3 { margin: 0; }
+/* A live run's status line tops the side column (directly under the picture on phones). */
+.side > .live-status { margin-bottom: var(--space-3); }
 
 /* One controls row: Play, Previous / Next, Compare (and Before / After in Single), then "Change details". */
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }

@@ -7,7 +7,7 @@ import { ChangesList } from '../ChangesList.tsx';
 import { ChangeCard, DiffView } from '../diff/DiffView.tsx';
 import { EmptyState } from '../states/EmptyState.tsx';
 import { ErrorCard } from '../states/ErrorCard.tsx';
-import { LoadingStatus } from '../states/LoadingStatus.tsx';
+import { LoadingStatus, type StatusFocus } from '../states/LoadingStatus.tsx';
 import { stepIndex, tsToMs } from '../timeline/scale.ts';
 import { Legend } from '../timeline/Legend.tsx';
 import { Timeline } from '../timeline/Timeline.tsx';
@@ -39,9 +39,9 @@ const years = (a?: string, b?: string) => (a && b ? `${a.slice(0, 4)}–${b.slic
 const IA = ARCHIVES['internet-archive'];
 
 /**
- * A live run: the hero (title, then the empty or error card, or the replay pane and the selected change), the scrub
- * strip captioned by the run's status line (filmstrip and timeline growing capture by capture), the folded changes
- * list and the diff.
+ * A live run: the hero (title, then the empty or error card, or the replay pane and the side column: the run's status
+ * line over the selected change), the scrub strip (filmstrip and timeline growing capture by capture), the folded
+ * changes list and the diff.
  */
 export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
   const { state, cancel } = useLiveTimeline(url);
@@ -174,6 +174,26 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     if (fresh > 0) newsFrame.current = requestAnimationFrame(() => setNews(`${fresh} more change${fresh === 1 ? '' : 's'} arrived.`));
   };
 
+  // The run's status line sits at the top of the side column, directly under the picture on phones, so a running run
+  // shows its progress and Cancel in the first viewport; with no side column it follows the title. It moves between
+  // the two (a remount), so it carries focus across (`carry`).
+  const carried = useRef<StatusFocus>(null);
+  const carry = useMemo(
+    () => ({
+      take: () => {
+        const where = carried.current;
+        carried.current = null;
+        return where;
+      },
+      keep: (where: StatusFocus) => void (carried.current = where),
+    }),
+    [],
+  );
+  const statusLine = !error && (
+    <LoadingStatus text={text} running={running} progress={captures.length ? [state.next, captures.length] : undefined} onCancel={cancel} onRetry={status === 'cancelled' ? onRetry : undefined} textRef={setTarget} carry={carry} />
+  );
+  const withSide = captures.length > 0 && (!!(entry && shownAt) || running);
+
   const span = years(captures[0]?.ts, captures.at(-1)?.ts);
   const quiet = status === 'done' && !entries.length && snapshots.length > 0;
   const card = (lead?: ReactNode, tools?: ReactNode) =>
@@ -233,7 +253,12 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
                 steps={shownAt && changeSteps.includes(shownAt) ? changeSteps : snapshots.map((x) => x.ts)}
                 runActive={running}
                 hold={hold}
-                side={(lead, tools) => <div className="side">{card(lead, tools)}</div>}
+                side={(lead, tools) => (
+                  <div className="side">
+                    {statusLine}
+                    {card(lead, tools)}
+                  </div>
+                )}
               />
             ) : (
               running && (
@@ -247,48 +272,47 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
                       <figcaption className="vp-cap mono">&nbsp;</figcaption>
                     </figure>
                   </section>
-                  <p className="side live-wait">The first change shows here as soon as two captures have been compared.</p>
+                  <div className="side">
+                    {statusLine}
+                    <p className="live-wait">The first change shows here as soon as two captures have been compared.</p>
+                  </div>
                 </>
               )
             ))}
+          {!withSide && statusLine}
         </div>
-        {(!error || captures.length > 0) && (
+        {captures.length > 0 && (
           <div className="scrub" data-region="scrub">
-            {!error && <LoadingStatus text={text} running={running} progress={captures.length ? [state.next, captures.length] : undefined} onCancel={cancel} onRetry={status === 'cancelled' ? onRetry : undefined} textRef={setTarget} />}
-            {captures.length > 0 && (
-              <>
-                <Filmstrip items={items} pending={captures.length - items.length} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
-                <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
-                  <h3 id="timeline-heading" className="sr-only">
-                    Timeline
-                  </h3>
-                  {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-                  <span className="sr-only" role="status">
-                    {news}
+            <Filmstrip items={items} pending={captures.length - items.length} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
+            <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
+              <h3 id="timeline-heading" className="sr-only">
+                Timeline
+              </h3>
+              {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+              <span className="sr-only" role="status">
+                {news}
+              </span>
+              <Timeline
+                timeline={strip.timeline}
+                marks={strip.marks}
+                selected={stripSelected}
+                onSelect={selectOnStrip}
+                labelledBy="timeline-heading"
+                describedBy="timeline-legend"
+              />
+              <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial}>
+                {marks.length > failed.length && (
+                  <span>
+                    <i className="mark-pending" /> not fetched yet
                   </span>
-                  <Timeline
-                    timeline={strip.timeline}
-                    marks={strip.marks}
-                    selected={stripSelected}
-                    onSelect={selectOnStrip}
-                    labelledBy="timeline-heading"
-                    describedBy="timeline-legend"
-                  />
-                  <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial}>
-                    {marks.length > failed.length && (
-                      <span>
-                        <i className="mark-pending" /> not fetched yet
-                      </span>
-                    )}
-                    {failed.length > 0 && (
-                      <span>
-                        <i className="mark-failed" /> {failed.length} could not be fetched
-                      </span>
-                    )}
-                  </Legend>
-                </div>
-              </>
-            )}
+                )}
+                {failed.length > 0 && (
+                  <span>
+                    <i className="mark-failed" /> {failed.length} could not be fetched
+                  </span>
+                )}
+              </Legend>
+            </div>
           </div>
         )}
         {entry && (

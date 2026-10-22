@@ -91,6 +91,25 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
     return () => io.disconnect();
   }, []);
 
+  // "Change details" opens downward: the hero gets its open height (`--details-h`), which desktop CSS adds below the
+  // picture, so the row grows by it and the bottom-aligned controls row (with the summary) stays where it was.
+  const details = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const el = details.current;
+    const hero = el?.closest<HTMLElement>('.hero');
+    if (!el || !hero || typeof ResizeObserver !== 'function') return;
+    const ro = new ResizeObserver(() => {
+      const summary = el.querySelector('summary');
+      const extra = el.open && summary ? el.getBoundingClientRect().height - summary.getBoundingClientRect().height : 0;
+      hero.style.setProperty('--details-h', `${Math.max(0, Math.round(extra))}px`);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      hero.style.removeProperty('--details-h');
+    };
+  }, []);
+
   return (
     <section className="change-panel" aria-labelledby="change-heading">
       <h3 id="change-heading">
@@ -126,7 +145,7 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
           </nav>
         </div>
         {tools}
-        <details className="fold change-details">
+        <details className="fold change-details" ref={details}>
           <summary>Change details</summary>
           <p className="panel-stats mono">{statsLine(entry.record)}</p>
           <p className="panel-links">

@@ -76,7 +76,15 @@ function measure() {
   const controls = document.querySelector('.controls') ?? document.querySelector('.diff-nav');
   const order = [document.querySelector('.sheet h2'), mat, document.querySelector('.change-panel'), controls];
   const inOrder = order.every(Boolean) && order.every((el, i) => i === 0 || !!(order[i - 1]!.compareDocumentPosition(el!) & Node.DOCUMENT_POSITION_FOLLOWING));
+  const status = document.querySelector('.live-status');
+  const frames = [...document.querySelectorAll('.film-strip .frame')].map((f) => f.getBoundingClientRect()).filter((r) => r.right > 0 && r.left < vw);
+  // The changes list's rows (when open): left edge and top, in DOM order.
+  const rows = [...document.querySelectorAll('.changes .change')].filter((el) => el.checkVisibility()).map((el) => el.getBoundingClientRect()).map((r) => [Math.round(r.left), Math.round(r.top)] as const);
   return {
+    status: status ? seen(status) : null,
+    framesBottom: frames.length ? Math.round(Math.max(...frames.map((r) => r.bottom))) : null,
+    vh,
+    rows,
     regions: regions.length ? regions.filter(seen).map((r) => r.dataset.region!) : null,
     stops: stops.map(name),
     framed: framed.map(name),
@@ -170,11 +178,27 @@ async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
     if (!m.inOrder) problems.push('hero DOM order is not title → picture → change line → controls');
     if (wide && (m.align ?? 99) > 8) problems.push(`controls row ends ${m.align} px from the picture's bottom`);
   }
+  // A running run shows its progress line (counter, bar, Cancel) in the first viewport; on desktop the strip's
+  // thumbnails are fully in view too.
+  if (view.name === 'live-running') {
+    if (!m.status) problems.push('the status line is not in the first viewport');
+    if (wide && (m.framesBottom === null || m.framesBottom > m.vh)) problems.push(`filmstrip thumbnails end at ${m.framesBottom} of ${m.vh}`);
+  }
+  // Carry-over 9e: the opened changes list is one column in chronological order (tops strictly increase).
+  if (view.name === 'text-diff') {
+    const one = m.rows.length > 1 && m.rows.every(([l, t], i) => i === 0 || (l === m.rows[0]![0] && t > m.rows[i - 1]![1]));
+    if (!one) problems.push(`changes list is not one column in order: ${m.rows.map(([l, t]) => `${l},${t}`).join(' ')}`);
+  }
+  const extra = [
+    m.status !== null && `status line in first view: ${m.status}`,
+    view.name === 'live-running' && m.framesBottom !== null && `thumbnails end at ${m.framesBottom} of ${m.vh}`,
+    m.rows.length > 0 && `changes list rows (left,top): ${m.rows.map(([l, t]) => `${l},${t}`).join(' ')}`,
+  ].filter(Boolean) as string[];
   // Axe with every disclosure open (the runner checks the closed state after this).
   const close = await openAll(page);
   const axeOpen = await assertAxeClean(page);
   await close();
-  const notes = [row, `stops: ${m.stops.join(' ')}`, `framed: ${m.framed.join(' ')}`, `eyebrows: ${m.eyebrows.join(' ')}`, `fills: ${m.fills.join(' ')}`, `headings: ${m.headings.join(' | ')}`, `disclosures open: ${axeOpen}`];
+  const notes = [row, `stops: ${m.stops.join(' ')}`, `framed: ${m.framed.join(' ')}`, `eyebrows: ${m.eyebrows.join(' ')}`, `fills: ${m.fills.join(' ')}`, `headings: ${m.headings.join(' | ')}`, `disclosures open: ${axeOpen}`, ...extra];
   if (problems.length && !baseline) throw new Error(`${view.name} ${w}: ${problems.join('; ')}`);
   return { notes: problems.length ? [...notes, `over caps (baseline run): ${problems.join('; ')}`] : notes };
 }
@@ -303,6 +327,29 @@ async function sticky(page: Page, scroll: boolean) {
   return [...notes, `scrolled to the diff: bar fixed at ${later.bar.map(Math.round).join('-')}, caption ${later.cap.map(Math.round).join('-')} (clear)`];
 }
 
+/** Opens "Change details" with the keyboard: its summary (and the rows above it) stay put, the panel opens downward. */
+async function detailsStay(page: Page): Promise<string> {
+  const summary = page.locator('.change-details > summary');
+  const top = () => summary.evaluate((el) => el.getBoundingClientRect().top + scrollY);
+  const prev = () => page.locator('.diff-nav .btn').first().evaluate((el) => el.getBoundingClientRect().top + scrollY);
+  // The view settles in (a short translate) after load: measure once it has finished.
+  await settled(page);
+  const before = [await top(), await prev()];
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector<HTMLDetailsElement>('.change-details')?.open);
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  const after = [await top(), await prev()];
+  const moved = after.map((a, i) => Math.round(Math.abs(a - before[i]!)));
+  if (moved.some((d) => d > 2)) throw new Error(`opening Change details moved its summary by ${moved[0]} px and Previous by ${moved[1]} px (${before.map(Math.round)} → ${after.map(Math.round)})`);
+  const panel = await page.evaluate(() => {
+    const d = document.querySelector('.change-details')!.getBoundingClientRect();
+    return { bottom: Math.round(d.bottom + scrollY), picture: Math.round(document.querySelector('.vpane .vp-mat')!.getBoundingClientRect().bottom + scrollY) };
+  });
+  await page.keyboard.press('Enter');
+  return `Change details opened: summary moved ${moved[0]} px, Previous ${moved[1]} px; panel ends at ${panel.bottom} (picture ${panel.picture})`;
+}
+
 const live = (page: Page, baseUrl: string) => VIEWS.find((v) => v.name === 'live-done')!.setup(page, baseUrl);
 const SOURCES = { rule: 'Summaries: auto summary (rules)', ai: 'Summaries: AI summary (Workers AI)', some: 'Summaries: mixed: items marked AI are by Workers AI' } as const;
 
@@ -323,7 +370,7 @@ export const calmFlows: readonly Flow[] = [
   { name: 'calm-inventory', description: 'Every feature reachable by Tab, Enter and Space, opening at most one disclosure, named in the tree', viewports: ['wide', 'mobile'], widthTag: true, firstView: true, run: inventory },
   {
     name: 'calm-fit',
-    description: 'Every sample at 1280×800 and 1440×900: the controls row ends within 8 px of the picture; the scrub strip starts in the first viewport',
+    description: 'Every sample at 1280×800 and 1440×900 (and git-scm at 960×800): the controls row ends within 8 px of the picture; the scrub strip starts in the first viewport; opening Change details does not move its summary',
     viewports: ['desktop', 'wide'],
     widthTag: true,
     firstView: true,
@@ -336,7 +383,14 @@ export const calmFlows: readonly Flow[] = [
           return { gap: Math.round(Math.abs(r('.controls').bottom - r('.vpane .vp-mat').bottom)), scrub: Math.round(r('.scrub').top), vh: innerHeight };
         });
         if (m.gap > 8 || m.scrub >= m.vh) throw new Error(`${id}: controls ${m.gap} px from the picture's bottom, scrub strip at ${m.scrub} of ${m.vh}`);
-        notes.push(`${id}: controls ${m.gap} px from the picture's bottom; scrub strip at ${m.scrub} (< ${m.vh})`);
+        notes.push(`${id}: controls ${m.gap} px from the picture's bottom; scrub strip at ${m.scrub} (< ${m.vh}); ${await detailsStay(page)}`);
+      }
+      const size = page.viewportSize()!;
+      if (size.width === 1440) {
+        await page.setViewportSize({ width: 960, height: 800 });
+        await openReady(page, baseUrl);
+        notes.push(`git-scm at 960: ${await detailsStay(page)}`);
+        await page.setViewportSize(size);
       }
       return { notes };
     },
@@ -381,6 +435,33 @@ export const calmFlows: readonly Flow[] = [
       });
       if (m.share > 0.1) throw new Error(`the tag covers ${(m.share * 100).toFixed(1)}% of the outline`);
       return { notes: [`tag covers ${(m.share * 100).toFixed(1)}% of the outline; its full text stays in the DOM: "${m.text}"`] };
+    },
+  },
+  {
+    name: 'calm-status-focus',
+    description: 'Live run: Cancel keeps focus when the status line moves into the side column with the first change, and Start again gets it after Cancel',
+    viewports: ['mobile', 'wide'],
+    widthTag: true,
+    async run({ page, baseUrl }) {
+      await mockApi(page, { snapshot: (i) => (i < 4 ? { delay: 900 } : { delay: null }) });
+      await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
+      const cancel = page.locator('.live-status button', { hasText: 'Cancel' });
+      await cancel.focus();
+      const where = () => page.evaluate(() => {
+        const a = document.activeElement;
+        const side = a?.closest('.side');
+        return `${side ? (side.querySelector('.live-wait') ? 'waiting side' : 'side') : a?.closest('.hero') ? 'hero' : 'elsewhere'}:${a?.tagName.toLowerCase()}:${a?.textContent?.trim().slice(0, 20)}`;
+      });
+      const first = await where();
+      if (first !== 'waiting side:button:Cancel') throw new Error(`Cancel focused before the first change: focus on ${first}`);
+      await page.locator('.side .change-panel').waitFor({ timeout: 10_000 });
+      const moved = await where();
+      if (moved !== 'side:button:Cancel') throw new Error(`after the first change arrived, focus on ${moved} (was ${first})`);
+      await page.keyboard.press('Enter');
+      await page.locator('[data-live="cancelled"]').waitFor();
+      const stopped = await where();
+      if (!stopped.endsWith(':button:Start again')) throw new Error(`after Cancel, focus on ${stopped}`);
+      return { notes: [`Cancel focused at ${first}; the first change arrived: focus on ${moved}; Enter (Cancel): focus on ${stopped}`] };
     },
   },
   {

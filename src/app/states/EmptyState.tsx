@@ -13,7 +13,8 @@ export function EmptyState({ url, onSample, headingRef }: { url: string; onSampl
           Save it now<span aria-hidden="true">&nbsp;↗</span>
           <span className="sr-only"> in the Internet Archive (opens in a new tab)</span>
         </a>
-        <button type="button" className="btn" onClick={onSample}>
+        {/* A text link: the card's one button is its first action. */}
+        <button type="button" className="btn-link" onClick={onSample}>
           Open a sample
         </button>
       </p>

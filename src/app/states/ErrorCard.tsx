@@ -56,7 +56,8 @@ export function ErrorCard({ error, onRetry, onSample, announce, headingRef }: Pr
         <button type="button" className="btn" aria-disabled={waiting || undefined} onClick={waiting ? undefined : onRetry}>
           Try again
         </button>
-        <button type="button" className="btn" onClick={onSample}>
+        {/* A text link: the card's one button is its first action. */}
+        <button type="button" className="btn-link" onClick={onSample}>
           Open a sample
         </button>
       </p>
