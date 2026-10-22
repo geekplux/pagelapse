@@ -6,6 +6,15 @@ import type { ApiError } from './api.ts';
 
 export type LiveStatus = 'captures' | 'snapshots' | 'done' | 'cancelled' | 'error';
 
+/** A run that will add no more changes: finished, cancelled, or failed. */
+export const runEnded = (status: LiveStatus) => status === 'done' || status === 'cancelled' || status === 'error';
+
+/** New changes worth an AI summaries request mid-run (a run that has ended asks for whatever is pending). */
+export const SUMMARY_EVERY = 4;
+
+/** Whether `pending` changes not yet asked for should be sent now: every {@link SUMMARY_EVERY}, and all once ended. */
+export const summariesDue = (pending: number, status: LiveStatus) => pending > 0 && (runEnded(status) || pending >= SUMMARY_EVERY);
+
 export interface LiveState {
   url: string;
   status: LiveStatus;

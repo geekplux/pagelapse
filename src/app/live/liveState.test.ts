@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SnapshotPage } from '../../core/types.ts';
 import { ApiError, fetchCaptures, fetchSnapshot } from './api.ts';
-import { initialLive, liveReducer, progressText } from './liveState.ts';
+import { SUMMARY_EVERY, initialLive, liveReducer, progressText, summariesDue } from './liveState.ts';
 import { throttleLatest } from '../throttle.ts';
 
 const caps = ['20140101000000', '20150101000000', '20160101000000'].map((ts) => ({ ts, digest: ts, length: 0 }));
@@ -91,5 +91,23 @@ describe('api client', () => {
     c.abort();
     vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => Promise.reject(new DOMException('Aborted', 'AbortError'))));
     await expect(fetchCaptures('https://example.org/', c.signal)).rejects.toBeInstanceOf(DOMException);
+  });
+});
+
+describe('summariesDue', () => {
+  it('waits for a batch mid-run, but asks for pending summaries once the run is done, cancelled or failed', () => {
+    const mid = (n: number) => [summariesDue(n, 'captures'), summariesDue(n, 'snapshots')];
+    expect(mid(SUMMARY_EVERY - 1)).toEqual([false, false]);
+    expect(mid(SUMMARY_EVERY)).toEqual([true, true]);
+    for (const status of ['done', 'cancelled', 'error'] as const) {
+      expect([summariesDue(1, status), summariesDue(0, status)]).toEqual([true, false]);
+    }
+  });
+
+  it('a cancelled or failed run with a few pending changes is due (the reducer statuses)', () => {
+    const s = liveReducer(started(), { type: 'snapshot', index: 0, page: page(caps[0]!.ts, 'Old text.') });
+    expect(summariesDue(1, s.status)).toBe(false);
+    expect(summariesDue(1, liveReducer(s, { type: 'cancel' }).status)).toBe(true);
+    expect(summariesDue(1, liveReducer(s, { type: 'error', error: new ApiError('archive_unavailable', 'down') }).status)).toBe(true);
   });
 });

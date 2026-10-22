@@ -46,7 +46,7 @@ const IA = ARCHIVES['internet-archive'];
 export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
   const { state, cancel } = useLiveTimeline(url);
   const { status, captures, failed, error } = state;
-  const ai = useSummaries(url, state.timeline.entries, status === 'done');
+  const ai = useSummaries(url, state.timeline.entries, status);
   const timeline = useMemo(() => withAiSummaries(state.timeline, ai), [state.timeline, ai]);
   const { entries, trivialCaptures, snapshots } = timeline;
   const [pick, setPick] = useState(initialChange);
