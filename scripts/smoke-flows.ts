@@ -1048,7 +1048,7 @@ export const flows: readonly Flow[] = [
         const name = `Open ${word} capture, ${formatTimestampLong(ts)} (opens in a new tab)`;
         if (!tree.includes(`link "${name}"`)) problems.push(`no link "${name}" in ${tree.replace(/\n/g, ' ')}`);
       }
-      const shown = await page.locator('.vp-pair .cap-out').evaluateAll((as) => as.map((x) => `${x.childNodes[0]?.textContent}${getComputedStyle(x, '::after').content.includes('↗') ? ' ↗' : ''}`));
+      const shown = await page.locator('.vp-pair .cap-out').evaluateAll((as) => as.map((x) => `${x.textContent}${getComputedStyle(x, '::after').content.includes('↗') ? ' ↗' : ''}`));
       if (shown.join() !== 'Open Before capture ↗,Open After capture ↗') problems.push(`visible link text ${shown.join(' | ')}`);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
@@ -1183,8 +1183,9 @@ export const flows: readonly Flow[] = [
   {
     name: 'examples-deeplinks',
     description: 'Every sample link in examples/README.md opens the sample, the change (its dates in the link text) and the compare mode it names',
-    viewports: ['desktop'],
+    viewports: ['wide'],
     shot: 'examples-gallery',
+    firstView: true,
     async run({ page, baseUrl }) {
       const md = readFileSync(new URL('../examples/README.md', import.meta.url), 'utf8');
       const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Onion skin|Single)\]\(http:\/\/localhost:5173(\/\?sample=[^)]+)\)/g)];
@@ -1208,8 +1209,9 @@ export const flows: readonly Flow[] = [
         notes.push(`${q.get('sample')} ${from} → ${to} in ${mode}`);
       }
       if (links.length < 6) throw new Error(`only ${links.length} sample links found in examples/README.md`);
-      // The shot: the gallery's first-view deep link (the git-scm decade compare).
-      await openReady(page, baseUrl, links[0]![4]);
+      // The shot: the gallery's Wikipedia redesign link (the git-scm decade compare is the hero shot already).
+      await openReady(page, baseUrl, links.find((l) => l[4]!.includes('wikipedia') && l[3] === 'Slider')![4]);
+      await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       return { notes: [`${links.length} links`, ...notes] };
     },
   },

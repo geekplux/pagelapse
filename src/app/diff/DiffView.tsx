@@ -117,11 +117,11 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
         <span className="panel-kicker mono">
           {overview ? (
             // The decade compare: the first (complete) capture against the latest, not one change.
-            <>
+            <span className="change-span">
               {overview[0]} <span aria-hidden="true">→</span>
               <span className="sr-only"> capture to</span> {overview[1]}
               <span className="sr-only">,</span>
-            </>
+            </span>
           ) : (
             <>
               <span className="sr-only">Change {index + 1} of {count}, </span>

@@ -127,12 +127,19 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
       {ps.length > 1 && pairNote && <span>{pairNote}</span>}
       {shown === 'single' && trivial && <span>trivial edit</span>}
       {(shown === 'single' || shown === 'side') &&
-        ps.map((p) => (
-          <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
-            {shown === 'side' ? `Open ${SIDES.find(([s]) => s === sideOf(entry, p.ts))![2]} capture` : 'Open capture'}
-            <span className="sr-only">{shown === 'side' && `, ${formatTimestampLong(p.ts)}`} (opens in a new tab)</span>
-          </a>
-        ))}
+        ps.map((p) => {
+          const word = SIDES.find(([s]) => s === sideOf(entry, p.ts))?.[2];
+          return shown === 'side' ? (
+            // Named with the date, starting with the visible text (WCAG 2.5.3): "Open Before capture, 6 November 2013 (…)".
+            <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer" aria-label={`Open ${word} capture, ${formatTimestampLong(p.ts)} (opens in a new tab)`}>
+              {`Open ${word} capture`}
+            </a>
+          ) : (
+            <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
+              Open capture<span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          );
+        })}
       {ps.map(
         (p) =>
           p.status === 'partial' && (
