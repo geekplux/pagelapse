@@ -1181,6 +1181,39 @@ export const flows: readonly Flow[] = [
     },
   })),
   {
+    name: 'examples-deeplinks',
+    description: 'Every sample link in examples/README.md opens the sample, the change (its dates in the link text) and the compare mode it names',
+    viewports: ['desktop'],
+    shot: 'examples-gallery',
+    async run({ page, baseUrl }) {
+      const md = readFileSync(new URL('../examples/README.md', import.meta.url), 'utf8');
+      const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Onion skin|Single)\]\(http:\/\/localhost:5173(\/\?sample=[^)]+)\)/g)];
+      const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', 'Onion skin': 'onion', Single: 'single' };
+      const notes: string[] = [];
+      for (const [, from, to, mode, path] of links) {
+        const q = new URL(path!, baseUrl).searchParams;
+        const f = fixtures.find((x) => x.id === q.get('sample'))!;
+        await openReady(page, baseUrl, path);
+        const m = await page.evaluate(() => ({
+          label: document.querySelector('#sample-label')?.textContent?.trim(),
+          dates: [...document.querySelectorAll('#change-heading time [aria-hidden="true"]')].map((t) => t.textContent?.trim()),
+          mode: document.querySelector<HTMLInputElement>('input[name="vp-mode"]:checked')?.value,
+        }));
+        const problems = [
+          m.label !== f?.label && `sample "${m.label}"`,
+          m.dates.join() !== `${from},${to}` && `change ${m.dates.join(' → ')}`,
+          m.mode !== MODE[mode!] && `mode ${m.mode}`,
+        ].filter(Boolean);
+        if (problems.length) throw new Error(`${path}: ${problems.join('; ')}, expected ${from} → ${to} in ${mode}`);
+        notes.push(`${q.get('sample')} ${from} → ${to} in ${mode}`);
+      }
+      if (links.length < 6) throw new Error(`only ${links.length} sample links found in examples/README.md`);
+      // The shot: the gallery's first-view deep link (the git-scm decade compare).
+      await openReady(page, baseUrl, links[0]![4]);
+      return { notes: [`${links.length} links`, ...notes] };
+    },
+  },
+  {
     name: 'hero-gif-frames',
     description: 'For scripts/render-hero-gif.ts: the decade compare, then one frame per Play step, written to .cache/hero-gif/',
     selfTest: true,
