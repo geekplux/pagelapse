@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest something that would save you time.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pagelapse stays small and calm on purpose (one focal point per view). Ideas that make the first look faster or clearer are the most welcome.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The moment you reached for Pagelapse, and what got in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: Your idea, and any alternatives you thought about.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send
+      options:
+        - label: I checked the open issues and docs/GOOD_FIRST_ISSUES.md for the same idea.
+          required: true
+        - label: I would like to work on this myself.

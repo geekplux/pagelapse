@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem
+    url: https://github.com/geekplux/pagelapse/security/policy
+    about: Please report vulnerabilities privately, as described in the security policy.
+  - name: Questions and ideas
+    url: https://github.com/geekplux/pagelapse/blob/main/CONTRIBUTING.md
+    about: Read the contributing guide for setup, checks and design rules.
