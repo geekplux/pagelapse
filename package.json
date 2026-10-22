@@ -24,7 +24,9 @@
     "bake:summaries": "node scripts/bake-sample-summaries.ts",
     "render:social": "node scripts/render-social.ts",
     "render:gif": "node scripts/render-hero-gif.ts",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check:deploy": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "deploy": "CLOUDFLARE_ENV=production pnpm build && wrangler deploy"
   },
   "dependencies": {
     "htmlparser2": "^12.0.0",

@@ -203,7 +203,12 @@ async function main(): Promise<number> {
 
   const blocked: string[] = [];
   const consoleErrors: string[] = [];
+  const cspViolations: string[] = [];
   const reports: FlowReport[] = [];
+  // public/_headers is served by the preview, so every flow runs under the deploy CSP; without it "0 violations" means
+  // nothing, so a missing CSP fails the run.
+  const csp = (await fetch(baseUrl)).headers.get('content-security-policy');
+  if (!csp?.includes('frame-src https://web.archive.org')) consoleErrors.push(`CSP header missing or without frame-src on ${baseUrl}: ${csp}`);
 
   const runs = selected.flatMap((flow) => (flow.schemes ?? ['light']).map((scheme) => ({ flow, scheme })));
   for (const { flow, scheme } of runs) {
@@ -219,8 +224,15 @@ async function main(): Promise<number> {
         blocked.push(url.href);
         return route.abort('blockedbyclient');
       });
+      // Report every CSP violation by name (Chrome also logs most of them as console errors).
+      await context.addInitScript(() =>
+        document.addEventListener('securitypolicyviolation', (e) =>
+          console.error(`CSP violation: ${e.effectiveDirective} blocked ${e.blockedURI || 'inline'} (${e.sourceFile}:${e.lineNumber})`),
+        ),
+      );
       const page = await context.newPage();
       page.on('console', (msg) => {
+        if (msg.text().startsWith('CSP violation:') || msg.text().includes('Content Security Policy')) cspViolations.push(`[${flow.name}/${viewport}/${scheme}] ${msg.text()}`);
         if (flow.apiErrors && msg.text().startsWith('Failed to load resource') && new URL(msg.location().url, baseUrl).pathname.startsWith('/api/')) return;
         if (msg.type() === 'error') consoleErrors.push(`[${flow.name}/${viewport}/${scheme}] ${msg.text()}`);
       });
@@ -269,7 +281,7 @@ async function main(): Promise<number> {
     }
   }
 
-  const ok = reports.every((r) => r.ok) && blocked.length === 0 && consoleErrors.length === 0;
+  const ok = reports.every((r) => r.ok) && blocked.length === 0 && consoleErrors.length === 0 && cspViolations.length === 0;
   const summary = {
     ok,
     baseUrl,
@@ -279,6 +291,8 @@ async function main(): Promise<number> {
     blockedRequests: { count: blocked.length, urls: blocked },
     stubbedRequests: { count: replayLog.length, sampleFlows: reports.filter((r) => !r.flow.startsWith('live')).reduce((n, r) => n + r.stubbed, 0), log: replayLog },
     consoleErrors,
+    // The CSP from public/_headers on `/`, and any violation under it (must be none).
+    csp: { header: csp, violations: cspViolations },
   };
   writeFileSync(join(outDir, 'smoke-report.json'), `${JSON.stringify(summary, null, 2)}\n`);
   console.log(JSON.stringify(summary, null, 2));

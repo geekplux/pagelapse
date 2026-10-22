@@ -1,0 +1,15 @@
+# Static asset headers for Workers Static Assets (PLAN 5.4). API responses set their own headers in worker/http.ts.
+# Live replay frames load from web.archive.org (frame-src / child-src); everything else is same-origin.
+# No Cross-Origin-Embedder-Policy: require-corp would block the archive frames.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src https://web.archive.org; child-src https://web.archive.org; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+
+# Content-hashed file names: cache for a year.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/samples/*
+  Cache-Control: public, max-age=31536000, immutable
