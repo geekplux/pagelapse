@@ -1,3 +1,5 @@
+import { readCapped } from '../src/archive/politeFetch.ts';
+
 /** Machine-readable API error codes; the UI maps each to a specific, actionable message (AC 14). */
 export type ErrorCode =
   | 'invalid_url' | 'no_captures' | 'excluded' | 'archive_rate_limited'
@@ -31,30 +33,10 @@ export function apiError(error: ErrorCode, message: string, retryAfter?: number)
 /**
  * The request body as text, or `null` when it is over `max` bytes. A declared `Content-Length` over the cap is
  * rejected without reading, and a streamed body is cancelled as soon as it passes the cap, so an oversized POST
- * never buffers more than `max` bytes in the Worker.
+ * never buffers much more than `max` bytes in the Worker.
  */
-export async function readCapped(req: Request, max: number): Promise<string | null> {
-  const declared = Number(req.headers.get('content-length'));
-  if (declared > max) return null;
-  if (!req.body) return '';
-  const reader = req.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > max) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-  const all = new Uint8Array(size);
-  let at = 0;
-  for (const c of chunks) {
-    all.set(c, at);
-    at += c.byteLength;
-  }
-  return new TextDecoder().decode(all);
+export async function readTextCapped(req: Request, max: number): Promise<string | null> {
+  if (Number(req.headers.get('content-length')) > max) return null;
+  const { bytes, truncated } = await readCapped(req, max);
+  return truncated ? null : new TextDecoder().decode(bytes);
 }

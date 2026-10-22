@@ -6,7 +6,7 @@ import type { ChangeRecord, ExtractedPage } from '../../src/core/types.ts';
 import { pairKey, validateTargetUrl } from '../../src/core/url.ts';
 import { snapKey } from '../cache.ts';
 import type { Env } from '../env.ts';
-import { apiError, json, readCapped } from '../http.ts';
+import { apiError, json, readTextCapped } from '../http.ts';
 import { MAX_BATCH } from '../prompt.ts';
 import { summarise } from '../summarise.ts';
 
@@ -25,7 +25,7 @@ const isPair = (p: unknown): p is Pair => {
  * browser keeps its own rule summary).
  */
 export async function summaries(req: Request, _url: URL, env: Env): Promise<Response> {
-  const raw = await readCapped(req, MAX_BODY);
+  const raw = await readTextCapped(req, MAX_BODY);
   if (raw === null) return apiError('bad_request', `The request body is over ${MAX_BODY} bytes.`);
   let body: { url?: unknown; pairs?: unknown } | null = null;
   try {

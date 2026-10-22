@@ -71,7 +71,7 @@ export function decodeBody(bytes: Uint8Array, contentType: string | null): strin
   }
 }
 
-async function readCapped(res: Response, maxBytes: number): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+export async function readCapped(res: Pick<Response, 'body'>, maxBytes: number): Promise<{ bytes: Uint8Array; truncated: boolean }> {
   const chunks: Uint8Array[] = [];
   let size = 0;
   let truncated = false;

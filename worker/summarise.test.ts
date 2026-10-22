@@ -6,7 +6,7 @@ import { ruleSummary } from '../src/core/ruleSummary.ts';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { snapKey } from './cache.ts';
 import type { Env } from './env.ts';
-import { readCapped } from './http.ts';
+import { readTextCapped } from './http.ts';
 import { handle } from './index.ts';
 import { MAX_BATCH, MAX_BATCH_CHARS, batches, messages } from './prompt.ts';
 import { MAX_BODY } from './routes/summaries.ts';
@@ -141,9 +141,9 @@ describe('POST /api/summaries', () => {
     expect(pulled).toBeLessThanOrEqual(MAX_BODY / 1024 + 2);
   });
 
-  it('readCapped returns the text of a body within the cap', async () => {
+  it('readTextCapped returns the text of a body within the cap', async () => {
     const req = new Request('http://127.0.0.1/', { method: 'POST', body: 'héllo' });
-    expect([await readCapped(req, 6), await readCapped(new Request('http://127.0.0.1/', { method: 'POST', body: 'héllo' }), 5)]).toEqual(['héllo', null]);
+    expect([await readTextCapped(req, 6), await readTextCapped(new Request('http://127.0.0.1/', { method: 'POST', body: 'héllo' }), 5)]).toEqual(['héllo', null]);
   });
 
   it('GET /api/health reports ai "available" with the binding', async () => {
