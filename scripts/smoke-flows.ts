@@ -1190,6 +1190,8 @@ export const flows: readonly Flow[] = [
       const md = readFileSync(new URL('../examples/README.md', import.meta.url), 'utf8');
       const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Onion skin|Single)\]\(http:\/\/localhost:5173(\/\?sample=[^)]+)\)/g)];
       const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', 'Onion skin': 'onion', Single: 'single' };
+      const all = md.match(/\]\(http:\/\/localhost:5173\/\?sample=/g)?.length ?? 0;
+      if (all !== 7 || links.length !== all) throw new Error(`examples/README.md: ${links.length} of ${all} sample links parsed, expected 7`);
       const notes: string[] = [];
       for (const [, from, to, mode, path] of links) {
         const q = new URL(path!, baseUrl).searchParams;
@@ -1208,7 +1210,6 @@ export const flows: readonly Flow[] = [
         if (problems.length) throw new Error(`${path}: ${problems.join('; ')}, expected ${from} → ${to} in ${mode}`);
         notes.push(`${q.get('sample')} ${from} → ${to} in ${mode}`);
       }
-      if (links.length < 6) throw new Error(`only ${links.length} sample links found in examples/README.md`);
       // The shot: the gallery's Wikipedia redesign link (the git-scm decade compare is the hero shot already).
       await openReady(page, baseUrl, links.find((l) => l[4]!.includes('wikipedia') && l[3] === 'Slider')![4]);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });

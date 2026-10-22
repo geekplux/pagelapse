@@ -10,7 +10,7 @@ Drafts for announcing Pagelapse, plus the facts to keep them honest. Replace `<d
 
 **Post:**
 
-> Watch a web page's decade in 15 seconds. Paste a URL and Pagelapse pulls the page's captures from the Internet Archive, keeps the ones where something meaningful changed, and lays them out as a time-lapse. Drag a divider between any two looks, play the years back, and read which words changed, with a one-line summary per change.
+> Watch a web page's decade in 15 seconds. Paste a URL and Pagelapse pulls the page's captures from the Internet Archive, keeps the ones where something meaningful changed, and lays them out as a time-lapse. Drag a divider between the looks before and after each change, play the years back, and read which words changed, with a one-line summary per change.
 >
 > The first view is a built-in sample (git-scm.com, 2013 to 2025) that works offline with no key. Live lookups go through a small Cloudflare Worker.
 >
@@ -25,7 +25,7 @@ Drafts for announcing Pagelapse, plus the facts to keep them honest. Replace `<d
 ```text
 Watch a web page's decade in 15 seconds.
 
-Pagelapse pulls Internet Archive captures of any URL, keeps the ones where something meaningful changed, and lets you drag between any two looks.
+Pagelapse pulls Internet Archive captures of any URL, keeps the ones where something meaningful changed, and lets you drag between the before and after of each change.
 
 Built-in samples work offline, no key. MIT.
 
@@ -40,7 +40,7 @@ Each one starts from the visual scrub.
 
 ### The fact-checker
 
-Someone claims a project's home page "always said" something. Paste the URL, drag the Slider from the earliest capture to the latest, then step through the timeline until the sentence appears. The text diff shows the exact words that came and went, and "View capture" opens that date in the archive, for a link anyone can check.
+Someone claims a project's home page "always said" something. Paste the URL, open the first change in Slider and drag the divider, then step with Next until the sentence appears. The text diff shows the exact words that came and went, and "View capture" opens that date in the archive, for a link anyone can check.
 
 ### The retrospective
 

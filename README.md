@@ -10,7 +10,7 @@
 
 ![Pagelapse showing the git-scm.com home page twelve years apart: a slider splits the first capture (November 2013) from the latest (December 2025), the summary of what changed sits to the right, and a filmstrip of all 14 captures runs below](docs/hero.webp)
 
-Paste a URL. Pagelapse finds the page's captures in the Wayback Machine, keeps the ones where something meaningful changed, and lays them out as a time-lapse. You can drag between any two looks, play the decade back, read exactly which words changed, and get one line per change that says what happened.
+Paste a URL. Pagelapse finds the page's captures in the Wayback Machine, keeps the ones where something meaningful changed, and lays them out as a time-lapse. You can drag a divider between the looks before and after each change, play the decade back, read exactly which words changed, and get one line per change that says what happened.
 
 ## Try it in 10 seconds
 

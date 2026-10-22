@@ -15,6 +15,8 @@ const OUT = join(root, 'docs/hero.gif');
 const MAX_BYTES = 3_000_000;
 /** Seconds per frame; the last frame (the latest capture) holds three times as long before the loop restarts. */
 const STEP_S = 0.8;
+/** The first frame, the decade compare, holds long enough to read both looks. */
+const DECADE_S = 2.4;
 
 const { values } = parseArgs({
   args: process.argv.slice(2).filter((a) => a !== '--'),
@@ -39,7 +41,7 @@ const pngs = readdirSync(frames).filter((f) => /^frame-\d+\.png$/.test(f)).sort(
 if (pngs.length < 2) throw new Error(`render-hero-gif: only ${pngs.length} frames in ${frames}`);
 
 // A concat list gives each frame its duration (the last one listed twice, as the format requires).
-const list = [...pngs.map((f, i) => `file '${f}'\nduration ${i === pngs.length - 1 ? STEP_S * 3 : STEP_S}`), `file '${pngs.at(-1)}'`].join('\n');
+const list = [...pngs.map((f, i) => `file '${f}'\nduration ${i === 0 ? DECADE_S : i === pngs.length - 1 ? STEP_S * 3 : STEP_S}`), `file '${pngs.at(-1)}'`].join('\n');
 writeFileSync(join(frames, 'frames.txt'), `${list}\n`);
 for (const colors of [128, 64]) {
   const run = spawnSync(
