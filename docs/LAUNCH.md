@@ -10,7 +10,7 @@ Drafts for announcing Pagelapse, plus the facts to keep them honest. Replace `<d
 
 **Post:**
 
-> Watch a web page's decade in 15 seconds. Paste a URL and Pagelapse pulls the page's captures from the Internet Archive, keeps the ones where something meaningful changed, and lays them out as a time-lapse. Drag a divider between the looks before and after each change, play the years back, and read which words changed, with a one-line summary per change.
+> Watch a web page's decade in 15 seconds. Paste a URL and Pagelapse pulls the page's captures from the Internet Archive, keeps the ones where something meaningful changed, and lays them out as a time-lapse. Drag a divider between the looks before and after each change, play a sample's years back, and read which words changed, with a one-line summary per change.
 >
 > The first view is a built-in sample (git-scm.com, 2013 to 2025) that works offline with no key. Live lookups go through a small Cloudflare Worker.
 >
@@ -40,11 +40,11 @@ Each one starts from the visual scrub.
 
 ### The fact-checker
 
-Someone claims a project's home page "always said" something. Paste the URL, open the first change in Slider and drag the divider, then step with Next until the sentence appears. The text diff shows the exact words that came and went, and "View capture" opens that date in the archive, for a link anyone can check.
+Someone claims a project's home page "always said" something. Paste the URL, open the first change, switch the compare mode to Slider (live pages open in Single) and drag the divider, then step with Next until the sentence appears. The text diff shows the exact words that came and went, and "View capture" opens that date in the archive, for a link anyone can check.
 
 ### The retrospective
 
-A maintainer prepares a "ten years of our project" post. Open the project's home page and press Play: one capture every 1.2 s, with the release number climbing. Pick the three biggest markers on the timeline (the largest changes), compare each in Side by side, and copy the links into the post.
+A maintainer prepares a "ten years of our project" post. Paste the project's home page and step through its changes with Previous and Next, or with the arrow keys on the timeline, while the text diff shows the release number climbing. Pick the three biggest markers on the timeline (the largest changes), compare each in Side by side, and copy each one's link from Change details into the post.
 
 ### Watch a redesign happen
 
