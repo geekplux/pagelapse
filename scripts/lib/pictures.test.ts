@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fixtureToSnapshots, parseSampleFixture } from '../../src/core/fixture.ts';
 import { buildTimeline } from '../../src/core/timeline.ts';
+import { overviewPair } from '../../src/app/visual/visualState.ts';
 import { checkPictures } from './pictures.ts';
 import { webpSize } from './webpInfo.ts';
 
@@ -42,5 +43,10 @@ describe('committed sample pictures', () => {
     const shot = (ts?: string) => f.snapshots.find((s) => s.ts === ts)?.shot?.status;
     expect(f.featured!.split('-').map(shot)).toEqual(['ok', 'ok']);
     expect(f.visual).toMatchObject({ archive: 'arquivo-pt', format: 'webp' });
+  });
+
+  it('opens the default sample on its decade compare: the first capture against the latest, both complete', () => {
+    const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', 'git-scm.json'), 'utf8')));
+    expect(overviewPair(f.snapshots)).toEqual({ from: f.snapshots[0]!.ts, to: f.snapshots.at(-1)!.ts, skipped: 0 });
   });
 });

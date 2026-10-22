@@ -32,6 +32,8 @@ interface Props {
   runActive?: boolean;
   /** Live: the selection only follows the run (nothing picked yet), so no frame loads until a pick or the run's end. */
   hold?: boolean;
+  /** Says what a compare pair is when it is not one change, e.g. `first and latest capture`. */
+  pairNote?: string | undefined;
   /** The side column, given the pane's controls: Play (`lead`), then the compare picker and Before / After (`tools`). */
   side: (lead: ReactNode, tools: ReactNode) => ReactNode;
 }
@@ -57,7 +59,7 @@ const Label = ({ side, ts }: { side: Side; ts: string }) => {
  * without some styles or with no picture. A compare mode needs both pictures, else it shows Single. Its controls (Play,
  * the compare picker, Single's `− Before | + After` toggle) go to the side column's controls row, after the picture.
  */
-export function VisualPane({ label, captures, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false, hold = false, side: renderSide }: Props) {
+export function VisualPane({ label, captures, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false, hold = false, pairNote, side: renderSide }: Props) {
   const [broken, setBroken] = useState<string[]>([]);
   const index = (ts: string) => captures.indexOf(ts);
   const pic = (ts: string) => {
@@ -122,12 +124,13 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
     <figcaption className="vp-cap mono">
       <span>{ps.map((p) => frameNo(index(p.ts))).join(' → ')}</span>
       {ps.length === 1 && <Ts ts={ps[0]!.ts} />}
+      {ps.length > 1 && pairNote && <span>{pairNote}</span>}
       {shown === 'single' && trivial && <span>trivial edit</span>}
       {(shown === 'single' || shown === 'side') &&
         ps.map((p) => (
           <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
-            {shown === 'side' ? `Open ${SIDES.find(([s]) => s === sideOf(entry, p.ts))![2]}` : 'Open capture'}
-            <span className="sr-only">{shown === 'side' && ' capture'} (opens in a new tab)</span>
+            {shown === 'side' ? `Open ${SIDES.find(([s]) => s === sideOf(entry, p.ts))![2]} capture` : 'Open capture'}
+            <span className="sr-only">{shown === 'side' && `, ${formatTimestampLong(p.ts)}`} (opens in a new tab)</span>
           </a>
         ))}
       {ps.map(

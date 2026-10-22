@@ -11,7 +11,7 @@ import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
 import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
 import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
-import { changeForCapture, shotAlt, shotSrc, splitText } from '../src/app/visual/visualState.ts';
+import { changeForCapture, overviewPair, shotAlt, shotSrc, splitText } from '../src/app/visual/visualState.ts';
 import { PLAY_MS } from '../src/app/visual/usePlay.ts';
 
 export interface FlowContext {
@@ -107,15 +107,16 @@ async function expectShown(page: Page, f: Fixture, ts: string): Promise<void> {
   if (current !== timestampToIso(ts)) throw new Error(`filmstrip marks ${current}, expected ${ts}`);
 }
 
-const featured = (() => {
-  const [from, to] = defaultFixture.featured!.split('-') as [string, string];
+/** The default sample's first view: the decade compare, its first complete capture against its latest (D-phase 19). */
+const hero = (() => {
+  const { from, to } = overviewPair(defaultFixture.snapshots)!;
   return { from, to };
 })();
 const picOf = (ts: string) => shotSrc(defaultFixture.id, defaultFixture.snapshots.find((s) => s.ts === ts)!.shot!.file!);
 const checkedMode = (page: Page) => page.locator('input[name="vp-mode"]:checked').getAttribute('value');
 
 /**
- * Slider mode on the default sample's featured change: Before under After, both labelled by symbol, word and date in
+ * Slider mode on the default sample's first view (the decade compare): Before under After, both labelled by symbol, word and date in
  * their own corner, After clipped at `v`%, and the divider's value and valuetext say so.
  */
 async function expectSlider(page: Page, v: number): Promise<string> {
@@ -126,8 +127,8 @@ async function expectSlider(page: Page, v: number): Promise<string> {
     now: document.querySelector('.vp-split')?.getAttribute('aria-valuenow'),
     text: document.querySelector('.vp-split')?.getAttribute('aria-valuetext'),
   }));
-  const { from, to } = featured;
-  const want = [[picOf(from), shotAlt(defaultFixture.label, featured, from)], [picOf(to), shotAlt(defaultFixture.label, featured, to)]];
+  const { from, to } = hero;
+  const want = [[picOf(from), shotAlt(defaultFixture.label, hero, from)], [picOf(to), shotAlt(defaultFixture.label, hero, to)]];
   const problems = [
     (await checkedMode(page)) !== 'slider' && 'Slider is not the checked mode',
     JSON.stringify(m.srcs) !== JSON.stringify(want) && `pictures ${JSON.stringify(m.srcs)}`,
@@ -135,7 +136,7 @@ async function expectSlider(page: Page, v: number): Promise<string> {
     (m.labels[1]?.[0] !== 'after' || !String(m.labels[1][1]).startsWith(`+ After ${formatTimestampShort(to)}`)) && `after label ${m.labels[1]}`,
     Number(m.labels[0]?.[2]) >= Number(m.labels[1]?.[2]) && 'Before is not left of After',
     m.now !== String(v) && `divider at ${m.now}, expected ${v}`,
-    m.text !== splitText(v, featured) && `valuetext "${m.text}"`,
+    m.text !== splitText(v, hero) && `valuetext "${m.text}"`,
     !m.clip.endsWith(` ${v}%)`) && `After clipped by "${m.clip}", expected ${v}%`,
   ].filter(Boolean);
   if (problems.length) throw new Error(problems.join('; '));
@@ -499,7 +500,9 @@ export const flows: readonly Flow[] = [
       await openReady(page, baseUrl, `/?sample=${lf.id}&change=${le.from}-${le.to}`);
       const nodes = await page.evaluate(() => document.querySelectorAll('#diff *').length);
       if (nodes >= 1500) throw new Error(`diff panel has ${nodes} nodes`);
-      const timeToReadyMs = await openReady(page, baseUrl);
+      // The bare first view diffs the decade compare; the latest change is one deep link (or one Previous) away.
+      const last = defaultTimeline.entries.at(-1)!;
+      const timeToReadyMs = await openReady(page, baseUrl, `/?change=${last.from}-${last.to}`);
       const notes = await checkDiff(page, defaultFixture, defaultTimeline.entries.length - 1);
       // Folded at every width since phase 17 (Calm layout); it was open on desktop before.
       const open = await page.locator('.changes-pane').evaluate((d) => (d as HTMLDetailsElement).open);
@@ -655,15 +658,18 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-default',
-    description: 'The hero: featured change picture, summary and filmstrip thumbnails above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
+    description: 'The hero: the decade compare (first ↔ latest capture) in Slider, named as such, with its summary and the filmstrip thumbnails above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
     shot: 'hero',
     schemes: ['light', 'dark'],
     cvd: true,
     async run({ page, baseUrl, viewport }) {
       const timeToReadyMs = await openReady(page, baseUrl);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
-      const [from, to] = defaultFixture.featured!.split('-') as [string, string];
+      const { from, to } = hero;
       const said = await expectSlider(page, 50);
+      // Honest about the pair: the caption and the change line say first and latest capture, not one change.
+      const named = await page.evaluate(() => [document.querySelector('.vpane .vp-cap')?.textContent ?? '', document.querySelector('#change-heading')?.textContent ?? ''] as const);
+      if (!named[0].includes('first and latest capture') || !/^first → capture to latest,/.test(named[1].trim())) throw new Error(`pair not named: caption "${named[0]}", heading "${named[1]}"`);
       if ((await page.locator('.frame').count()) !== defaultFixture.snapshots.length) throw new Error('not one frame per capture');
       if (!page.url().endsWith('/') || new URL(page.url()).search) throw new Error(`first view rewrote the URL: ${page.url()}`);
       await page.waitForTimeout(500);
@@ -692,7 +698,7 @@ export const flows: readonly Flow[] = [
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { timeToReadyMs, notes: [`featured ${from}-${to} in Slider mode: ${said}`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, filmstrip thumbnails): ${m.fold.map(Math.round).join(', ')}`] };
+      return { timeToReadyMs, notes: [`decade ${from}-${to} in Slider mode: ${said}`, `heading "${named[1].trim()}"`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, filmstrip thumbnails): ${m.fold.map(Math.round).join(', ')}`] };
     },
   },
   {
@@ -705,6 +711,10 @@ export const flows: readonly Flow[] = [
       await openChanges(page);
       const notes = [`load: ${await currentInList(page)}`];
       // Dispatched clicks: a real click would let Playwright scroll the page to the target first.
+      // From the decade compare, Previous first narrows to the selected latest change, then steps back.
+      await page.locator('.diff-nav .btn').first().dispatchEvent('click');
+      await expectSelected(page, defaultFixture, entries.length - 1);
+      await page.locator('#change-heading .change-mag').waitFor({ timeout: 2_000 });
       await page.locator('.diff-nav .btn').first().dispatchEvent('click');
       await expectSelected(page, defaultFixture, entries.length - 2);
       notes.push(`Previous: ${await currentInList(page)}`);
@@ -953,7 +963,7 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'compare-slider',
-    description: 'The hero opens in Slider mode on the featured change: Before / After labelled by symbol, word, date and corner, divider at 50%',
+    description: 'The hero opens in Slider mode on the decade compare: Before / After labelled by symbol, word, date and corner, divider at 50%',
     schemes: ['light', 'dark'],
     cvd: true,
     async run({ page, baseUrl }) {
@@ -1032,9 +1042,17 @@ export const flows: readonly Flow[] = [
         viewport === 'mobile' && a && b && a.bottom > b.top && 'mats are not stacked',
         new URL(page.url()).searchParams.get('view') !== 'side' && `URL ${page.url()}`,
       ].filter(Boolean);
+      // The two links' accessible names, as a screen reader gets them: word, "capture" and the date.
+      const tree = await page.locator('.vp-pair').ariaSnapshot();
+      for (const [word, ts] of [['Before', hero.from], ['After', hero.to]] as const) {
+        const name = `Open ${word} capture, ${formatTimestampLong(ts)} (opens in a new tab)`;
+        if (!tree.includes(`link "${name}"`)) problems.push(`no link "${name}" in ${tree.replace(/\n/g, ' ')}`);
+      }
+      const shown = await page.locator('.vp-pair .cap-out').evaluateAll((as) => as.map((x) => `${x.childNodes[0]?.textContent}${getComputedStyle(x, '::after').content.includes('↗') ? ' ↗' : ''}`));
+      if (shown.join() !== 'Open Before capture ↗,Open After capture ↗') problems.push(`visible link text ${shown.join(' | ')}`);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { notes: [`${a.label} | ${b.label}`, `URL ${new URL(page.url()).search}`] };
+      return { notes: [`${a.label} | ${b.label}`, `URL ${new URL(page.url()).search}`, `links: ${tree.split('\n').filter((l) => l.includes('link')).map((l) => l.trim()).join(' | ')}`] };
     },
   },
   {

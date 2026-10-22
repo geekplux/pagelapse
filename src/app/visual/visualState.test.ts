@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureForChange, changeForCapture, frameNo, initialView, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
+import { captureForChange, changeForCapture, frameNo, initialView, overviewPair, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
 
 const caps = ['2013', '2014', '2015', '2016', '2017'].map((y) => `${y}0101000000`);
 // 2015 is a trivial capture: the 2014 -> 2016 change skips it.
@@ -86,5 +86,20 @@ describe('visualState', () => {
     expect(shotAlt('x.org home page', entries[1]!, caps[3]!)).toBe('x.org home page as captured 1 January 2016 (After), top of page');
     expect(shotAlt('x.org home page', entries[1]!, caps[1]!)).toBe('x.org home page as captured 1 January 2014 (Before), top of page');
     expect(shotAlt('x.org home page', entries[1]!, caps[2]!)).toBe('x.org home page as captured 1 January 2015, top of page');
+  });
+
+  it('spans the earliest complete capture to the latest one for the decade compare', () => {
+    const shot = (status: 'ok' | 'partial' | 'failed') => ({ status, settle: 'quiet' as const, ...(status !== 'failed' && { file: 'x' }) });
+    const snaps = [
+      { ts: caps[0]!, shot: shot('failed') },
+      { ts: caps[1]!, shot: shot('partial') },
+      { ts: caps[2]!, shot: shot('ok') },
+      { ts: caps[3]!, shot: shot('ok') },
+      { ts: caps[4]!, shot: shot('partial') },
+    ];
+    expect(overviewPair(snaps)).toEqual({ from: caps[2], to: caps[3], skipped: 2 });
+    expect(overviewPair(snaps.map((s) => ({ ...s, shot: shot('ok') })))).toEqual({ from: caps[0], to: caps[4], skipped: 0 });
+    expect(overviewPair(snaps.slice(0, 3))).toBeUndefined();
+    expect(overviewPair([])).toBeUndefined();
   });
 });

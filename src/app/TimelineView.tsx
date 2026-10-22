@@ -3,7 +3,7 @@ import type { SampleFixture, TimelineEntry } from '../core/types.ts';
 import { ARCHIVES } from '../archive/archives.ts';
 import { viewCaptureUrl } from '../core/url.ts';
 import { fixtureToSnapshots } from '../core/fixture.ts';
-import { buildTimeline, trivialEntries, withAiSummaries } from '../core/timeline.ts';
+import { buildTimeline, compareCaptures, trivialEntries, withAiSummaries } from '../core/timeline.ts';
 import { changePictures, decodePicture } from '../samples/index.ts';
 import { ChangesList } from './ChangesList.tsx';
 import { ChangeCard, DiffView } from './diff/DiffView.tsx';
@@ -14,7 +14,7 @@ import { type UrlState, changeIndex } from './urlState.ts';
 import { Filmstrip } from './visual/Filmstrip.tsx';
 import { usePlay } from './visual/usePlay.ts';
 import { VisualPane } from './visual/VisualPane.tsx';
-import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, pairOf, parseMode, sampleView, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
+import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, overviewPair, pairOf, parseMode, sampleView, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
 
 interface Props {
   fixture: SampleFixture;
@@ -24,11 +24,13 @@ interface Props {
   initialAt?: string | undefined;
   /** Compare mode to show first (`?view=`); Slider when missing or unknown. */
   initialMode?: string | undefined;
+  /** Open on the decade compare (first complete capture ↔ latest) when the address asks for no change or capture. */
+  overview?: boolean;
   onChange: (q: Pick<UrlState, 'change' | 'at' | 'view'>) => void;
 }
 
 /** The sample: the hero (title, picture, change line and controls), the scrub strip (filmstrip over timeline), the folded lists, then the diff. */
-export function TimelineView({ fixture, initialChange, initialAt, initialMode, onChange }: Props) {
+export function TimelineView({ fixture, initialChange, initialAt, initialMode, overview = false, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
   // Baked AI summaries (scripts/bake-sample-summaries.ts), if any; else every change reads "auto summary".
@@ -49,20 +51,33 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     return { key: entries[v.index] ? pairOf(entries[v.index]!) : '', at: v.at };
   });
   const [mode, setMode] = useState<Mode>(() => parseMode(initialMode) ?? DEFAULT_MODE);
+  // The decade compare: a decade in one drag. The pane, the change line and the text diff show the first complete
+  // capture against the latest; the timeline keeps the latest change selected. Any selection, Single or Play leaves it.
+  const span = useMemo(() => {
+    const pair = overview ? overviewPair(snapshots) : undefined;
+    const [a, b] = [pair?.from, pair?.to].map((ts) => timeline.snapshots.find((s) => s.ts === ts));
+    return pair && a && b ? { entry: compareCaptures(a, b), skipped: pair.skipped, latest: pair.to === snapshots.at(-1)?.ts } : undefined;
+  }, [overview, snapshots, timeline]);
+  const [wide, setWide] = useState(() => !!span && entries.length > 0 && !initialChange && !initialAt && parseMode(initialMode) !== 'single');
   const selected = changeIndex(all, view.key);
   const entry = all[selected];
+  const shownEntry = wide && span ? span.entry : entry;
+  const ends = span && ([span.skipped ? 'earliest complete' : 'first', span.latest ? 'latest' : 'latest complete'] as const);
   const years = `${snapshots[0]?.ts.slice(0, 4)}–${snapshots.at(-1)?.ts.slice(0, 4)}`;
   const capUrl = (ts: string) => viewCaptureUrl(fixture.source.archive, ts, fixture.url);
   const page = (ts: string) => timeline.snapshots.find((s) => s.ts === ts);
   /** Selects change `e`, showing capture `at` (default: the same side as now, so Before stays Before while scrubbing). */
   const choose = (e?: TimelineEntry, at?: string, m = mode) => {
     if (!e) return;
+    setWide(false);
     const next = at ?? captureForChange(e, entry && sideOf(entry, view.at) === 'before' ? 'before' : 'after');
     setView({ key: pairOf(e), at: next });
     onChange(viewQuery(e, next, m));
   };
   const changeMode = (m: Mode) => {
     setMode(m);
+    if (wide && m !== 'single') return onChange({ view: m === DEFAULT_MODE ? undefined : m });
+    setWide(false);
     if (entry) onChange(viewQuery(entry, view.at, m));
   };
   const select = (i: number) => choose(all[i]);
@@ -81,6 +96,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
   const togglePlay = () => {
     if (!play.playing) {
       setMode('single');
+      setWide(false);
       if (view.at === captures.at(-1)) showCapture(captures[0]!, all, 'single');
       else if (entry) onChange(viewQuery(entry, view.at, 'single'));
     }
@@ -97,6 +113,10 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
   useEffect(() => {
     const q = entries[changeIndex(entries, view.key)];
     const want = viewQuery(q ?? { from: '', to: '' }, view.at, mode);
+    if (wide) {
+      if (initialMode !== want.view) onChange({ view: want.view });
+      return;
+    }
     if (q && ((initialChange !== undefined && initialChange !== view.key) || initialAt !== want.at || initialMode !== want.view)) onChange(want);
     // Runs once on mount.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
@@ -109,7 +129,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     performance.mark('wd:ready');
     // ... and "visual ready" once the first change's pictures have decoded (both sides, for the toggle and compare).
     const el = root.current;
-    void Promise.all(changePictures(fixture, view.key).map(decodePicture)).then(() => {
+    void Promise.all(changePictures(fixture, wide && span ? pairOf(span.entry) : view.key).map(decodePicture)).then(() => {
       el.dataset.visualReady = 'true';
       performance.mark('wd:visual-ready');
     });
@@ -127,22 +147,23 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
               {snapshots.length} captures · {years}
             </p>
           </div>
-          {entry && (
+          {entry && shownEntry && (
             <VisualPane
               label={fixture.label}
               captures={captures}
               link={capUrl}
               view={viewOf}
-              entry={entry}
+              entry={shownEntry}
               at={view.at}
               trivial={trivial.has(view.at)}
               mode={mode}
               onMode={changeMode}
               onSide={(side: Side) => choose(entry, captureForChange(entry, side))}
               play={{ ...play, toggle: togglePlay }}
+              pairNote={wide && ends ? `${ends[0]} and ${ends[1]} capture` : undefined}
               side={(lead, tools) => (
                 <div className="side">
-                  <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} showing={showingText(captures, entry, view.at, trivial.has(view.at))} quiet={play.playing} lead={lead} tools={tools} />
+                  <ChangeCard entry={shownEntry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} showing={showingText(captures, shownEntry, view.at, trivial.has(view.at))} quiet={play.playing} lead={lead} tools={tools} overview={wide ? ends : undefined} />
                 </div>
               )}
             />
@@ -204,7 +225,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
             </ol>
           </details>
         </div>
-        {entry && <DiffView entry={entry} from={page(entry.from)!} to={page(entry.to)!} />}
+        {shownEntry && <DiffView entry={shownEntry} from={page(shownEntry.from)!} to={page(shownEntry.to)!} />}
       </div>
     </article>
   );

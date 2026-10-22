@@ -15,8 +15,8 @@ export function emptyTimeline(url: string): Timeline {
   return { url, snapshots: [], entries: [], trivialCaptures: [], baseline: 0 };
 }
 
-/** The entry for the change from `base` to `s`, whatever its magnitude. */
-function compare(base: SnapshotPage, s: SnapshotPage, opts: TimelineOptions): TimelineEntry {
+/** The entry for the change from `base` to `s`, whatever its magnitude (also any two captures, e.g. first and latest). */
+export function compareCaptures(base: SnapshotPage, s: SnapshotPage, opts: TimelineOptions = {}): TimelineEntry {
   const diff = diffPages(base, s, opts);
   const significance = scoreDiff(diff, base, s);
   const record = toChangeRecord(diff, base, s);
@@ -35,7 +35,7 @@ export function appendSnapshot(t: Timeline, s: SnapshotPage, opts: TimelineOptio
   const snapshots = [...t.snapshots, s];
   const base = t.snapshots[t.baseline];
   if (!base) return { ...t, snapshots };
-  const entry = compare(base, s, opts);
+  const entry = compareCaptures(base, s, opts);
   if (entry.significance.magnitude === 'trivial') return { ...t, snapshots, trivialCaptures: [...t.trivialCaptures, s.ts] };
   return { ...t, snapshots, entries: [...t.entries, entry], baseline: snapshots.length - 1 };
 }
@@ -56,7 +56,7 @@ export function trivialEntries(t: Timeline, opts: TimelineOptions = {}): Timelin
   const out: TimelineEntry[] = [];
   for (const s of t.snapshots.slice(1)) {
     if (!trivial.has(s.ts)) base = s;
-    else if (base) out.push(compare(base, s, opts));
+    else if (base) out.push(compareCaptures(base, s, opts));
   }
   return out;
 }

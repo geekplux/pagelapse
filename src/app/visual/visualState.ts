@@ -128,3 +128,15 @@ export const shotAlt = (label: string, e: Pair, at: string, what = 'top of page'
   const side = sideOf(e, at);
   return `${label} as captured ${formatTimestampLong(at)}${side ? ` (${SIDE_WORD[side]})` : ''}, ${what}`;
 };
+
+/**
+ * The default sample's first view (the "decade" compare): the earliest capture recorded with all its styles (`ok`) and
+ * the latest one, so one drag spans the whole run. `skipped` counts earlier captures passed over (no picture, or
+ * `partial`), for the caption. Undefined when fewer than two captures qualify.
+ */
+export function overviewPair(snapshots: readonly { ts: string; shot?: ShotRef | undefined }[]): (Pair & { skipped: number }) | undefined {
+  const ok = snapshots.filter((s) => s.shot?.status === 'ok' && s.shot.file);
+  const [first, last] = [ok[0], ok.at(-1)];
+  if (!first || !last || first === last) return undefined;
+  return { from: first.ts, to: last.ts, skipped: snapshots.indexOf(first) };
+}

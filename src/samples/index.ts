@@ -1,6 +1,6 @@
 import { parseSampleFixture } from '../core/fixture.ts';
 import type { SampleFixture } from '../core/types.ts';
-import { shotSrc } from '../app/visual/visualState.ts';
+import { overviewPair, shotSrc } from '../app/visual/visualState.ts';
 import gitScm from './git-scm.json';
 
 /** A built-in sample: metadata for the picker plus a loader for its fixture. */
@@ -45,5 +45,9 @@ export function changePictures(f: SampleFixture, pair?: string): string[] {
   return f.snapshots.flatMap((s) => (s.shot?.file && pair?.split('-').includes(s.ts) ? [shotSrc(f.id, s.shot.file)] : []));
 }
 
+/** The default sample's first view: its decade compare (first complete capture ↔ latest), as a `<from>-<to>` pair. */
+const hero = overviewPair(defaultSample.snapshots);
+const heroPair = hero ? `${hero.from}-${hero.to}` : defaultSample.featured;
+
 // The hero pictures start loading before React's first render (D23).
-if (typeof Image === 'function') for (const src of changePictures(defaultSample, defaultSample.featured)) void decodePicture(src);
+if (typeof Image === 'function') for (const src of changePictures(defaultSample, heroPair)) void decodePicture(src);

@@ -123,6 +123,7 @@ export function App() {
             initialChange={current.change}
             initialAt={current.at}
             initialMode={current.view}
+            overview={current.id === defaultSample.id}
             onChange={(q) => writeUrlState({ sample: current.id, ...q })}
           />
         ) : (

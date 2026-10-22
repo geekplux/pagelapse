@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseSampleFixture } from '../../src/core/fixture.ts';
+import { overviewPair } from '../../src/app/visual/visualState.ts';
 import { webpSize } from './webpInfo.ts';
 
 export const PICTURE_BUDGET = { full: 64_000, thumb: 8_000, total: 2_200_000, firstView: 160_000 };
@@ -11,7 +12,7 @@ export interface PictureReport {
   largestFull: number;
   largestThumb: number;
   total: number;
-  /** The default sample's featured pair (full) plus all its thumbnails. */
+  /** The default sample's first-view pair (its decade compare, full size) plus all its thumbnails. */
   firstView: number;
   /** Share of captures with a picture (`ok` or `partial`). */
   pictured: number;
@@ -27,6 +28,8 @@ export function checkPictures(root: string): PictureReport {
     const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', `${id}.json`), 'utf8')));
     const dir = join(root, 'public/samples', id);
     const seen = new Set<string>();
+    const hero = overviewPair(f.snapshots);
+    const heroTs = hero ? [hero.from, hero.to] : (f.featured?.split('-') ?? []);
     for (const s of f.snapshots) {
       captures++;
       if (!s.shot) r.problems.push(`${id} ${s.ts}: no shot`);
@@ -46,7 +49,7 @@ export function checkPictures(root: string): PictureReport {
         r[key] = Math.max(r[key], bytes.length);
         r.count++;
         r.total += bytes.length;
-        if (i === 0 && (suffix === '.thumb.webp' || f.featured?.split('-').includes(s.ts))) r.firstView += bytes.length;
+        if (i === 0 && (suffix === '.thumb.webp' || heroTs.includes(s.ts))) r.firstView += bytes.length;
       }
     }
     for (const name of existsSync(dir) ? readdirSync(dir) : []) if (!seen.has(name)) r.problems.push(`${id}/${name} is an orphan`);

@@ -48,7 +48,7 @@ function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
  * link). Previous / Next's live region also says which capture the pane shows (`showing`); `quiet` silences it during
  * Play. On phones Previous / Next sticks to the bottom of the screen once the row has scrolled away above.
  */
-export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing, quiet, lead, tools }: Omit<Props, 'from' | 'to'> & { showing?: string | undefined; quiet?: boolean; lead?: ReactNode; tools?: ReactNode }) {
+export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing, quiet, lead, tools, overview }: Omit<Props, 'from' | 'to'> & { showing?: string | undefined; quiet?: boolean; lead?: ReactNode; tools?: ReactNode; overview?: readonly [string, string] | undefined }) {
   const pair = `${entry.from}-${entry.to}`;
   // The confirmation belongs to the change it was given for.
   const [copied, setCopied] = useState({ pair: '', text: '' });
@@ -67,10 +67,11 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
 
   // What Previous / Next's live region says: kept until the change, its place or the shown capture changes, so a live
   // run's growing total does not re-announce it with every change that arrives.
-  const key = `${pair} ${index} ${showing ?? ''}`;
+  const key = `${pair} ${index} ${showing ?? ''} ${overview ?? ''}`;
   const [said, setSaid] = useState({ key: '', text: '' });
   if (said.key !== key) {
-    const text = `Change ${index + 1} of ${count}: ${formatTimestampLong(entry.from)} to ${formatTimestampLong(entry.to)}, ${entry.significance.magnitude}`;
+    const dates = `${formatTimestampLong(entry.from)} to ${formatTimestampLong(entry.to)}`;
+    const text = overview ? `${overview[0].charAt(0).toUpperCase()}${overview[0].slice(1)} capture to ${overview[1]}: ${dates}, across all ${count} changes` : `Change ${index + 1} of ${count}: ${dates}, ${entry.significance.magnitude}`;
     setSaid({ key, text: showing ? `${text}, showing ${showing}` : text });
   }
 
@@ -114,10 +115,21 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
     <section className="change-panel" aria-labelledby="change-heading">
       <h3 id="change-heading">
         <span className="panel-kicker mono">
-          <span className="sr-only">Change {index + 1} of {count}, </span>
-          <span className="change-mag" data-magnitude={entry.significance.magnitude}>
-            {entry.significance.magnitude}
-          </span>
+          {overview ? (
+            // The decade compare: the first (complete) capture against the latest, not one change.
+            <>
+              {overview[0]} <span aria-hidden="true">→</span>
+              <span className="sr-only"> capture to</span> {overview[1]}
+              <span className="sr-only">,</span>
+            </>
+          ) : (
+            <>
+              <span className="sr-only">Change {index + 1} of {count}, </span>
+              <span className="change-mag" data-magnitude={entry.significance.magnitude}>
+                {entry.significance.magnitude}
+              </span>
+            </>
+          )}
         </span>{' '}
         <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
         <span className="sr-only"> to </span> <Ts ts={entry.to} />
@@ -129,17 +141,16 @@ export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing,
         {lead}
         <div className="nav-slot" ref={slot}>
           <nav className="diff-nav" aria-label="Previous and next change" data-stuck={stuck || undefined}>
-            <button type="button" className="btn" aria-disabled={index === 0} onClick={() => index > 0 && onSelect(index - 1)}>
+            {/* From the decade compare, Previous narrows to the selected (latest) change; there is nothing after it. */}
+            <button type="button" className="btn" aria-disabled={!overview && index === 0} onClick={() => (overview ? onSelect(index) : index > 0 && onSelect(index - 1))}>
               <span aria-hidden="true">‹ </span>Previous
             </button>
             {/* Quiet while Play steps, so the time-lapse does not chatter. */}
             <span className="mono" aria-live={quiet ? 'off' : 'polite'}>
-              <span aria-hidden="true">
-                {index + 1} / {count}
-              </span>
+              <span aria-hidden="true">{overview ? `all ${count}` : `${index + 1} / ${count}`}</span>
               <span className="sr-only">{said.text}</span>
             </span>
-            <button type="button" className="btn" aria-disabled={index === count - 1} onClick={() => index < count - 1 && onSelect(index + 1)}>
+            <button type="button" className="btn" aria-disabled={!!overview || index === count - 1} onClick={() => !overview && index < count - 1 && onSelect(index + 1)}>
               Next<span aria-hidden="true"> ›</span>
             </button>
           </nav>
