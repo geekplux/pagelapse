@@ -27,3 +27,34 @@ export function apiError(error: ErrorCode, message: string, retryAfter?: number)
   const extra: Record<string, string> = retryAfter ? { 'Retry-After': String(retryAfter) } : {};
   return json({ error, message, ...(retryAfter && { retryAfter }) }, STATUS[error], 'no-store', extra);
 }
+
+/**
+ * The request body as text, or `null` when it is over `max` bytes. A declared `Content-Length` over the cap is
+ * rejected without reading, and a streamed body is cancelled as soon as it passes the cap, so an oversized POST
+ * never buffers more than `max` bytes in the Worker.
+ */
+export async function readCapped(req: Request, max: number): Promise<string | null> {
+  const declared = Number(req.headers.get('content-length'));
+  if (declared > max) return null;
+  if (!req.body) return '';
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    all.set(c, at);
+    at += c.byteLength;
+  }
+  return new TextDecoder().decode(all);
+}

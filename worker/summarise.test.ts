@@ -6,8 +6,10 @@ import { ruleSummary } from '../src/core/ruleSummary.ts';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { snapKey } from './cache.ts';
 import type { Env } from './env.ts';
+import { readCapped } from './http.ts';
 import { handle } from './index.ts';
 import { MAX_BATCH, MAX_BATCH_CHARS, batches, messages } from './prompt.ts';
+import { MAX_BODY } from './routes/summaries.ts';
 import { summarise } from './summarise.ts';
 
 const timeline = (j: unknown) => {
@@ -107,6 +109,42 @@ describe('POST /api/summaries', () => {
       expect([(await post(t.env, body)).res.status, t.calls.length]).toEqual([400, 0]);
     },
   );
+
+  it('rejects an oversized body by its Content-Length without reading it', async () => {
+    const t = setup();
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(c) {
+        pulled++;
+        c.enqueue(new Uint8Array(1024));
+      },
+    });
+    const req = new Request('http://127.0.0.1/api/summaries', {
+      method: 'POST', body, headers: { 'content-length': String(MAX_BODY + 1) }, duplex: 'half',
+    } as RequestInit);
+    const res = await handle(req, t.env);
+    expect([res.status, t.calls.length, pulled <= 1]).toEqual([400, 0, true]);
+  });
+
+  it('stops reading a streamed body as soon as it passes the cap', async () => {
+    const t = setup();
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(c) {
+        pulled++;
+        c.enqueue(new Uint8Array(1024).fill(32));
+      },
+    });
+    const res = await handle(new Request('http://127.0.0.1/api/summaries', { method: 'POST', body, duplex: 'half' } as RequestInit), t.env);
+    expect([res.status, t.calls.length]).toEqual([400, 0]);
+    // An endless stream: the route must stop pulling just past MAX_BODY bytes (plus the stream's read-ahead).
+    expect(pulled).toBeLessThanOrEqual(MAX_BODY / 1024 + 2);
+  });
+
+  it('readCapped returns the text of a body within the cap', async () => {
+    const req = new Request('http://127.0.0.1/', { method: 'POST', body: 'héllo' });
+    expect([await readCapped(req, 6), await readCapped(new Request('http://127.0.0.1/', { method: 'POST', body: 'héllo' }), 5)]).toEqual(['héllo', null]);
+  });
 
   it('GET /api/health reports ai "available" with the binding', async () => {
     const res = await handle(new Request('http://127.0.0.1/api/health'), setup().env);

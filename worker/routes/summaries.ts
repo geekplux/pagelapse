@@ -6,11 +6,13 @@ import type { ChangeRecord, ExtractedPage } from '../../src/core/types.ts';
 import { pairKey, validateTargetUrl } from '../../src/core/url.ts';
 import { snapKey } from '../cache.ts';
 import type { Env } from '../env.ts';
-import { apiError, json } from '../http.ts';
+import { apiError, json, readCapped } from '../http.ts';
 import { MAX_BATCH } from '../prompt.ts';
 import { summarise } from '../summarise.ts';
 
 type Pair = { from: string; to: string };
+/** Request body cap: a full batch of 8 pairs and a long URL fit well within it. */
+export const MAX_BODY = 4096;
 const isPair = (p: unknown): p is Pair => {
   const { from, to } = (p ?? {}) as Partial<Pair>;
   return typeof from === 'string' && typeof to === 'string' && isValidTimestamp(from) && isValidTimestamp(to) && from < to;
@@ -23,10 +25,11 @@ const isPair = (p: unknown): p is Pair => {
  * browser keeps its own rule summary).
  */
 export async function summaries(req: Request, _url: URL, env: Env): Promise<Response> {
-  const raw = await req.text();
+  const raw = await readCapped(req, MAX_BODY);
+  if (raw === null) return apiError('bad_request', `The request body is over ${MAX_BODY} bytes.`);
   let body: { url?: unknown; pairs?: unknown } | null = null;
   try {
-    if (raw.length <= 4096) body = JSON.parse(raw);
+    body = JSON.parse(raw);
   } catch {}
   const check = validateTargetUrl(typeof body?.url === 'string' ? body.url : '');
   const pairs = body?.pairs;
