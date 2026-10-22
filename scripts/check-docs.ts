@@ -16,6 +16,8 @@ export const DOC_FILES = [
   'docs/GOOD_FIRST_ISSUES.md',
   '.github/pull_request_template.md',
   'public/samples/README.md',
+  'examples/README.md',
+  'docs/LAUNCH.md',
 ];
 
 /** Lines outside fenced code blocks, with inline code spans blanked (links in code are not links). */

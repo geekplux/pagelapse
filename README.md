@@ -6,6 +6,8 @@
 
 **Live demo:** _coming soon_ · **Run it yourself:** [try it in 10 seconds](#try-it-in-10-seconds)
 
+![Pagelapse playing the git-scm.com home page as a time-lapse: first a slider splits the 2013 capture from the 2025 one, then the page steps through its 14 captures from 2013 to 2025, one per frame](docs/hero.gif)
+
 ![Pagelapse showing the git-scm.com home page before and after its 2025 redesign: a slider splits the two captures, the change summary sits to the right, and a filmstrip of 14 captures from 2013 to 2025 runs below](docs/hero.webp)
 
 Paste a URL. Pagelapse finds the page's captures in the Wayback Machine, keeps the ones where something meaningful changed, and lays them out as a time-lapse. You can drag between any two looks, play the decade back, read exactly which words changed, and get one line per change that says what happened.
@@ -19,7 +21,7 @@ git clone https://github.com/geekplux/pagelapse.git && cd pagelapse
 pnpm i && pnpm dev
 ```
 
-Open the address `pnpm dev` prints (usually http://localhost:5173). The first view is the built-in git-scm.com sample: text and pictures are bundled, so it needs no network, no account and no key. Pick Wikipedia or rust-lang.org from the header, or paste any URL to look it up live in the Internet Archive.
+Open the address `pnpm dev` prints (usually http://localhost:5173). The first view is the built-in git-scm.com sample: text and pictures are bundled, so it needs no network, no account and no key. Pick Wikipedia or rust-lang.org from the header, or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
 
 ## Features
 
@@ -84,7 +86,6 @@ Pagelapse has no accounts, cookies or analytics. A live lookup sends the URL to 
 ## Roadmap
 
 - A hosted live demo on Cloudflare.
-- A hero GIF, an examples gallery and a social preview image.
 - Re-recording the samples from the Internet Archive itself.
 - An optional screenshot provider for live thumbnails (Cloudflare Browser Rendering). It is designed but not built: see [EXTENDING](docs/EXTENDING.md#optional-screenshot-provider-designed-not-built).
 - Smaller ideas are listed in [good first issues](docs/GOOD_FIRST_ISSUES.md).
