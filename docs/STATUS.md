@@ -2,7 +2,7 @@ STATE: IN-PROGRESS
 
 # Status: Pagelapse
 
-- Current phase: 19 done; PR being opened
+- Current phase: 20 (`phase-20-deploy`) starting (speed mode)
 - Blockers: none blocking. Non-blocking: Workers AI token for baking sample summaries (optional; `pnpm bake:summaries` with `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_API_TOKEN` in `.dev.vars`). Samples show rule-based "auto summary" until then.
 
 | Phase | Branch | PR | State | Verify rounds |
@@ -25,14 +25,16 @@ STATE: IN-PROGRESS
 | 16 | phase-16-ai-summaries | [#17](https://github.com/geekplux/pagelapse/pull/17) | PR open (PASS) | 1 |
 | 17 | phase-17-calm-polish | [#18](https://github.com/geekplux/pagelapse/pull/18) | PR open (PASS) | 2 |
 | 18 | phase-18-oss-packaging | [#19](https://github.com/geekplux/pagelapse/pull/19) | PR open (PASS) | 1 |
-| 19 | phase-19-showcase-launch | (opening) | verified (2 review rounds, final copy fix applied) | 2 |
+| 19 | phase-19-showcase-launch | [#20](https://github.com/geekplux/pagelapse/pull/20) | PR open (reviewed) | 2 |
 | 20 | phase-20-deploy | - | not started | 0 |
 
 Follow-ups:
+- Upload assets/social-preview.png as the GitHub social preview (repo settings).
+- After deploy: point examples/README.md deep links (and the examples-deeplinks smoke regex) at the live origin.
 - Turn on GitHub private vulnerability reporting for geekplux/pagelapse (SECURITY.md relies on it).
 - After deploy: confirm web.archive.org allows `if_` replay in a frame (`curl -sI`), see phase 20.
 - Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
 - Record a real Internet Archive CDX listing for `test/fixtures/api/` (current one is synthetic; IA unreachable from this box).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-21 (phase 19 reviewed)
+Last updated: 2026-10-21 (PR #20 opened)
