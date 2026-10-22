@@ -32,6 +32,8 @@ export interface Flow {
   description: string;
   /** Self-test flows only run when named explicitly with `--flows`. */
   selfTest?: boolean;
+  /** Review-only flows that build their own markup with inline styles run without the page's CSP. */
+  bypassCsp?: boolean;
   /** Colour schemes to run in (default: light only). */
   schemes?: Theme[];
   /** Screenshot base name (default: the flow name). */
@@ -856,9 +858,12 @@ export const flows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       await page.setViewportSize({ width: 1024, height: 768 });
       await openReady(page, baseUrl);
-      await page.addStyleTag({
-        content: 'html { font-size: 125% !important; } * { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }',
-      });
+      // A constructed stylesheet: the CSP (style-src 'self') blocks injected <style> elements.
+      await page.evaluate((css) => {
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(css);
+        document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+      }, 'html { font-size: 125% !important; } * { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; } p { margin-bottom: 2em !important; }');
       await settle(page);
       const m = await page.evaluate(() => {
         const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
@@ -1158,6 +1163,7 @@ export const flows: readonly Flow[] = [
     name: `shots-contact-sheet-${f.id}`,
     description: `${f.id}: every capture's thumbnail (or "no picture"), frame number, date, status`,
     viewports: ['desktop'],
+    bypassCsp: true,
     clip: '#contact-sheet',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);

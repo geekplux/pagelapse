@@ -215,7 +215,7 @@ async function main(): Promise<number> {
     for (const [viewport, size] of Object.entries(VIEWPORTS) as [keyof typeof VIEWPORTS, { width: number; height: number }][]) {
       if (flow.viewports ? !flow.viewports.includes(viewport) : viewport === 'wide') continue;
       // One context at a time; each flow/viewport/scheme gets a clean one.
-      const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1, colorScheme: scheme });
+      const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1, colorScheme: scheme, bypassCSP: !!flow.bypassCsp });
       await context.route('**/*', (route) => {
         const url = new URL(route.request().url());
         if (url.protocol === 'data:' || url.protocol === 'blob:' || LOCAL_HOSTS.has(url.hostname)) {
