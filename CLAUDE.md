@@ -96,3 +96,11 @@ The product is renamed **Pagelapse** (repo geekplux/pagelapse), and a new phase 
 
 ## Design direction 2026-10-21 (Sean)
 Calmer, less cramped layout plus a dedicated polish phase, starting with your next phase (do not redo the current one). Full details: /workspace/gx-projects/logs/wayback-diff.design-direction.md
+
+## Speed mode 2026-10-21 (Sean): go as fast as possible, starting now
+Sean wants maximum development speed. Quality bar for shipped code is unchanged, but cut verification overhead:
+- Exactly two review rounds per phase (review, fix, second review, fix), then stop. Never run a third review round.
+- Per phase run lint, typecheck, unit tests and build. Run the headless-browser suite (check:browser / smoke / e2e / a11y probes) at most ONCE per phase, at the end, and only the flows the phase touched.
+- Wrap EVERY headless Chrome / Playwright / browser check in a shared lock so only one project on this machine runs a browser at a time: `flock /workspace/gx-projects/logs/browser.lock <command>`. Close preview servers right after.
+- Screenshots: per phase only 1-2 key shots (1440 light) for the PR description, compressed WebP. The full 1440/390 light/dark before/after set is done once, in the calm-polish phase.
+- Keep PRs focused; don't gold-plate docs mid-phase.
