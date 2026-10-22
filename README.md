@@ -83,6 +83,16 @@ Pagelapse has no accounts, cookies or analytics. A live lookup sends the URL to 
 - Reduced-motion settings turn off cross-fades and smooth scrolling, and nothing plays by itself.
 - axe-core and keyboard flows run in headless Chrome. Testing with more screen readers is welcome: please [open an issue](https://github.com/geekplux/pagelapse/issues/new/choose) for anything that gets in your way.
 
+## Deploy your own
+
+Pagelapse runs on Cloudflare: one Worker for `/api/*`, with the app and the sample pictures served as static assets. You need a Cloudflare account, one KV namespace and nothing else (no API keys). Check everything without an account first:
+
+```sh
+CLOUDFLARE_ENV=production pnpm build && pnpm run check:deploy
+```
+
+[docs/DEPLOY.md](docs/DEPLOY.md) has the prerequisites, the deploy command, post-deploy checks, rollback, costs and limits, and how to point the live-demo link and the [examples gallery](examples/README.md) at your deployment.
+
 ## Roadmap
 
 - A hosted live demo on Cloudflare.

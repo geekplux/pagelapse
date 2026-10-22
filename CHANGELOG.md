@@ -6,6 +6,7 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 
 ### Added
 
+- Deployment preparation: production Wrangler config, security headers for the static site (a Content Security Policy that allows only the Internet Archive's replay frames), year-long caching for hashed assets and sample pictures, a deploy dry run (`pnpm run check:deploy`) and a deployment guide ([docs/DEPLOY.md](docs/DEPLOY.md)). The site is not deployed yet.
 - A showcase: the first view opens on the default sample's decade compare (its first capture against its latest), an [examples gallery](examples/README.md) with deep links, a social preview image, a hero GIF and launch drafts ([docs/LAUNCH.md](docs/LAUNCH.md)).
 - Open-source packaging: a new README, CONTRIBUTING, Code of Conduct (Contributor Covenant 2.1), security policy, issue and pull request templates, design notes ([docs/DESIGN.md](docs/DESIGN.md)), an extension guide ([docs/EXTENDING.md](docs/EXTENDING.md)), good first issues, and a docs link check that runs with the tests.
 - A calm layout: one focal point per view, secondary details folded behind native disclosures, one spacing scale and one ink accent, all checked by tests and a layout audit.

@@ -18,6 +18,7 @@ export const DOC_FILES = [
   'public/samples/README.md',
   'examples/README.md',
   'docs/LAUNCH.md',
+  'docs/DEPLOY.md',
 ];
 
 /** Lines outside fenced code blocks, with inline code spans blanked (links in code are not links). */
