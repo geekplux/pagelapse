@@ -22,6 +22,8 @@
     "record:samples": "node scripts/record-samples.ts",
     "record:visuals": "node scripts/record-visuals.ts",
     "bake:summaries": "node scripts/bake-sample-summaries.ts",
+    "render:social": "node scripts/render-social.ts",
+    "render:gif": "node scripts/render-hero-gif.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {

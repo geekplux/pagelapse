@@ -1,6 +1,6 @@
 // Flow registry for scripts/smoke.ts. Each flow runs once per viewport in a
 // fresh browser context; the runner takes the screenshot after `run` resolves.
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { ARCHIVES } from '../src/archive/archives.ts';
 import { describeChange } from '../src/app/describe.ts';
@@ -1180,6 +1180,34 @@ export const flows: readonly Flow[] = [
       return { notes: [`${f.id}: ${shown} thumbnails, ${f.snapshots.length - want} without a picture`] };
     },
   })),
+  {
+    name: 'hero-gif-frames',
+    description: 'For scripts/render-hero-gif.ts: the decade compare, then one frame per Play step, written to .cache/hero-gif/',
+    selfTest: true,
+    viewports: ['wide'],
+    firstView: true,
+    async run({ page, baseUrl }) {
+      const dir = new URL('../.cache/hero-gif/', import.meta.url);
+      rmSync(dir, { recursive: true, force: true });
+      mkdirSync(dir, { recursive: true });
+      const shots: number[] = [];
+      const shoot = async (i: number) => {
+        await settle(page);
+        writeFileSync(new URL(`frame-${String(shots.length).padStart(2, '0')}.png`, dir), await page.screenshot());
+        shots.push(i);
+      };
+      await openReady(page, baseUrl);
+      await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
+      await shoot(-1);
+      await page.locator('.vp-play').click();
+      const last = defaultFixture.snapshots.length - 1;
+      for (let i = 0; i <= last; i++) {
+        await page.locator(`.frame[aria-current="true"] time[datetime="${timestampToIso(defaultFixture.snapshots[i]!.ts)}"]`).waitFor({ timeout: PLAY_MS * 3 });
+        await shoot(i);
+      }
+      return { notes: [`${shots.length} frames: the decade compare, then captures #01-#${last + 1}`] };
+    },
+  },
   {
     name: '__fail',
     description: 'Self-test: always fails, to prove cleanup and a non-zero exit',
