@@ -28,7 +28,7 @@ All 20 phases are done and every PR is open (none merged). **Deployment awaits S
 | 17 | phase-17-calm-polish | [#18](https://github.com/geekplux/pagelapse/pull/18) | PR open (PASS) | 2 |
 | 18 | phase-18-oss-packaging | [#19](https://github.com/geekplux/pagelapse/pull/19) | PR open (PASS) | 1 |
 | 19 | phase-19-showcase-launch | [#20](https://github.com/geekplux/pagelapse/pull/20) | PR open (reviewed) | 2 |
-| 20 | phase-20-deploy | (opening) | verified PASS — awaiting Sean's approval to deploy | 1 |
+| 20 | phase-20-deploy | [#21](https://github.com/geekplux/pagelapse/pull/21) | PR open (PASS) — awaiting Sean's approval to deploy | 1 |
 
 Follow-ups:
 - Upload assets/social-preview.png as the GitHub social preview (repo settings).
@@ -39,4 +39,4 @@ Follow-ups:
 - Record a real Internet Archive CDX listing for `test/fixtures/api/` (current one is synthetic; IA unreachable from this box).
 - Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
-Last updated: 2026-10-21 (all phases done)
+Last updated: 2026-10-21 (all PRs open; STATE: DONE)
