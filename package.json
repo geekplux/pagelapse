@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.worker.json",
     "test": "vitest run",
     "size": "node scripts/check-size.ts",
+    "check:docs": "node scripts/check-docs.ts",
     "smoke": "node scripts/smoke.ts",
     "record:samples": "node scripts/record-samples.ts",
     "record:visuals": "node scripts/record-visuals.ts",
