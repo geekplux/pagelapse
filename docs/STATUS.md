@@ -37,6 +37,5 @@ Follow-ups:
 - After deploy: confirm web.archive.org allows `if_` replay in a frame (`curl -sI`), see phase 20.
 - Re-record built-in samples from the Internet Archive on a machine that can reach web.archive.org (this box cannot; samples recorded via arquivo.pt, see D12).
 - Record a real Internet Archive CDX listing for `test/fixtures/api/` (current one is synthetic; IA unreachable from this box).
-- Move ci/github-workflow.yml to .github/workflows/ (needs workflow scope).
 
 Last updated: 2026-10-21 (all PRs open; STATE: DONE)

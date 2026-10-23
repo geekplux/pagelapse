@@ -23,7 +23,7 @@ New here? [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md) lists well-scop
 | `pnpm size` | after a build: JavaScript, CSS, font, sample and picture budgets, and that only React reaches the browser bundle |
 | `pnpm smoke` | after a build: user flows, accessibility (axe-core) and layout audits in headless Chrome (`/usr/bin/google-chrome`); `--flows a,b` runs a subset |
 
-`pnpm check` runs lint, typecheck, test and build in one go. CI (`ci/github-workflow.yml`) runs the same plus `pnpm size`.
+`pnpm check` runs lint, typecheck, test and build in one go. CI (`.github/workflows/ci.yml`) runs the same plus `pnpm size`.
 
 ## How the code is organised
 

@@ -46,14 +46,14 @@ describe('README first screen', () => {
 });
 
 describe('open-source packaging files', () => {
-  it('all exist, and nothing is under .github/workflows/', () => {
-    const files = [...DOC_FILES, 'LICENSE', 'docs/hero.webp', 'ci/github-workflow.yml', ...['bug_report', 'feature_request', 'sample_suggestion', 'config'].map((f) => `.github/ISSUE_TEMPLATE/${f}.yml`)];
+  it('all exist, CI included, and the old ci/ folder is gone', () => {
+    const files = [...DOC_FILES, 'LICENSE', 'docs/hero.webp', '.github/workflows/ci.yml', ...['bug_report', 'feature_request', 'sample_suggestion', 'config'].map((f) => `.github/ISSUE_TEMPLATE/${f}.yml`)];
     expect(files.filter((f) => !existsSync(join(root, f)))).toEqual([]);
-    expect(existsSync(join(root, '.github/workflows'))).toBe(false);
+    expect(existsSync(join(root, 'ci'))).toBe(false);
   });
 
   it('CI runs the size budgets', () => {
-    expect(read('ci/github-workflow.yml')).toMatch(/run: pnpm size/);
+    expect(read('.github/workflows/ci.yml')).toMatch(/run: pnpm size/);
   });
 });
 
