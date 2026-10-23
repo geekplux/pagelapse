@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "See how any web page looked and changed over the years, from web archive captures.",
+  "homepage": "https://pagelapse.geekplux.com",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@9.15.9",
@@ -26,7 +27,7 @@
     "render:gif": "node scripts/render-hero-gif.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "check:deploy": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
-    "deploy": "CLOUDFLARE_ENV=production pnpm build && wrangler deploy"
+    "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
     "htmlparser2": "^12.0.0",

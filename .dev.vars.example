@@ -3,6 +3,6 @@
 #
 # Optional, only for `pnpm bake:summaries` (scripts/bake-sample-summaries.ts), which bakes Workers AI one-liners
 # into the samples. The token needs the "Workers AI: Read" permission. The Worker itself never reads these: in
-# production it uses the `AI` binding (wrangler.jsonc, env.production).
+# production it uses the `AI` binding (wrangler.jsonc; local dev uses wrangler.local.jsonc, without it).
 # CLOUDFLARE_ACCOUNT_ID=
 # CLOUDFLARE_API_TOKEN=

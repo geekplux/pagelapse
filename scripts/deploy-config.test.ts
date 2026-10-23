@@ -1,11 +1,15 @@
-// Guards the deploy setup (PLAN phase 20): the dry-run script, the production-only AI binding (D11), the static
+// Guards the deploy setup (PLAN phase 20): the dry-run script, the production-only wrangler.jsonc (no named
+// environments, custom domain, previews without production KV), the local config without AI (D11), the static
 // headers (PLAN 5.4) and the build metadata kept out of the upload.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const read = (rel: string) => readFileSync(new URL(`../${rel}`, import.meta.url), 'utf8');
 /** wrangler.jsonc uses whole-line `//` comments only. */
-const wrangler = JSON.parse(read('wrangler.jsonc').replace(/^\s*\/\/.*$/gm, ''));
+const jsonc = (rel: string) => JSON.parse(read(rel).replace(/^\s*\/\/.*$/gm, ''));
+const wrangler = jsonc('wrangler.jsonc');
+const local = jsonc('wrangler.local.jsonc');
+const PLACEHOLDER = '0'.repeat(32);
 const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
 
 /** `_headers` as `{ path: { header: value } }`. */
@@ -24,19 +28,41 @@ function headers(text: string): Record<string, Record<string, string>> {
 }
 
 describe('deploy config', () => {
-  it('check:deploy is exactly the dry run, and deploy builds for production', () => {
+  it('check:deploy is exactly the dry run, and deploy is the Workers Builds pair (build, then a bare deploy)', () => {
     expect(pkg.scripts['check:deploy']).toBe('wrangler deploy --dry-run --outdir .wrangler/dry-run');
-    expect(pkg.scripts.deploy).toBe('CLOUDFLARE_ENV=production pnpm build && wrangler deploy');
+    expect(pkg.scripts.build).toBe('vite build');
+    expect(pkg.scripts.deploy).toBe('pnpm build && wrangler deploy');
   });
 
-  it('keeps AI in production only, which repeats every binding under the same Worker name', () => {
+  it('is production only: no named environments (no warning on a bare `wrangler deploy`), AI, the custom domain', () => {
     expect(wrangler).toMatchObject({ name: 'pagelapse', workers_dev: true, preview_urls: false, observability: { enabled: true } });
-    expect(wrangler.ai).toBeUndefined();
-    const prod = wrangler.env.production;
-    expect(prod.name).toBe('pagelapse');
-    expect(prod.ai).toEqual({ binding: 'AI' });
-    expect(prod.kv_namespaces.map((k: { binding: string }) => k.binding)).toEqual(['CACHE']);
-    expect(prod.ratelimits).toEqual(wrangler.ratelimits);
+    expect(wrangler.env).toBeUndefined();
+    expect(wrangler.ai).toEqual({ binding: 'AI' });
+    expect(wrangler.routes).toEqual([{ pattern: 'pagelapse.geekplux.com', custom_domain: true }]);
+    expect(wrangler.kv_namespaces.map((k: { binding: string }) => k.binding)).toEqual(['CACHE']);
+  });
+
+  it('binds CACHE to the real KV namespace id (32 hex, not the all-zeros placeholder)', () => {
+    const id = wrangler.kv_namespaces[0].id as string;
+    expect(id).toMatch(/^[0-9a-f]{32}$/);
+    expect(id).not.toBe(PLACEHOLDER);
+  });
+
+  it('gives Workers Builds previews their own rate limiters, but no production KV and no AI', () => {
+    const { previews } = wrangler;
+    expect(previews.ratelimits.map((r: { name: string }) => r.name)).toEqual(['UPSTREAM_LIMIT', 'AI_LIMIT']);
+    const prodIds = wrangler.ratelimits.map((r: { namespace_id: string }) => r.namespace_id);
+    for (const r of previews.ratelimits) expect(prodIds).not.toContain(r.namespace_id);
+    expect(previews.kv_namespaces).toBeUndefined();
+    expect(previews.ai).toBeUndefined();
+  });
+
+  it('wrangler.local.jsonc mirrors the production Worker for `pnpm dev`, without AI or the custom domain', () => {
+    for (const key of ['name', 'main', 'compatibility_date', 'assets', 'ratelimits']) expect(local[key]).toEqual(wrangler[key]);
+    expect(local.ai).toBeUndefined();
+    expect(local.routes).toBeUndefined();
+    expect(local.env).toBeUndefined();
+    expect(local.kv_namespaces.map((k: { binding: string }) => k.binding)).toEqual(['CACHE']);
   });
 
   it('serves the PLAN 5.4 CSP, allowing frames from the Internet Archive only, and no COEP', () => {

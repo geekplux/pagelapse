@@ -1194,9 +1194,9 @@ export const flows: readonly Flow[] = [
     firstView: true,
     async run({ page, baseUrl }) {
       const md = readFileSync(new URL('../examples/README.md', import.meta.url), 'utf8');
-      const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Onion skin|Single)\]\(http:\/\/localhost:5173(\/\?sample=[^)]+)\)/g)];
+      const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Onion skin|Single)\]\(https:\/\/pagelapse\.geekplux\.com(\/\?sample=[^)]+)\)/g)];
       const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', 'Onion skin': 'onion', Single: 'single' };
-      const all = md.match(/\]\(http:\/\/localhost:5173\/\?sample=/g)?.length ?? 0;
+      const all = md.match(/\]\(https:\/\/pagelapse\.geekplux\.com\/\?sample=/g)?.length ?? 0;
       if (all !== 7 || links.length !== all) throw new Error(`examples/README.md: ${links.length} of ${all} sample links parsed, expected 7`);
       const notes: string[] = [];
       for (const [, from, to, mode, path] of links) {

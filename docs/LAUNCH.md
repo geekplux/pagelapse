@@ -2,7 +2,7 @@ Drafts only. Nothing has been posted.
 
 # Launch kit
 
-Drafts for announcing Pagelapse, plus the facts to keep them honest. Replace `<demo>` with the live demo address once it is deployed. Every post leads with the visual scrub: it is what people share.
+Drafts for announcing Pagelapse, plus the facts to keep them honest. Every post leads with the visual scrub: it is what people share.
 
 ## Show HN
 
@@ -18,7 +18,7 @@ Drafts for announcing Pagelapse, plus the facts to keep them honest. Replace `<d
 >
 > To be kind to the archive it fetches two captures at a time, caches everything, backs off on 429s and identifies itself.
 >
-> Demo: `<demo>` · Code (MIT): https://github.com/geekplux/pagelapse
+> Demo: https://pagelapse.geekplux.com · Code (MIT): https://github.com/geekplux/pagelapse
 
 ## X post
 

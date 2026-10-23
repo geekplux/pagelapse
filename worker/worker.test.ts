@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { USER_AGENT } from '../src/archive/politeFetch.ts';
 import cdx from '../test/fixtures/api/cdx-example.json';
 import html from '../test/fixtures/html/wikipedia-article.html?raw';
+import { memoryKv } from './cache.ts';
 import type { Env } from './env.ts';
 import { handle } from './index.ts';
 
@@ -138,5 +139,29 @@ describe('worker API', () => {
     expect(await t.get('/api/nope')).toMatchObject({ res: { status: 404 }, body: { error: 'not_found' } });
     const post = await handle(new Request('http://127.0.0.1/api/health', { method: 'POST' }), { CACHE: {} as KVNamespace });
     expect([post.status, post.headers.get('content-type')]).toEqual([404, 'application/json; charset=utf-8']);
+  });
+
+  it('works without a CACHE binding (Workers Builds previews): an in-memory cache, so a repeat makes no upstream call', async () => {
+    const calls: string[] = [];
+    const io = { fetch: async (input: RequestInfo | URL) => (calls.push(String(input)), recorded(String(input))), sleep: async () => {} };
+    const get = (path: string) => handle(new Request(`http://127.0.0.1${path}`), {}, io);
+    expect(await (await get('/api/health')).json()).toMatchObject({ ok: true, ai: 'unavailable' });
+    for (let i = 0; i < 2; i++) expect((await get('/api/snapshot?url=example.org&ts=20200101000000')).status).toBe(200);
+    expect(calls).toHaveLength(1);
+  });
+});
+
+describe('memoryKv', () => {
+  it('stores text and JSON, honours expirationTtl and drops the oldest key past the cap', async () => {
+    let t = 0;
+    const kv = memoryKv(2, () => t);
+    await kv.put('a', '{"n":1}');
+    await kv.put('b', 'x', { expirationTtl: 60 });
+    expect([await kv.get('a', 'json'), await kv.get('b')]).toEqual([{ n: 1 }, 'x']);
+    t = 60_000;
+    expect(await kv.get('b')).toBeNull();
+    await kv.put('c', '1');
+    await kv.put('d', '2');
+    expect([await kv.get('a'), await kv.get('c'), await kv.get('d')]).toEqual([null, '1', '2']);
   });
 });

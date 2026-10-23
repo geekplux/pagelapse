@@ -1,4 +1,5 @@
-// Renders assets/social-preview.svg to assets/social-preview.png (1280×640, the size GitHub's social preview wants)
+// Renders assets/social-preview.svg to assets/social-preview.png (1280×640, the size GitHub's social preview wants),
+// and copies it to public/social-preview.png (the site's og:image, index.html),
 // in system Chrome. The SVG's relative pictures and fonts are inlined as data: URLs first, so nothing loads from the
 // network. Run it under the shared browser lock: `flock /workspace/gx-projects/logs/browser.lock pnpm render:social`.
 //
@@ -12,6 +13,7 @@ import { encodeWebp } from './lib/webp.ts';
 const root = resolve(import.meta.dirname, '..');
 const SVG = join(root, 'assets/social-preview.svg');
 const PNG = join(root, 'assets/social-preview.png');
+const OG_PNG = join(root, 'public/social-preview.png');
 const SIZE = { width: 1280, height: 640 };
 /** GitHub rejects social previews of 1 MB or more. */
 const MAX_BYTES = 1_000_000;
@@ -46,6 +48,7 @@ try {
   if (fonts < 2) throw new Error(`render-social: Fraunces did not load (${fonts} faces)`);
   const png = await page.screenshot({ clip: { x: 0, y: 0, ...SIZE } });
   writeFileSync(PNG, png);
+  writeFileSync(OG_PNG, png);
   const bytes = statSync(PNG).size;
   if (bytes >= MAX_BYTES) throw new Error(`render-social: ${PNG} is ${bytes} B, GitHub needs < ${MAX_BYTES} B`);
   console.log(`render-social: wrote assets/social-preview.png (${SIZE.width}×${SIZE.height}, ${bytes} B)`);

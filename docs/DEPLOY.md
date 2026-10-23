@@ -1,6 +1,6 @@
 # Deploying Pagelapse
 
-Pagelapse deploys as **one Cloudflare Worker with Workers Static Assets**. The app, its fonts and the built-in sample pictures are static files: Cloudflare serves them without running the Worker. Only `/api/*` runs the Worker, which queries the Internet Archive, extracts text, caches in KV and writes AI summaries.
+Pagelapse deploys as **one Cloudflare Worker with Workers Static Assets**, live at **https://pagelapse.geekplux.com**. The app, its fonts and the built-in sample pictures are static files: Cloudflare serves them without running the Worker. Only `/api/*` runs the Worker, which queries the Internet Archive, extracts text, caches in KV and writes AI summaries.
 
 | Binding | Kind | What it does |
 |---|---|---|
@@ -9,19 +9,42 @@ Pagelapse deploys as **one Cloudflare Worker with Workers Static Assets**. The a
 | `AI_LIMIT` | Rate limit | 10 summary batches per minute per visitor |
 | `AI` | Workers AI | one-line change summaries (production only; without it the app writes rule-based "auto summaries") |
 
-The `AI` binding exists only in the `production` environment of [`wrangler.jsonc`](../wrangler.jsonc), because Workers AI has no local mode and would make `pnpm dev` and `pnpm preview` ask for a login. That is why every deploy builds with `CLOUDFLARE_ENV=production`: the Cloudflare Vite plugin then writes the production bindings into `dist/pagelapse/wrangler.json`, which `wrangler deploy` reads (through `.wrangler/deploy/config.json`).
+## How the config is laid out
+
+- **[`wrangler.jsonc`](../wrangler.jsonc) is production only.** There are no named environments, so `pnpm run build` (the Cloudflare Vite plugin writes `dist/pagelapse/wrangler.json`, which `wrangler deploy` reads through `.wrangler/deploy/config.json`) followed by a bare `npx wrangler deploy` deploys production with every binding, and prints no "multiple environments" warning. It declares the custom domain (`routes: [{ "pattern": "pagelapse.geekplux.com", "custom_domain": true }]`), so a deploy keeps the domain attached in the dashboard.
+- **`previews`** (in the same file) is what Workers Builds branch previews (`npx wrangler preview`) get, because previews do not inherit the top-level bindings: their own rate-limit counters (`namespace_id` 2001/2002), **no `CACHE`** and **no `AI`**. Without `CACHE` the Worker uses a small per-isolate memory cache (`memoryKv` in [`worker/cache.ts`](../worker/cache.ts)), so previews work and never touch production KV; without `AI` they write rule summaries (the daily AI cap is counted in KV, so previews stay off the model).
+- **[`wrangler.local.jsonc`](../wrangler.local.jsonc)** is what `pnpm dev` uses (picked in [`vite.config.ts`](../vite.config.ts)): the same Worker without `AI` (Workers AI has no local mode and would ask for a login) and without the custom domain; KV is simulated locally. `pnpm preview` serves the production build with remote bindings off, so it needs no login either and writes rule summaries.
+
+## Workers Builds (the Git integration)
+
+The repository is connected to Workers Builds in the dashboard (**Workers & Pages > pagelapse > Settings > Build**):
+
+| Setting | Value |
+|---|---|
+| Build command | `pnpm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Non-production branch deploy command | `npx wrangler preview` |
+| Root directory | `/` |
+
+Every push to `main` deploys production; other branches get preview builds. No build variables are needed (no `CLOUDFLARE_ENV`).
 
 ## Prerequisites
 
-1. A Cloudflare account with a `workers.dev` subdomain (the dashboard asks you to pick one the first time you open Workers & Pages).
-2. Log in once: `pnpm exec wrangler login`.
-3. Create the KV namespace and paste its id:
+1. A Cloudflare account. For a manual deploy from your machine, log in once: `pnpm exec wrangler login`.
+2. The custom domain `pagelapse.geekplux.com` is attached in the dashboard (**Settings > Domains & Routes**) and declared in `wrangler.jsonc`. If you run your own copy, change or delete the `routes` line.
+3. **The KV namespace.** Production caches in the KV namespace titled `PAGELAPSE_CACHE`, bound as `CACHE`; its id (`d1881ba046b74f8bbd26b6d7164f555f`) is set in the `kv_namespaces` line of `wrangler.jsonc`. A deploy failing with `KV namespace '…' is not valid [code: 10042]` means that id is wrong (the original placeholders were `<set-at-deploy>` and 32 zeros, `00000000000000000000000000000000`). If you recreate it, or run your own copy:
 
    ```sh
-   pnpm exec wrangler kv namespace create CACHE
+   pnpm exec wrangler kv namespace create PAGELAPSE_CACHE
    ```
 
-   Copy the printed `id` (32 hex characters) into `env.production.kv_namespaces[0].id` in `wrangler.jsonc`, replacing `<set-at-deploy>`. The top-level `CACHE` entry is only used by local dev and preview and can keep its placeholder. A KV id is not a secret, so committing it is fine.
+   If wrangler offers to add the binding to the config, decline (it would add a second binding named after the title). Copy the printed `id` (32 hex characters) into the existing line instead:
+
+   ```jsonc
+   "kv_namespaces": [{ "binding": "CACHE", "id": "<the id wrangler printed>" }],
+   ```
+
+   Commit and push it to `main`. Leave `wrangler.local.jsonc` alone (its zeros are a local dummy). A KV id is not a secret, so committing it is fine. `scripts/deploy-config.test.ts` checks it is a non-zero 32-hex id.
 4. Workers AI: nothing to create. If the dashboard has not been used for Workers AI before, open **AI > Workers AI** once and accept the terms. The rate-limit bindings need no setup (their `namespace_id`s only need to be unique within the account).
 
 No secrets are needed: Pagelapse has no API keys. Never commit `.dev.vars`.
@@ -31,28 +54,28 @@ No secrets are needed: Pagelapse has no API keys. Never commit `.dev.vars`.
 These need no account and no login:
 
 ```sh
-CLOUDFLARE_ENV=production pnpm build && pnpm run check:deploy
+pnpm install --frozen-lockfile && pnpm build && pnpm run check:deploy
 ```
 
 `check:deploy` is `wrangler deploy --dry-run --outdir .wrangler/dry-run`: it bundles the Worker into `.wrangler/dry-run/`, lists the bindings (`CACHE`, `AI`, `UPSTREAM_LIMIT`, `AI_LIMIT`) and the upload size, and stops. Build metadata (`dist/client/.vite/`) is kept out of the upload by `public/.assetsignore`.
 
-`pnpm build && pnpm preview` serves the production build locally, with the `public/_headers` security headers applied, and without the `AI` binding.
+`pnpm build && pnpm preview` serves the production build locally, with the `public/_headers` security headers applied; remote bindings are off, so `AI` cannot be reached and summaries are rule-based.
 
 ## Deploy
 
-The exact command, from the repository root:
+Normally: merge to `main` and Workers Builds runs `pnpm run build`, then `npx wrangler deploy`. By hand, from the repository root, the same two steps:
 
 ```sh
-CLOUDFLARE_ENV=production pnpm build && pnpm exec wrangler deploy
+pnpm build && pnpm exec wrangler deploy
 ```
 
-`pnpm run deploy` runs the same two steps. Wrangler prints the URL, `https://pagelapse.<your-subdomain>.workers.dev`.
+`pnpm run deploy` runs them too. The site is served at https://pagelapse.geekplux.com (and at the `pagelapse.<subdomain>.workers.dev` host).
 
 ## Post-deploy checks
 
-Set `SITE=https://pagelapse.<your-subdomain>.workers.dev` first.
+Set `SITE=https://pagelapse.geekplux.com` first.
 
-1. **Health.** `curl -s "$SITE/api/health"` prints `{"ok":true,"version":"0.1.0","ai":"available"}`. `"ai":"unavailable"` means the build ran without `CLOUDFLARE_ENV=production`.
+1. **Health.** `curl -s "$SITE/api/health"` prints `{"ok":true,"version":"0.1.0","ai":"available"}`. `"ai":"unavailable"` means the `AI` binding is missing from `wrangler.jsonc` (or you are on a preview, which has none by design).
 2. **Headers.** `curl -sI "$SITE/"` shows `content-security-policy` with `frame-src https://web.archive.org`, plus `x-content-type-options: nosniff`, `referrer-policy` and `permissions-policy`. `curl -sI "$SITE/samples/git-scm/20131106090756-302c3cea.webp"` shows `cache-control: public, max-age=31536000, immutable`.
 3. **The first view.** Open `$SITE`. The git-scm.com sample shows at once, with its pictures. Try Slider, Side by side, Onion skin and Play.
 4. **A live run.** Paste `https://git-scm.com/` and press Enter. Captures arrive one by one and the run ends with a timeline of changes, each with an "AI summary".
@@ -61,7 +84,7 @@ Set `SITE=https://pagelapse.<your-subdomain>.workers.dev` first.
    ```sh
    curl -s -o /dev/null -w "%{time_total}s\n" "$SITE/api/snapshot?url=https%3A%2F%2Fgit-scm.com%2F&ts=20251218145830"   # first: archive fetch
    curl -s -o /dev/null -w "%{time_total}s\n" "$SITE/api/snapshot?url=https%3A%2F%2Fgit-scm.com%2F&ts=20251218145830"   # again: KV, much faster
-   pnpm exec wrangler kv key list --namespace-id <your-kv-id> --remote | head   # snap:v1:… keys
+   pnpm exec wrangler kv key list --binding CACHE --remote | head   # snap:v1:… keys
    ```
 
 6. **The archive allows framing.** Live pictures are the Internet Archive's own replay in a sandboxed frame, so the archive must not forbid embedding:
@@ -73,19 +96,9 @@ Set `SITE=https://pagelapse.<your-subdomain>.workers.dev` first.
    Expect no `X-Frame-Options` and no `frame-ancestors` that excludes other sites. If the archive ever starts sending them, the pane shows its slow state and the "Open capture" link-out still works; record it as an issue.
 7. **The frame under our CSP.** In the live run from step 4, select a change and rest on it. The picture pane shows the archived page, and the browser console has no "Refused to frame" or other Content Security Policy errors.
 
-## Set the live-demo link
+## Live-demo links
 
-Once the site is up, point the docs at it (replace the origin with yours):
-
-1. `README.md`: replace `_coming soon_` after **Live demo:** with `[pagelapse.<your-subdomain>.workers.dev](https://pagelapse.<your-subdomain>.workers.dev)`, and drop "A hosted live demo on Cloudflare" from the roadmap.
-2. `examples/README.md`: the gallery's deep links start with `http://localhost:5173` so they work for anyone running the quick start. Swap the origin:
-
-   ```sh
-   sed -i 's#http://localhost:5173#https://pagelapse.<your-subdomain>.workers.dev#g' examples/README.md
-   ```
-
-3. `scripts/smoke-flows.ts`: the `examples-deeplinks` flow parses those links with two regexes that contain `http:\/\/localhost:5173`. Replace that part with the escaped new origin (`https:\/\/pagelapse\.<your-subdomain>\.workers\.dev`) in both, then run `pnpm build && pnpm smoke --flows examples-deeplinks` (the flow opens each link's path on the local preview).
-4. `docs/LAUNCH.md`: fill in the demo link in the post drafts.
+The README, the [examples gallery](../examples/README.md) deep links, `docs/LAUNCH.md`, the page's canonical and Open Graph tags (`index.html`), `public/robots.txt` and `public/sitemap.xml` point at https://pagelapse.geekplux.com. If you deploy your own copy elsewhere, replace that origin in those files and in the `examples-deeplinks` regexes of `scripts/smoke-flows.ts`, then run `pnpm build && pnpm smoke --flows examples-deeplinks` (the flow opens each link's path on the local preview).
 
 ## Rollback
 
