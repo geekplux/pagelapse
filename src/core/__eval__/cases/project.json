@@ -1,0 +1,132 @@
+[
+  {
+    "id": "project-tracking-links",
+    "label": "trivial",
+    "note": "Tracking and session params on link text only",
+    "before": { "title": "Tidewater - a tiny tide-table library", "blocks": [
+      "# Tidewater",
+      "A tiny, dependency-free library that predicts tide times from harmonic constants.",
+      "Download: tidewater.example.org/download?utm_source=home&utm_medium=hero",
+      "Docs: tidewater.example.org/docs?sessionid=8f2a",
+      "- Works offline",
+      "- Under 10 KB",
+      "- MIT licensed"
+    ] },
+    "after": { "title": "Tidewater - a tiny tide-table library", "blocks": [
+      "# Tidewater",
+      "A tiny, dependency-free library that predicts tide times from harmonic constants.",
+      "Download: tidewater.example.org/download?fbclid=IwAR3x&utm_source=nav",
+      "Docs: tidewater.example.org/docs?sessionid=c41d&gclid=77",
+      "- Works offline",
+      "- Under 10 KB",
+      "- MIT licensed"
+    ] }
+  },
+  {
+    "id": "project-repo-counters",
+    "label": "trivial",
+    "note": "Star, fork and watcher counters on a project page",
+    "before": { "title": "tidewater: tide predictions in the browser", "blocks": [
+      "# tidewater",
+      "Tide predictions in the browser, from harmonic constants.",
+      "1.2k stars",
+      "340 forks",
+      "Watchers: 12",
+      "## Install",
+      "Add the package with your package manager, then import predict from the module."
+    ] },
+    "after": { "title": "tidewater: tide predictions in the browser", "blocks": [
+      "# tidewater",
+      "Tide predictions in the browser, from harmonic constants.",
+      "1.5k stars",
+      "402 forks",
+      "Watchers: 15",
+      "## Install",
+      "Add the package with your package manager, then import predict from the module."
+    ] }
+  },
+  {
+    "id": "project-release-and-feature",
+    "label": "minor",
+    "note": "Release number bump plus one new feature bullet",
+    "before": { "title": "Tidewater - a tiny tide-table library", "blocks": [
+      "# Tidewater",
+      "A tiny, dependency-free library that predicts tide times from harmonic constants. It runs in browsers, in Node and on small boards.",
+      "Latest release 2.3.1",
+      "## Features",
+      "- Works offline",
+      "- Under 10 KB",
+      "- Predictions for any harbour with published constants",
+      "- MIT licensed",
+      "## Getting started",
+      "Install the package, load the constants for your harbour and call predict with a date range. The result is a list of high and low waters."
+    ] },
+    "after": { "title": "Tidewater - a tiny tide-table library", "blocks": [
+      "# Tidewater",
+      "A tiny, dependency-free library that predicts tide times from harmonic constants. It runs in browsers, in Node and on small boards.",
+      "Latest release 2.4.0",
+      "## Features",
+      "- Works offline",
+      "- Under 10 KB",
+      "- Predictions for any harbour with published constants",
+      "- Moon phase helper",
+      "- MIT licensed",
+      "## Getting started",
+      "Install the package, load the constants for your harbour and call predict with a date range. The result is a list of high and low waters."
+    ] }
+  },
+  {
+    "id": "project-features-swap",
+    "label": "moderate",
+    "note": "Half of the feature list replaced and the tagline reworded",
+    "before": { "title": "Tidewater - a tiny tide-table library", "blocks": [
+      "# Tidewater",
+      "A tiny, dependency-free library that predicts tide times from harmonic constants.",
+      "## Features",
+      "- Works offline",
+      "- Under 10 KB",
+      "- Predictions for any harbour with published constants",
+      "- Command-line tool for printing tide tables",
+      "- MIT licensed",
+      "## Getting started",
+      "Install the package, load the constants for your harbour and call predict with a date range."
+    ] },
+    "after": { "title": "Tidewater - a tiny tide-table library", "blocks": [
+      "# Tidewater",
+      "A tiny, dependency-free library for tide times, currents and moon phases.",
+      "## Features",
+      "- Works offline",
+      "- Current speed and direction for tidal straits",
+      "- Ships with constants for three thousand harbours",
+      "- Charts rendered as SVG",
+      "- MIT licensed",
+      "## Getting started",
+      "Install the package, load the constants for your harbour and call predict with a date range."
+    ] }
+  },
+  {
+    "id": "project-redesign",
+    "label": "major",
+    "note": "Homepage redesign: new headings, new copy",
+    "before": { "title": "Tidewater - a tiny tide-table library", "blocks": [
+      "# Tidewater",
+      "A tiny, dependency-free library that predicts tide times from harmonic constants.",
+      "## Features",
+      "- Works offline",
+      "- Under 10 KB",
+      "- MIT licensed",
+      "## Getting started",
+      "Install the package, load the constants for your harbour and call predict with a date range."
+    ] },
+    "after": { "title": "Tidewater: know the sea before you go", "blocks": [
+      "# Know the sea before you go",
+      "Tidewater turns published harbour data into tide tables, current maps and safe launch windows for paddlers, divers and sailors.",
+      "## Plan a trip",
+      "Pick a harbour on the map, choose your craft and see the hours when the water suits you.",
+      "## For developers",
+      "The same engine is available as a library and a command-line tool.",
+      "## Community",
+      "Join the forum to share local knowledge about tricky bars and races."
+    ] }
+  }
+]

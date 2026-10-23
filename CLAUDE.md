@@ -73,8 +73,8 @@ Keep it current so an outside monitor can read progress. **The first line is alw
 - Nothing finance-related (no prices, trading, crypto, payments features or sample data).
 - Never mention Sean's employer anywhere (code, docs, commits, PRs).
 
-## GitHub token limitation
-The `gh` token on this box has `repo` scope but **not `workflow` scope**, so pushes that add or change files under `.github/workflows/` are rejected. Do not commit anything under `.github/workflows/`. Put CI definitions in `ci/github-workflow.yml` (same content) and list "move ci/github-workflow.yml to .github/workflows/ (needs workflow scope)" under follow-ups in `docs/STATUS.md`. This is not a blocker.
+## CI
+CI lives in `.github/workflows/ci.yml` (the `gh` token now has `workflow` scope). Keep it in step with `pnpm check` and `pnpm size`.
 
 ## Hard rules: secrets
 - Never commit secrets. Local secrets go in `.dev.vars` (gitignored); deployed secrets via `wrangler secret put`.
@@ -88,5 +88,19 @@ This project will be released as open source and is not meant to be commercializ
 - **Value, then convenience.** Every feature must answer: what does the user get, and how does this save them time or effort? Cut anything that doesn't.
 - **Its own design.** Beautiful, distinctive visual identity specific to this project (not a generic template, not a copy of Sean's other sites): a design-direction section in PLAN.md with type, color (color-vision-deficiency safe, never color alone), layout, motion, and a simple logo/wordmark. Polish empty, loading, and error states.
 - **Open-source packaging is part of the product,** planned as real phases: README that sells in 10 seconds (one-line pitch, hero GIF or screenshot, live demo link placeholder, quick start, how it works, roadmap), LICENSE (MIT), CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates, a CHANGELOG, good-first-issue candidates listed in docs, a social preview image, and an examples/ gallery.
-- **Quality signals:** tests and CI config (in ci/ until workflow scope is granted), typed public APIs, small dependency footprint, fast load, accessible (keyboard + screen reader), docs for extending it.
+- **Quality signals:** tests and CI config (`.github/workflows/ci.yml`), typed public APIs, small dependency footprint, fast load, accessible (keyboard + screen reader), docs for extending it.
 - **Launch-ready:** include a short launch kit in docs/LAUNCH.md (Show HN / X post draft, 3 demo scenarios, comparison with alternatives). Do not post anything anywhere.
+
+## Change request 2026-10-20 (Sean)
+The product is renamed **Pagelapse** (repo geekplux/pagelapse), and a new phase after the diff view adds a visual pane that shows what the page looked like at each capture while scrubbing (iframe replay for live, pre-recorded screenshots for samples, filmstrip, side-by-side / slider / onion-skin compare). Full details: /workspace/gx-projects/logs/wayback-diff.change-request.md
+
+## Design direction 2026-10-21 (Sean)
+Calmer, less cramped layout plus a dedicated polish phase, starting with your next phase (do not redo the current one). Full details: /workspace/gx-projects/logs/wayback-diff.design-direction.md
+
+## Speed mode 2026-10-21 (Sean): go as fast as possible, starting now
+Sean wants maximum development speed. Quality bar for shipped code is unchanged, but cut verification overhead:
+- Exactly two review rounds per phase (review, fix, second review, fix), then stop. Never run a third review round.
+- Per phase run lint, typecheck, unit tests and build. Run the headless-browser suite (check:browser / smoke / e2e / a11y probes) at most ONCE per phase, at the end, and only the flows the phase touched.
+- Wrap EVERY headless Chrome / Playwright / browser check in a shared lock so only one project on this machine runs a browser at a time: `flock /workspace/gx-projects/logs/browser.lock <command>`. Close preview servers right after.
+- Screenshots: per phase only 1-2 key shots (1440 light) for the PR description, compressed WebP. The full 1440/390 light/dark before/after set is done once, in the calm-polish phase.
+- Keep PRs focused; don't gold-plate docs mid-phase.

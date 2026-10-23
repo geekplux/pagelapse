@@ -1,0 +1,38 @@
+name: Sample suggestion
+description: Propose a page for the built-in samples.
+labels: [sample]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A good sample has a long, interesting history (a redesign, a rewritten pitch), at least 8 distinct captures, an open licence, and nothing finance-related. See docs/EXTENDING.md for how samples are recorded.
+  - type: input
+    id: url
+    attributes:
+      label: Page URL
+      placeholder: https://example.org/
+    validations:
+      required: true
+  - type: textarea
+    id: story
+    attributes:
+      label: What changed over the years?
+      description: The changes that make it worth scrubbing through, with years if you know them.
+    validations:
+      required: true
+  - type: input
+    id: licence
+    attributes:
+      label: Licence of the page content
+      description: For example CC BY-SA 4.0, or MIT for a site whose source is MIT-licensed.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: The page is not about prices, trading, payments or other finance topics.
+          required: true
+        - label: The page has captures in the Internet Archive spread over several years.
+          required: true

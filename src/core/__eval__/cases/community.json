@@ -1,0 +1,94 @@
+[
+  {
+    "id": "forum-thread-counters",
+    "label": "trivial",
+    "note": "Views, replies and 'last edited' counters on a forum thread",
+    "before": { "title": "Best way to store seeds over winter? - Growers Forum", "blocks": [
+      "# Best way to store seeds over winter?",
+      "1,234 views",
+      "12 replies",
+      "I saved seeds from my tomatoes this year. Do they need to go in the fridge, or is a cool cupboard enough?",
+      "A paper envelope in a cool, dry cupboard is fine. Avoid plastic bags, they trap moisture.",
+      "Last edited 2 hours ago"
+    ] },
+    "after": { "title": "Best way to store seeds over winter? - Growers Forum", "blocks": [
+      "# Best way to store seeds over winter?",
+      "1,301 views",
+      "14 replies",
+      "I saved seeds from my tomatoes this year. Do they need to go in the fridge, or is a cool cupboard enough?",
+      "A paper envelope in a cool, dry cupboard is fine. Avoid plastic bags, they trap moisture.",
+      "Last edited 5 minutes ago"
+    ] }
+  },
+  {
+    "id": "forum-new-reply",
+    "label": "moderate",
+    "note": "A substantial new reply posted to a short thread",
+    "before": { "title": "Best way to store seeds over winter? - Growers Forum", "blocks": [
+      "# Best way to store seeds over winter?",
+      "I saved seeds from my tomatoes this year. Do they need to go in the fridge, or is a cool cupboard enough?",
+      "A paper envelope in a cool, dry cupboard is fine. Avoid plastic bags, they trap moisture."
+    ] },
+    "after": { "title": "Best way to store seeds over winter? - Growers Forum", "blocks": [
+      "# Best way to store seeds over winter?",
+      "I saved seeds from my tomatoes this year. Do they need to go in the fridge, or is a cool cupboard enough?",
+      "A paper envelope in a cool, dry cupboard is fine. Avoid plastic bags, they trap moisture.",
+      "I ferment tomato seeds in water for three days first, which removes the gel coat and kills some diseases. Then dry them on a plate for a week before they go in the envelope."
+    ] }
+  },
+  {
+    "id": "review-rating-change",
+    "label": "minor",
+    "note": "Phase 5 leftover: 'Rated 2 stars' -> 'Rated 5 stars' is a changed verdict, not a counter",
+    "before": { "title": "The Lighthouse Keeper's Daughter - reader reviews", "blocks": [
+      "# The Lighthouse Keeper's Daughter",
+      "Rated 2 stars by the reading circle",
+      "A slow novel about a family on a remote rock. Some readers loved the weather writing; others found the middle chapters long."
+    ] },
+    "after": { "title": "The Lighthouse Keeper's Daughter - reader reviews", "blocks": [
+      "# The Lighthouse Keeper's Daughter",
+      "Rated 5 stars by the reading circle",
+      "A slow novel about a family on a remote rock. Some readers loved the weather writing; others found the middle chapters long."
+    ] }
+  },
+  {
+    "id": "library-hours-updated",
+    "label": "trivial",
+    "note": "ISO 'updated' date and a zero-width space only",
+    "before": { "title": "Opening times - Riverside Library", "blocks": [
+      "# Opening times",
+      "Updated 2021-03-04",
+      "The library is open every day except Monday. The study room can be booked at the front desk.",
+      "Children's story time is on Wednesday mornings in the new wing."
+    ] },
+    "after": { "title": "Opening times - Riverside Library", "blocks": [
+      "# Opening times",
+      "Updated 2021-05-06",
+      "The library is open every day except Monday. The study room can be booked at the front desk.​",
+      "Children's story time is on Wednesday mornings in the new wing."
+    ] }
+  },
+  {
+    "id": "library-service-ended",
+    "label": "moderate",
+    "note": "A service is withdrawn and the page explains the replacement",
+    "before": { "title": "Services - Riverside Library", "blocks": [
+      "# Services",
+      "## Home delivery",
+      "Members who cannot visit can have books delivered by volunteers every second Tuesday.",
+      "## Study room",
+      "The study room can be booked at the front desk for up to three hours.",
+      "## Story time",
+      "Children's story time is on Wednesday mornings in the new wing."
+    ] },
+    "after": { "title": "Services - Riverside Library", "blocks": [
+      "# Services",
+      "## Study room",
+      "The study room can be booked at the front desk for up to three hours.",
+      "## Story time",
+      "Children's story time is on Wednesday mornings in the new wing.",
+      "## E-books",
+      "Members can now borrow e-books and audiobooks through the library app."
+    ] }
+  }
+]

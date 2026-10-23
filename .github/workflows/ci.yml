@@ -1,0 +1,56 @@
+# CI for Pagelapse: lint, typecheck, test, build and size budgets on every push to main and every PR.
+# Node 24 matches .npmrc (use-node-version); pnpm comes from package.json "packageManager".
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm size
+
+  # Optional: the headless-browser smoke flows (system Chrome, preinstalled on GitHub's Ubuntu runners).
+  # Run it by hand from the Actions tab; it is slower and does not gate pull requests.
+  smoke:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm smoke --out smoke-out
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: smoke-screenshots
+          path: smoke-out

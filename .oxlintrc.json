@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "jsx-a11y", "vitest", "import"],
+  "categories": {
+    "correctness": "error"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**", "docs/screenshots/**", ".cache/**"],
+  "overrides": [
+    {
+      "files": ["src/core/**"],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          { "name": "fetch", "message": "src/core is pure (AC 36): inject IO instead." },
+          { "name": "window", "message": "src/core is pure (AC 36): no DOM." },
+          { "name": "document", "message": "src/core is pure (AC 36): no DOM." }
+        ]
+      }
+    }
+  ]
+}

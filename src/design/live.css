@@ -1,0 +1,43 @@
+/* Live mode: the URL form (in the header row), the run's status line (atop the side column), and the empty and
+   error cards. */
+.url-form { flex: 1 1 22rem; min-width: 0; max-width: 34rem; display: grid; gap: var(--space-1); }
+.url-form label { font-size: 0.85rem; color: var(--ink-2); }
+.url-row { display: flex; gap: var(--space-2); }
+.url-row input {
+  flex: 1; width: 0; min-width: 0; min-height: 2.5rem; padding: var(--space-1) var(--space-3); border: 2px solid var(--ink); border-radius: 3px;
+  background: var(--card); color: var(--ink); font: 1rem var(--font-mono);
+}
+.url-row input::placeholder { color: var(--ink-2); opacity: 1; }
+.url-row input[aria-invalid="true"] { border-style: dashed; }
+/* The view's one primary action: the only solid accent fill (accent.test.ts). */
+.btn-go { min-height: 2.5rem; background: var(--accent); color: var(--card); border-color: var(--accent); font-weight: 600; }
+.url-error { font-size: 0.9rem; font-weight: 600; }
+/* Kept in the accessibility tree (an alert must exist before its text arrives); no gap while empty. */
+.url-error:empty { margin-top: calc(-1 * var(--space-1)); }
+
+.live-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.live-status p { flex: 1 1 20rem; font-size: 0.9rem; color: var(--ink-2); }
+.live-dot { display: inline-block; width: 0.6rem; height: 0.6rem; margin-right: var(--space-2); border: 2px solid var(--ink); border-radius: 50%; animation: live-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes live-pulse { to { opacity: 0.3; } }
+/* Determinate progress beside the counter: a hairline box filled in ink-2 (no hue, no spinner). */
+.live-bar { appearance: none; width: 10rem; height: 6px; border: 1px solid var(--rule-strong); border-radius: 0; background: transparent; }
+.live-bar::-webkit-progress-bar { background: transparent; }
+.live-bar::-webkit-progress-value { background: var(--ink-2); }
+.live-bar::-moz-progress-bar { background: var(--ink-2); }
+.live-wait { padding: var(--space-3) 0; color: var(--ink-2); font: 1rem / 1.5 var(--font-read); }
+
+/* The message is the view's focal point, so its card keeps its frame. */
+.state-card { display: grid; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--rule-strong); border-left: 4px solid var(--ink); border-radius: 3px; background: var(--card); max-width: 48rem; }
+.sheet .state-card h3 { font: 600 var(--step-1) / 1.3 var(--font-display); color: var(--ink); }
+.state-card p { font: 1rem / 1.5 var(--font-read); }
+.state-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
+.state-actions a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Legend swatches for captures not fetched yet (dotted) and failed (dashed), as drawn on the strip. */
+.mark-pending, .mark-failed { display: inline-block; width: 0; height: 15px; margin: 0 var(--space-1); vertical-align: middle; border-left: 1px solid var(--rule-strong); }
+.mark-pending { border-left: 1.5px dotted var(--rule-strong); height: 9px; }
+.mark-failed { height: 20px; border-left: 2px dashed var(--ink-2); }
+@media (forced-colors: active) {
+  .tl-pending, .tl-failed { stroke: CanvasText; }
+  .btn-go { forced-color-adjust: none; background: ButtonText; color: ButtonFace; }
+}

@@ -1,0 +1,140 @@
+[
+  {
+    "id": "event-posted-date",
+    "label": "trivial",
+    "note": "Long-form posted dates and a like counter",
+    "before": { "title": "Harvest festival - Riverside Allotment Society", "blocks": [
+      "# Harvest festival",
+      "Posted Mar 17, 2014 by Ana",
+      "Bring your biggest marrow, your best jam and your strangest-shaped carrot. Judging starts after lunch in the main shed.",
+      "There will be a seed swap table and tea in the orchard.",
+      "2,345 likes"
+    ] },
+    "after": { "title": "Harvest festival - Riverside Allotment Society", "blocks": [
+      "# Harvest festival",
+      "Posted Sept. 3, 2021 by Ana",
+      "Bring your biggest marrow, your best jam and your strangest-shaped carrot. Judging starts after lunch in the main shed.",
+      "There will be a seed swap table and tea in the orchard.",
+      "2,912 likes"
+    ] }
+  },
+  {
+    "id": "course-room-change",
+    "label": "minor",
+    "note": "Phase 5 leftover: 'Room 10:30A' is a room name, not a time",
+    "before": { "title": "Introduction to Field Botany - course page", "blocks": [
+      "# Introduction to Field Botany",
+      "Lectures in Room 10:30A, Science Building",
+      "A first course in identifying wild plants, with weekly walks along the river and the old railway line."
+    ] },
+    "after": { "title": "Introduction to Field Botany - course page", "blocks": [
+      "# Introduction to Field Botany",
+      "Lectures in Room 10:45A, Science Building",
+      "A first course in identifying wild plants, with weekly walks along the river and the old railway line."
+    ] }
+  },
+  {
+    "id": "course-copyright-line",
+    "label": "trivial",
+    "note": "Copyright line restyled with a new year",
+    "before": { "title": "Introduction to Field Botany - course page", "blocks": [
+      "# Introduction to Field Botany",
+      "A first course in identifying wild plants, with weekly walks along the river and the old railway line.",
+      "## Weeks",
+      "- Week 1: leaves and stems",
+      "- Week 2: flowers",
+      "Copyright 2012 Riverside College"
+    ] },
+    "after": { "title": "Introduction to Field Botany - course page", "blocks": [
+      "# Introduction to Field Botany",
+      "A first course in identifying wild plants, with weekly walks along the river and the old railway line.",
+      "## Weeks",
+      "- Week 1: leaves and stems",
+      "- Week 2: flowers",
+      "Copyright © 2023 Riverside College"
+    ] }
+  },
+  {
+    "id": "course-syllabus-update",
+    "label": "moderate",
+    "note": "Two of five weeks replaced with new topics",
+    "before": { "title": "Introduction to Field Botany - course page", "blocks": [
+      "# Introduction to Field Botany",
+      "A first course in identifying wild plants, with weekly walks along the river and the old railway line.",
+      "## Weeks",
+      "- Week 1: leaves and stems",
+      "- Week 2: flowers and their parts",
+      "- Week 3: grasses and sedges",
+      "- Week 4: ferns and mosses",
+      "- Week 5: field test on the riverbank"
+    ] },
+    "after": { "title": "Introduction to Field Botany - course page", "blocks": [
+      "# Introduction to Field Botany",
+      "A first course in identifying wild plants, with weekly walks along the river and the old railway line.",
+      "## Weeks",
+      "- Week 1: leaves and stems",
+      "- Week 2: flowers and their parts",
+      "- Week 3: trees in winter, from buds and bark",
+      "- Week 4: using keys and keeping a field notebook",
+      "- Week 5: field test on the riverbank"
+    ] }
+  },
+  {
+    "id": "event-cancelled",
+    "label": "major",
+    "note": "Event page replaced with a cancellation notice",
+    "before": { "title": "Harvest festival - Riverside Allotment Society", "blocks": [
+      "# Harvest festival",
+      "Bring your biggest marrow, your best jam and your strangest-shaped carrot. Judging starts after lunch in the main shed.",
+      "## Programme",
+      "- Morning: seed swap and plant sale",
+      "- Lunch: soup from the society's own vegetables",
+      "- Afternoon: judging and prize-giving",
+      "There will be tea in the orchard all day."
+    ] },
+    "after": { "title": "Harvest festival cancelled - Riverside Allotment Society", "blocks": [
+      "# Harvest festival cancelled",
+      "Sadly this year's festival is cancelled because the field is flooded. We hope to see everyone at the spring fair."
+    ] }
+  },
+  {
+    "id": "recipe-ratio-change",
+    "label": "minor",
+    "note": "Phase 5 leftover: 'ratio 1:30' -> '1:45' is a recipe change, not a time",
+    "before": { "title": "Cold-brew tea - Kitchen notebook", "blocks": [
+      "# Cold-brew tea",
+      "Steep loose green tea in cold water at a ratio 1:30 for eight hours in the fridge.",
+      "Strain through a fine sieve and drink within two days."
+    ] },
+    "after": { "title": "Cold-brew tea - Kitchen notebook", "blocks": [
+      "# Cold-brew tea",
+      "Steep loose green tea in cold water at a ratio 1:45 for eight hours in the fridge.",
+      "Strain through a fine sieve and drink within two days."
+    ] }
+  },
+  {
+    "id": "recipe-method-rewrite",
+    "label": "major",
+    "note": "Recipe method rewritten end to end and ingredients changed",
+    "before": { "title": "Oat flapjacks - Kitchen notebook", "blocks": [
+      "# Oat flapjacks",
+      "## Ingredients",
+      "- 250 g oats",
+      "- 125 g butter",
+      "- 4 tbsp golden syrup",
+      "## Method",
+      "Melt the butter and syrup, stir in the oats and press into a tin. Bake for twenty minutes."
+    ] },
+    "after": { "title": "Oat flapjacks - Kitchen notebook", "blocks": [
+      "# Oat flapjacks",
+      "## Ingredients",
+      "- 200 g oats",
+      "- 2 ripe bananas",
+      "- a handful of dried apricots, chopped",
+      "- 1 tsp cinnamon",
+      "## Method",
+      "Mash the bananas with a fork until smooth, then fold in the oats, apricots and cinnamon. Leave the mixture to stand for ten minutes so the oats soften.",
+      "Spread into a lined tin, bake until golden at the edges and cut into squares once cool."
+    ] }
+  }
+]

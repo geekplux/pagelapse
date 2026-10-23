@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="t d">
+  <title id="t">Pagelapse: scrub through a decade of any web page</title>
+  <desc id="d">The Pagelapse wordmark and tagline beside a before/after split of the git-scm.com home page: the capture of 6 November 2013 on the left, the capture of 18 December 2025 on the right, with a divider between them.</desc>
+  <!-- Rendered to assets/social-preview.png by scripts/render-social.ts (fonts and pictures are inlined there). -->
+  <style>
+    @font-face { font-family: Fraunces; src: url("../public/fonts/Fraunces-SemiBold.woff2") format("woff2"); font-weight: 600; }
+    @font-face { font-family: Fraunces; src: url("../public/fonts/Fraunces-Italic.woff2") format("woff2"); font-weight: 400; font-style: italic; }
+    .display { font-family: Fraunces, Georgia, serif; fill: #1F1B16; }
+    .page { font-style: italic; font-weight: 400; }
+    .lapse { font-weight: 600; }
+    .sub { font-family: Charter, "Bitstream Charter", Georgia, serif; fill: #5C5346; font-size: 26px; }
+    .mono { font-family: ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace; fill: #1F1B16; }
+  </style>
+  <rect width="1280" height="640" fill="#F6F1E7"/>
+
+  <!-- The mark (src/design/Logo.tsx geometry), 76 px -->
+  <g transform="translate(72 96) scale(3.1667)">
+    <rect width="24" height="24" rx="5.5" fill="#1F1B16"/>
+    <g fill="#1F1B16" stroke="#FFFDF8" stroke-width="1.5" stroke-linecap="round">
+      <rect x="4" y="3.25" width="13" height="14.5" rx="1.5"/>
+      <rect x="7" y="6.25" width="13" height="14.5" rx="1.5"/>
+      <path d="M13.5 6.25v14.5"/>
+    </g>
+    <g fill="none" stroke-width="1.25">
+      <path d="M8.75 9.75h1.25M11 9.75h1M8.75 17.25h1.25M11 17.25h1" stroke="#E8895A"/>
+      <path d="M14.75 9.75h3.75M14.75 17.25h2.5" stroke="#7FB0EE"/>
+    </g>
+    <circle cx="13.5" cy="13.5" r="1.75" fill="#FFFDF8"/>
+  </g>
+  <!-- Wordmark: *page***lapse** over a five-frame strip -->
+  <text class="display" x="168" y="150" font-size="64"><tspan class="page">page</tspan><tspan class="lapse">lapse</tspan></text>
+  <g fill="none" stroke="#5C5346" stroke-width="1.5">
+    <rect x="290" y="166" width="21" height="6" rx="1"/>
+    <rect x="317" y="165" width="21" height="7" rx="1"/>
+    <rect x="344" y="164" width="21" height="8" rx="1"/>
+    <rect x="371" y="163" width="21" height="9" rx="1"/>
+  </g>
+  <rect x="398" y="162" width="21" height="10" rx="1" fill="#1F1B16"/>
+
+  <!-- Tagline -->
+  <text class="display lapse" font-size="50">
+    <tspan x="72" y="290">Scrub through a</tspan>
+    <tspan x="72" y="352">decade of any</tspan>
+    <tspan x="72" y="414">web page.</tspan>
+  </text>
+  <text class="sub">
+    <tspan x="72" y="474">See how it looked and what changed,</tspan>
+    <tspan x="72" y="508">from the Internet Archive.</tspan>
+  </text>
+  <text class="mono" x="72" y="572" font-size="22">github.com/geekplux/pagelapse</text>
+
+  <!-- The proof print: Before (2013) under After (2025), After shown right of the divider -->
+  <rect x="588" y="100" width="632" height="407" fill="#FFFDF8" stroke="#8A7F6E" stroke-width="1.5"/>
+  <image x="604" y="116" width="600" height="375" href="../public/samples/git-scm/20131106090756-302c3cea.webp"/>
+  <svg x="904" y="116" width="300" height="375" viewBox="480 0 480 600">
+    <image width="960" height="600" href="../public/samples/git-scm/20251218145830-286cd682.webp"/>
+  </svg>
+  <!-- Divider and knob -->
+  <path d="M904 116v375" stroke="#1F1B16" stroke-width="3"/>
+  <circle cx="904" cy="303" r="18" fill="#FFFDF8" stroke="#1F1B16" stroke-width="2.5"/>
+  <text class="mono" x="904" y="309" font-size="18" text-anchor="middle">‹ ›</text>
+  <!-- Labels: symbol, word and date (never colour alone) -->
+  <g font-size="20">
+    <rect x="616" y="128" width="248" height="38" fill="#FFFDF8" stroke="#1F1B16" stroke-width="1.5"/>
+    <text class="mono" x="630" y="154"><tspan fill="#B4441A" font-weight="700">−</tspan> Before 2013·11·06</text>
+    <rect x="944" y="128" width="248" height="38" fill="#FFFDF8" stroke="#1F1B16" stroke-width="1.5"/>
+    <text class="mono" x="958" y="154"><tspan fill="#1F5FB0" font-weight="700">+</tspan> After 2025·12·18</text>
+  </g>
+  <text class="mono" x="588" y="546" font-size="20" style="fill:#5C5346">git-scm.com · first and latest capture</text>
+</svg>

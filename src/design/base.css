@@ -1,0 +1,278 @@
+/* Fraunces (OFL, public/fonts/OFL.txt): static instances of the google/fonts variable font made with
+   fonttools varLib.instancer (wght 600 opsz 72 SOFT 50 WONK 0; italic wght 400 WONK 1), Latin-1 subset. */
+@font-face {
+  font-family: Fraunces;
+  src: url("/fonts/Fraunces-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: Fraunces;
+  src: url("/fonts/Fraunces-Italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Spacing uses only the --space-* scale (spacing.test.ts); the one accent is ink (accent.test.ts). */
+*, *::before, *::after { box-sizing: border-box; }
+h1, h2, h3, p, ol, dl, dd { margin: 0; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.55 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+#root { display: contents; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+a { color: inherit; text-decoration-color: var(--rule-strong); text-underline-offset: 0.2em; transition: text-decoration-color 150ms var(--ease); }
+a:hover { text-decoration-color: currentColor; }
+/* Colour-agnostic double ring: a card-coloured gap, then a 2 px ink ring. */
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 2px var(--card); border-radius: 2px; }
+main:focus { outline: none; }
+
+/* One measure for header, content and footer: 16 px gutters on phones, 40 px from 640 px. */
+.site-header, main, .site-footer { width: min(100% - 2 * var(--space-3), 84rem); margin-inline: auto; }
+@media (min-width: 40rem) { .site-header, main, .site-footer { width: min(100% - 2 * var(--space-5), 84rem); } }
+.skip-link { position: absolute; left: var(--space-3); top: calc(-1 * var(--space-6)); padding: var(--space-2) var(--space-3); background: var(--card); border: 1px solid var(--ink); z-index: 1; }
+.skip-link:focus { top: var(--space-3); }
+
+/* Header: one row (wordmark, the URL form, the sample toggles), wrapping on narrow screens. */
+.site-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); padding-block: var(--space-3); }
+.site-header h1 { line-height: 0; }
+.home-link { text-decoration: none; display: inline-block; }
+.wordmark { display: inline-flex; align-items: center; gap: var(--space-3); }
+.wm-text { display: inline-flex; align-items: baseline; line-height: 1; padding-bottom: var(--space-2); }
+.wm-page { font: italic 400 2.4rem / 1 var(--font-display); letter-spacing: -0.015em; margin-right: 0.03em /* spacing-allow: optical kerning between the two wordmark halves */; }
+.wm-lapse { position: relative; font: 600 2.4rem / 1 var(--font-display); letter-spacing: -0.02em; }
+/* Time-lapse strip: five hairline frames growing slowly taller; the latest one is filled. */
+.wm-frames { position: absolute; left: 0; right: 0; top: calc(100% + var(--space-1)); display: flex; align-items: flex-end; gap: var(--space-1); }
+.wm-frames i { flex: 1; height: 5px; border: 1px solid var(--ink-2); border-radius: 1px; }
+.wm-frames i:nth-child(2) { height: 6px; }
+.wm-frames i:nth-child(3) { height: 7px; }
+.wm-frames i:nth-child(4) { height: 8px; }
+.wm-frames i:last-child { height: 9px; border-color: var(--ink); background: var(--ink); }
+@media (max-width: 39.99rem) { .wm-page, .wm-lapse { font-size: 1.9rem; } .wordmark svg { width: 32px; height: 32px; } }
+
+.logo-tile { fill: var(--ink); }
+.logo-page { fill: var(--ink); stroke: var(--card); }
+.logo-line { stroke: var(--card); }
+.logo-handle { fill: var(--card); }
+.logo-plus { stroke: var(--mark-plus); }
+.logo-minus { stroke: var(--mark-minus); }
+
+/* Samples: quiet text toggles; the pressed one is underlined in ink and bold (never colour alone). */
+.picker { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-3); margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+.picker-label { color: var(--ink-2); font-size: 0.9rem; }
+.chip {
+  min-height: 2rem; padding: 0; border: 0; background: none; color: var(--ink-2); font: 500 0.95rem/1 var(--font-ui); cursor: pointer;
+  text-decoration: underline 2px transparent; text-underline-offset: 0.45em; transition: text-decoration-color 150ms var(--ease), color 150ms var(--ease);
+}
+.chip:hover { color: var(--ink); text-decoration-color: var(--rule-strong); }
+.chip[aria-pressed="true"] { color: var(--ink); font-weight: 700; text-decoration-color: var(--ink); }
+.chip-short { display: none; }
+@media (max-width: 39.99rem) {
+  .chip-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .chip-short { display: inline; }
+}
+
+/* The sample or live run: no card, grouped by space and alignment. */
+/* The footer always starts below the first viewport, so a short state view shows only its message. */
+main { flex: 1; min-height: 100vh; }
+/* Backwards fill only: a transform left on after the entry would make it the containing block of the fixed bar. */
+.sheet { animation: settle 320ms var(--ease) backwards; }
+.sheet-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); }
+.sheet h2 { font: 600 var(--step-2) / 1.15 var(--font-display); letter-spacing: -0.015em; }
+.sheet-meta { font-size: var(--step--1); color: var(--ink-2); }
+.sheet h3 { font: 600 var(--step-1) / 1.3 var(--font-display); }
+.captures { list-style: none; padding: 0; margin-top: var(--space-2); }
+.captures li { display: grid; grid-template-columns: 2.5ch 11ch 1fr; gap: 0 var(--space-3); align-items: baseline; padding-block: var(--space-1); }
+.captures-source { color: var(--ink-2); font-size: 0.9rem; }
+.cap-no { color: var(--ink-2); font-size: var(--step--1); }
+.cap-title { font-family: var(--font-read); font-size: 1.05rem; }
+@media (max-width: 30rem) {
+  .captures li { grid-template-columns: 2.5ch 1fr; }
+  .cap-title { grid-column: 2; }
+}
+
+/* Disclosures: a quiet summary line that says what is inside; no animation; content stays in the DOM. */
+.fold > summary { width: fit-content; min-height: 1.5rem; cursor: pointer; color: var(--ink); font-size: 0.9rem; }
+.fold > summary:hover { text-decoration: underline; text-decoration-color: var(--rule-strong); }
+.fold[open] > summary { margin-bottom: var(--space-2); }
+
+/* Magnitude: size, ramp lightness and the word, shared by markers, legend and list. */
+/* Legend dots use the marker diameters (2 x MARKER_R in timeline/scale.ts). */
+[data-magnitude="minor"] { --d: 12px; --c: var(--mag-2); }
+[data-magnitude="moderate"] { --d: 19px; --c: var(--mag-3); }
+[data-magnitude="major"] { --d: 27px; --c: var(--mag-4); }
+[data-magnitude="trivial"] { --d: 12px; --c: var(--mag-1); }
+.mag-dot, .change-mag::before { content: ""; display: inline-block; width: var(--d); height: var(--d); margin: 0 var(--space-1) 0 var(--space-2); border-radius: 50%; background: var(--c); vertical-align: middle; }
+.change-mag::before { margin-left: 0; }
+.change-mag[data-magnitude="trivial"]::before, .tl-marker[data-magnitude="trivial"] { background: none; fill: var(--paper); border: 2px solid var(--c); stroke: var(--c); stroke-width: 2; }
+/* The major dot repeats the marker's inner ring (r 9 of 13.5) as a shape cue. */
+.mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px var(--c), inset 0 0 0 5.25px var(--paper); }
+.mag-tick { display: inline-block; width: 6px; height: 15px; margin-right: var(--space-1); border: 1.5px solid var(--mag-1); border-radius: 3px; vertical-align: middle; }
+.change-mag, .change-span { color: var(--ink-2); font-size: var(--step--1); }
+.tl-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); }
+
+/* The seismograph strip. Only the strip scrolls sideways, inside its own container. */
+.tl { position: relative; }
+.tl-strip { overflow-x: auto; overflow-y: hidden; padding: var(--space-1); }
+.tl-trace { fill: none; stroke: var(--ink-2); stroke-width: 1.25; stroke-linejoin: round; }
+.nowrap { white-space: nowrap; }
+.tl-slider { cursor: pointer; touch-action: pan-y; user-select: none; }
+.tl-strip svg { display: block; }
+.tl-grid { stroke: var(--rule); stroke-dasharray: 2 3; }
+.tl-axis { stroke: var(--rule-strong); }
+.tl-cap { stroke: var(--ink-2); }
+.tl-trivial { fill: var(--paper); stroke: var(--mag-1); stroke-width: 1.5; }
+/* Live runs: a capture not fetched yet is a short dotted mark below the baseline; one that failed is a taller dashed one. */
+.tl-pending { stroke: var(--rule-strong); stroke-width: 1.5; stroke-dasharray: 1 2; stroke-linecap: round; }
+.tl-failed { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.tl-stem { stroke: var(--rule-strong); }
+.tl-stem.is-sel { stroke: var(--ink); stroke-width: 1.5; }
+.tl-marker { fill: var(--c); stroke: var(--paper); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: tl-in 260ms var(--ease) both; }
+.tl-marker-ring { fill: none; stroke: var(--paper); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: tl-in 260ms var(--ease) both; pointer-events: none; }
+.tl-ring { fill: none; stroke: var(--ink); stroke-width: 2; }
+.tl-move { transition: transform 150ms ease-out; }
+.tl-caret { fill: var(--ink); }
+.tl-year, .tl-sel-date { font: 12px var(--font-mono); font-variant-numeric: tabular-nums; fill: var(--ink-2); }
+.tl-sel-date { fill: var(--ink); font-weight: 700; }
+.tl-tip {
+  position: absolute; z-index: 2; transform: translate(-50%, -100%); width: max-content; max-width: min(17rem, 85vw);
+  display: grid; gap: var(--space-1); padding: var(--space-2); border-radius: 3px; background: var(--card); color: var(--ink);
+  border: 1px solid var(--rule-strong); font-size: 0.85rem; line-height: 1.35; pointer-events: auto; box-shadow: 0 6px 18px -8px var(--shadow);
+}
+.tl-tip .mono { font-size: 0.75rem; color: var(--ink-2); }
+.tl-tip b { color: var(--ink); }
+@keyframes tl-in { from { opacity: 0; transform: scale(0.3); } }
+
+/* The selected change beside the picture: the change line, then the controls row. */
+/* Never a scroll anchor: its text changes on every selection, and anchoring to it would jump the page while scrubbing. */
+.change-panel { display: flex; flex-direction: column; gap: var(--space-3); overflow-anchor: none; }
+.diff-panel { display: grid; gap: var(--space-3); justify-items: start; }
+.sheet .change-panel h3 { font: 600 var(--step-1) / 1.3 var(--font-mono); }
+.panel-kicker { display: block; margin-bottom: var(--space-1); font-weight: 400; line-height: 1.5; }
+.panel-summary { font: var(--step-1) / 1.45 var(--font-read); max-width: 60ch; }
+/* Phones: the strip sits below the change line, so reserve its usual height: scrubbing must not move the strip under the finger. */
+@media (max-width: 39.99rem) { .change-panel .panel-summary { min-height: 4lh; } }
+.source-label { color: var(--ink-2); font-size: 0.8rem; white-space: nowrap; }
+.panel-stats, .panel-links { color: var(--ink-2); font-size: 0.9rem; }
+.panel-links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); margin-top: var(--space-2); }
+.panel-links a { color: var(--ink); }
+/* Inline links get a >= 24 px tall target without changing the line box. */
+.panel-links a, .site-footer a { padding-block: var(--space-1); }
+.cap-out::after { content: " ↗" / ""; }
+.btn { min-height: 2.5rem; padding: var(--space-1) var(--space-3); border: 1px solid var(--rule-strong); border-radius: 3px; background: transparent; color: var(--ink); font: 500 0.9rem/1 var(--font-ui); cursor: pointer; }
+.btn:hover { border-color: var(--ink); }
+.btn[aria-disabled="true"] { border-style: dashed; color: var(--ink-2); font-weight: 400; cursor: not-allowed; }
+.btn-link { min-height: 24px; padding: var(--space-1) 0; border: 0; background: none; color: var(--ink); font: 600 0.85rem var(--font-ui); text-decoration: underline; cursor: pointer; }
+.toggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 2.5rem; font-size: 0.9rem; cursor: pointer; }
+.toggle input { width: 1.1rem; height: 1.1rem; margin: 0; accent-color: var(--ink); }
+.diff-structure { list-style: none; padding: 0; margin: 0; font-family: var(--font-read); }
+.diff-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); color: var(--ink-2); font-size: 0.85rem; }
+.diff-legend b { font-family: var(--font-mono); }
+
+/* The diff as a marked galley: gutter symbol and text style carry the meaning, hue and tint repeat it. */
+.diff-body { display: grid; gap: var(--space-2); max-width: 72ch; font: 1.05rem / 1.6 var(--font-read); animation: fade 120ms ease-out; }
+.db, .diff-structure li { position: relative; padding: var(--space-1) var(--space-2) var(--space-1) calc(var(--space-4) + var(--space-2)); border-left: 3px solid transparent; }
+.db::before, .diff-structure li::before { position: absolute; left: var(--space-2); font: 700 1rem / 1.6 var(--font-mono); }
+.db-t { margin: 0; overflow-wrap: anywhere; }
+.db-t.is-clamped { max-height: 12lh; overflow: hidden; }
+.db[data-op="equal"] { color: var(--ink-2); }
+:is(.db, .diff-structure li)[data-op="added"]::before { content: "+" / ""; }
+:is(.db, .diff-structure li)[data-op="removed"]::before { content: "−" / ""; }
+:is(.db, .diff-structure li)[data-op="modified"]::before { content: "~" / ""; }
+:is(.db, .diff-structure li)[data-op="moved"]::before { content: "↕" / ""; }
+.diff-structure [data-op="added"]::before, .db[data-op="added"]::before, .diff-legend [data-op="added"] { color: var(--added); }
+.diff-structure [data-op="removed"]::before, .db[data-op="removed"]::before, .diff-legend [data-op="removed"] { color: var(--removed); }
+.db[data-op="added"] { background: linear-gradient(to right, var(--added-tint) 1.6rem, transparent 1.6rem); border-left-color: var(--added); }
+.db[data-op="removed"] { background: linear-gradient(to right, var(--removed-tint) 1.6rem, transparent 1.6rem); border-left-color: var(--removed); }
+.db[data-op="modified"] { border-left-color: var(--ink-2); }
+.db[data-op="moved"] { border-left: 3px dotted var(--ink-2); font-style: italic; }
+ins, .w-ins, .db[data-op="added"] .db-t { text-decoration: underline 2px var(--added); text-underline-offset: 3px; text-decoration-skip-ink: none; }
+del, .w-del, .db[data-op="removed"] .db-t { text-decoration: line-through 2px var(--removed); }
+ins, .w-ins { background: var(--added-tint); }
+del, .w-del { background: var(--removed-tint); }
+/* Spoken word marks (generated content reaches the accessibility tree, not the screen). */
+ins::before, ins::after, del::before, del::after { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+ins::before { content: " [added: "; }
+del::before { content: " [removed: "; }
+ins::after, del::after { content: "] "; }
+.db[data-kind="heading"] .db-t { font: 600 1.25rem / 1.3 var(--font-display); }
+.db[data-kind="list-item"] .db-t::before { content: "•" / ""; display: inline-block; margin-right: var(--space-2); }
+.db[data-kind="code"] .db-t { font: 0.9rem / 1.5 var(--font-mono); white-space: pre-wrap; }
+.db[data-kind="quote"] .db-t { font-style: italic; }
+.db-gap { min-height: 2.25rem; padding: var(--space-1) var(--space-3); border: 1px dashed var(--rule-strong); border-radius: 3px; background: none; color: var(--ink-2); font: 0.85rem var(--font-mono); text-align: left; cursor: pointer; }
+.db-gap::before { content: "⋯ " / ""; }
+.db-gap:hover { color: var(--ink); border-color: var(--ink); }
+.db-open { display: grid; gap: var(--space-2); }
+.diff-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); font-size: 0.9rem; }
+.diff-nav > * { white-space: nowrap; }
+/* The changes list: one column in time order, no row dividers; the selected one has an ink bar and weight. */
+.changes-note { color: var(--ink-2); font-size: var(--step--1); }
+.changes { list-style: none; padding: 0; margin-top: var(--space-2); max-width: 72ch; }
+.change {
+  display: grid; grid-template-columns: auto 1fr; gap: 0 var(--space-3); width: 100%; min-height: 2.75rem; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: 0; border-left: 3px solid transparent; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.change:hover { border-left-color: var(--rule-strong); }
+.change[aria-current="true"] { border-left-color: var(--ink); }
+.change[aria-current="true"] .change-sum { font-weight: 600; }
+.change-sum { grid-column: 1 / -1; font: 0.98rem / 1.4 var(--font-read); }
+.loading { padding-block: var(--space-5); color: var(--ink-2); }
+
+.site-footer { padding-block: var(--space-5) var(--space-6); margin-top: var(--space-6); border-top: 1px solid var(--rule); display: grid; gap: var(--space-3); color: var(--ink-2); font-size: 0.9rem; }
+.site-footer > * { max-width: 72ch; }
+.site-footer a { color: var(--ink); }
+.site-footer .tagline { color: var(--ink); font: italic 400 1.15rem / 1.35 var(--font-read); }
+.site-footer .fold p + p { margin-top: var(--space-2); }
+.keys div { display: grid; grid-template-columns: 9rem 1fr; gap: var(--space-3); padding-block: var(--space-1); }
+.keys dt { color: var(--ink); font-weight: 600; }
+.licence-link { white-space: nowrap; }
+
+@keyframes fade { from { opacity: 0; } }
+@keyframes settle { from { opacity: 0; transform: translateY(6px); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0s !important; animation-delay: 0s !important;
+    transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important;
+  }
+}
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+  .logo-tile { fill: CanvasText; }
+  .logo-page { fill: CanvasText; }
+  .logo-page, .logo-line, .logo-plus, .logo-minus { stroke: Canvas; }
+  .logo-handle { fill: Canvas; }
+  .wm-frames i { border-color: CanvasText; }
+  .wm-frames i:last-child { forced-color-adjust: none; background: CanvasText; }
+  .chip[aria-pressed="true"] { text-decoration-color: CanvasText; }
+  .tl-marker, .tl-caret { fill: CanvasText; stroke: Canvas; }
+  .tl-ring, .tl-stem.is-sel { stroke: Highlight; }
+  .tl-trace { stroke: CanvasText; }
+  .tl-marker-ring { stroke: Canvas; }
+  .tl-year, .tl-sel-date { fill: CanvasText; }
+  .tl-axis, .tl-cap, .tl-stem { stroke: CanvasText; }
+  .tl-trivial { fill: Canvas; stroke: CanvasText; }
+  .mag-dot, .change-mag::before { forced-color-adjust: none; background: CanvasText; }
+  .mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px CanvasText, inset 0 0 0 5.25px Canvas; }
+  .change[aria-current="true"] { border-left-color: Highlight; }
+  ins, del, .w-ins, .w-del, .db[data-op] .db-t { text-decoration-color: CanvasText; }
+  .db[data-op="equal"], .change:not([aria-current="true"]) { border-left-color: Canvas; }
+  .db[data-op="added"], .db[data-op="removed"], .db[data-op="modified"] { border-left-color: CanvasText; }
+  .btn[aria-disabled="true"] { color: GrayText; }
+}

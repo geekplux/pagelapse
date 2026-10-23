@@ -1,0 +1,39 @@
+// Pagelapse: one Worker + Static Assets (D1). Static files (including sample pictures) never invoke the Worker;
+// only /api/* does. Deploying needs Sean's approval: see docs/DEPLOY.md for the exact steps and command.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pagelapse",
+  "main": "worker/index.ts",
+  // The newest date the pinned workerd (via @cloudflare/vite-plugin's Miniflare) supports; refresh with upgrades.
+  "compatibility_date": "2026-10-12",
+  // Served at https://pagelapse.<your-subdomain>.workers.dev; no per-version preview URLs.
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": { "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
+  // Workers Logs: request logs and `console.error` from API errors, sampled at 100%.
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  // KV `CACHE`: the placeholder id is only used by local dev/preview (Miniflare). Before deploying, run
+  // `pnpm exec wrangler kv namespace create CACHE` and paste the printed id into env.production below.
+  "kv_namespaces": [{ "binding": "CACHE", "id": "<set-at-deploy>" }],
+  // Per-IP limits on uncached upstream fetches and summary batches (namespace ids are arbitrary per account).
+  "ratelimits": [
+    { "name": "UPSTREAM_LIMIT", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
+    { "name": "AI_LIMIT", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
+  ],
+  // D11: Workers AI has no local mode, and a top-level `ai` binding makes `vite dev`/`preview` demand a Cloudflare
+  // login. So `ai` lives only in the production env (built with CLOUDFLARE_ENV=production); dev, preview and tests
+  // run without it and use rule summaries. Bindings are not inherited, so production repeats them.
+  "env": {
+    "production": {
+      // Keep the Worker (and its workers.dev host) named "pagelapse", not "pagelapse-production".
+      "name": "pagelapse",
+      "ai": { "binding": "AI" },
+      // Paste the id from `wrangler kv namespace create CACHE` here (a 32-character hex string).
+      "kv_namespaces": [{ "binding": "CACHE", "id": "<set-at-deploy>" }],
+      "ratelimits": [
+        { "name": "UPSTREAM_LIMIT", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
+        { "name": "AI_LIMIT", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
+      ]
+    }
+  }
+}

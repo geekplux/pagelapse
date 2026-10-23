@@ -1,0 +1,89 @@
+[
+  {
+    "id": "wiki-last-edited",
+    "label": "trivial",
+    "note": "'Last edited' footer and an archive replay prefix in a reference link",
+    "before": { "title": "Lighthouse of Pharos Point - Community Wiki", "blocks": [
+      "# Lighthouse of Pharos Point",
+      "The lighthouse stands on a granite headland at the mouth of the estuary. It was first lit in 1852 and automated in 1981.",
+      "## History",
+      "The first tower was built of timber and burned down within a decade. The current stone tower replaced it in 1862.",
+      "Source: https://web.archive.org/web/20140317091200/https://example.org/pharos-history",
+      "This page was last edited on 17 March 2014, at 12:34."
+    ] },
+    "after": { "title": "Lighthouse of Pharos Point - Community Wiki", "blocks": [
+      "# Lighthouse of Pharos Point",
+      "The lighthouse stands on a granite headland at the mouth of the estuary. It was first lit in 1852 and automated in 1981.",
+      "## History",
+      "The first tower was built of timber and burned down within a decade. The current stone tower replaced it in 1862.",
+      "Source: https://example.org/pharos-history",
+      "This page was last edited on 2 May 2015, at 08:00."
+    ] }
+  },
+  {
+    "id": "wiki-heading-rename",
+    "label": "minor",
+    "note": "One section heading renamed on a ~150-word article",
+    "before": { "title": "Lighthouse of Pharos Point - Community Wiki", "blocks": [
+      "# Lighthouse of Pharos Point",
+      "The lighthouse stands on a granite headland at the mouth of the estuary. It was first lit in 1852 and automated in 1981, when the last keepers left.",
+      "## Early history",
+      "The first tower was built of timber and burned down within a decade. The current stone tower replaced it in 1862, using granite quarried on the headland itself.",
+      "## The light",
+      "The lens is a first-order Fresnel lens made in Paris. It turns on a bath of mercury and shows two white flashes every fifteen seconds, visible for about twenty nautical miles.",
+      "## Visiting",
+      "The grounds are open to walkers all year. The tower itself can be climbed on summer weekends with a guide from the local heritage society."
+    ] },
+    "after": { "title": "Lighthouse of Pharos Point - Community Wiki", "blocks": [
+      "# Lighthouse of Pharos Point",
+      "The lighthouse stands on a granite headland at the mouth of the estuary. It was first lit in 1852 and automated in 1981, when the last keepers left.",
+      "## Construction",
+      "The first tower was built of timber and burned down within a decade. The current stone tower replaced it in 1862, using granite quarried on the headland itself.",
+      "## The light",
+      "The lens is a first-order Fresnel lens made in Paris. It turns on a bath of mercury and shows two white flashes every fifteen seconds, visible for about twenty nautical miles.",
+      "## Visiting",
+      "The grounds are open to walkers all year. The tower itself can be climbed on summer weekends with a guide from the local heritage society."
+    ] }
+  },
+  {
+    "id": "wiki-history-expanded",
+    "label": "moderate",
+    "note": "A paragraph added to History and another one reworded",
+    "before": { "title": "Lighthouse of Pharos Point - Community Wiki", "blocks": [
+      "# Lighthouse of Pharos Point",
+      "The lighthouse stands on a granite headland at the mouth of the estuary. It was first lit in 1852 and automated in 1981, when the last keepers left.",
+      "## History",
+      "The first tower was built of timber and burned down within a decade. The current stone tower replaced it in 1862, using granite quarried on the headland itself.",
+      "## The light",
+      "The lens is a first-order Fresnel lens made in Paris. It shows two white flashes every fifteen seconds."
+    ] },
+    "after": { "title": "Lighthouse of Pharos Point - Community Wiki", "blocks": [
+      "# Lighthouse of Pharos Point",
+      "The lighthouse stands on a granite headland at the mouth of the estuary. It was first lit in 1852 and automated in 1981, when the last keepers left.",
+      "## History",
+      "The first tower was built of timber and burned down within a decade. The current stone tower replaced it in 1862, using granite quarried on the headland itself.",
+      "During the great storm of 1903 the keepers kept the light burning for three nights without relief, and a lifeboat crew was guided home by its beam.",
+      "## The light",
+      "The lens is a first-order Fresnel lens made in Paris. It floats on mercury and still shows two white flashes every fifteen seconds."
+    ] }
+  },
+  {
+    "id": "wiki-stub-expanded",
+    "label": "major",
+    "note": "A two-line stub grows into a full article",
+    "before": { "title": "Pharos Point - Community Wiki", "blocks": [
+      "# Pharos Point",
+      "Pharos Point is a headland on the north shore of the estuary. This article is a stub."
+    ] },
+    "after": { "title": "Pharos Point - Community Wiki", "blocks": [
+      "# Pharos Point",
+      "Pharos Point is a granite headland on the north shore of the estuary, known for its lighthouse, its seabird colonies and its dangerous tidal race.",
+      "## Geology",
+      "The headland is the eroded root of an old volcano. Its pink granite was quarried until the 1920s for harbour walls along the coast.",
+      "## Wildlife",
+      "Guillemots, razorbills and a small colony of puffins nest on the cliffs from April to July. Grey seals haul out on the rocks below.",
+      "## Lighthouse",
+      "The lighthouse was first lit in 1852 and automated in 1981."
+    ] }
+  }
+]

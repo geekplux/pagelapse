@@ -1,0 +1,152 @@
+/* The stage. Regions in DOM order, which is the visual and keyboard order: the hero (title, then the picture with the
+   selected change beside it), the scrub strip (filmstrip over timeline), the folded lists, the diff. The picture is
+   the focal point: about two thirds of the width on desktop; the change line is top-aligned with it and the controls
+   row ends at its bottom edge. The scrub strip belongs to the focal point, so it sits closer (24 px) than the rest. */
+.stage { display: grid; gap: var(--space-4); }
+@media (min-width: 60rem) { main { padding-top: var(--space-4); } }
+.stage > *, .hero > *, .scrub > *, .lists > * { min-width: 0; }
+.lists, .diff-panel { margin-top: var(--space-3); }
+.lists { display: grid; gap: var(--space-3); justify-items: start; }
+.hero { display: grid; gap: var(--space-3) var(--space-5); }
+.scrub { display: grid; gap: var(--space-2); }
+@media (min-width: 60rem) {
+  .hero { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .hero > .sheet-head, .hero > .state-card { grid-column: 1 / -1; }
+  /* Side by side needs the width: the two prints span both columns, the selected change follows below. */
+  .hero:has(> .vpane[data-mode="side"]) { grid-template-columns: minmax(0, 1fr); }
+  /* The side column is never a scroll box: longer, enlarged or spaced-out text makes the row taller instead. */
+  .side { display: flex; flex-direction: column; }
+  .side .change-panel { flex: 1; }
+  .controls { margin-top: auto; }
+  /* "Change details" opens downward: the space it takes is added below the picture (DiffView sets --details-h), so
+     the row grows and the controls row stays put instead of rising (not in Side by side, where the change follows). */
+  .hero:has(.change-details[open]):not(:has(> .vpane[data-mode="side"])) > .vpane { margin-bottom: var(--details-h, 0) /* spacing-allow: the measured height of the open details */; }
+  .hero > .live-status { grid-column: 1 / -1; }
+}
+.stage h3 { margin: 0; }
+/* A live run's status line tops the side column (directly under the picture on phones). */
+.side > .live-status { margin-bottom: var(--space-3); }
+
+/* One controls row: Play, Previous / Next, Compare (and Before / After in Single), then "Change details". */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.controls > .vp-modes, .controls > .change-details { flex-basis: 100%; }
+/* Phones: once the row has scrolled away above, Previous / Next sticks to the bottom of the screen (its slot keeps
+   its size, so nothing moves), and focus scrolls stop above it. */
+@media (max-width: 39.99rem) {
+  html { scroll-padding-bottom: calc(var(--space-6) + var(--space-2)); }
+  /* A changes-list row brought into view stops clear of the sticky bar too (AAA 2.4.12). */
+  .change { scroll-margin-bottom: calc(var(--space-6) + var(--space-2)); }
+  .nav-slot { min-height: 2.5rem; }
+  .diff-nav[data-stuck] { position: fixed; z-index: 1; inset: auto 0 0; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--paper); border-top: 1px solid var(--rule-strong); }
+}
+
+/* Compare: a disclosure button naming the mode, then native radios as quiet text segments. */
+.vp-compare::after { content: " ▾" / ""; }
+.vp-compare[aria-expanded="true"]::after { content: " ▴" / ""; }
+.vp-modes:not([hidden]) { display: flex; }
+.vp-modes { flex-wrap: wrap; gap: 0 var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
+.vp-mode { position: relative; display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--ink-2); font: 500 0.9rem/1 var(--font-ui); white-space: nowrap; cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 0.45em; }
+.vp-mode input { position: absolute; inset: 0; margin: 0; appearance: none; cursor: pointer; }
+.vp-play { white-space: nowrap; }
+/* Playing, or swapped: a heavier ink border and bold text, besides the changed label. */
+.vp-play[data-playing], .vp-onion .btn[aria-pressed="true"] { border: 2px solid var(--ink); font-weight: 700; }
+.vp-sides { display: inline-flex; }
+.vp-side { min-height: 2.5rem; padding: var(--space-1) var(--space-3); border: 1px solid var(--rule-strong); background: none; color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 0.45em; }
+.vp-side + .vp-side { border-left: 0; }
+.vp-side b, .vp-label b { font-family: var(--font-mono); }
+.vp-side [data-op="added"], .vp-label [data-op="added"] { color: var(--added); }
+.vp-side [data-op="removed"], .vp-label [data-op="removed"] { color: var(--removed); }
+/* Pressed or checked: ink, bold and underlined; never a fill, never hue alone. */
+:is(.vp-mode:has(:checked), .vp-side[aria-checked="true"]) { color: var(--ink); font-weight: 700; text-decoration-color: var(--ink); }
+
+/* The mounted print: a card mat, a strong hairline, the picture at 16:10 with its size reserved. */
+.vp-mat { position: relative; margin: 0; padding: var(--space-2); background: var(--card); border: 1px solid var(--rule-strong); border-radius: 2px; box-shadow: 0 18px 40px -28px var(--shadow); }
+.vp-shot { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: var(--paper) center / cover no-repeat; }
+.vp-none {
+  display: grid; place-content: center; gap: var(--space-2); padding: var(--space-3); text-align: center; color: var(--ink-2);
+  background: repeating-linear-gradient(135deg, var(--card) 0 9px, var(--rule) 9px 10px); border: 1px dashed var(--rule-strong);
+}
+.vp-none p:first-child { color: var(--ink); font: 600 var(--step-1) / 1.3 var(--font-display); }
+.vp-none p { padding: var(--space-1) var(--space-2); background: var(--card); }
+.vp-label { position: absolute; z-index: 1; top: var(--space-3); left: var(--space-3); padding: var(--space-1) var(--space-2); background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); max-width: calc(50% - 20px); overflow-wrap: anywhere; }
+.vp-label[data-side="after"] { left: auto; right: var(--space-3); }
+@media (max-width: 39.99rem) { .vp-label { padding: 0 var(--space-1); font-size: 0.7rem; } }
+
+/* Compare: the two pictures share one 16:10 cell. Slider clips After at --split; onion skin fades the top one. */
+.vp-cmp { position: relative; display: grid; }
+.vp-cmp > :not(.vp-split) { grid-area: 1 / 1; min-width: 0; }
+.vp-clip { clip-path: inset(0 0 0 var(--split)); }
+.vp-top { opacity: var(--op); }
+/* The divider: a 32 px wide drag strip with its own touch handling, a 2 px ink line on a card halo, a card knob. */
+.vp-split { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - var(--space-3)) /* spacing-allow: the divider follows --split */; width: 32px; display: grid; place-items: center; touch-action: none; cursor: ew-resize; }
+.vp-split::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin-inline: auto; width: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); }
+.vp-knob { position: relative; display: grid; place-items: center; width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 50%; background: var(--card); color: var(--ink); box-shadow: 0 0 0 2px var(--card); font: 700 0.85rem/1 var(--font-mono); }
+.vp-split:focus-visible .vp-knob { background: var(--ink); color: var(--card); }
+.vp-onion { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-top: var(--space-2); font: 0.85rem var(--font-ui); }
+.vp-onion input { vertical-align: middle; accent-color: var(--ink); }
+.vp-onion input[type=range] { min-height: 24px; }
+.vp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+@media (max-width: 39.99rem) { .vp-pair { grid-template-columns: 1fr; } }
+/* A new picture fades in over the previous one (none under reduced motion). */
+.vp-frame { background: center / cover no-repeat; }
+@media (prefers-reduced-motion: no-preference) {
+  .vp-frame[data-fade] { background-image: var(--prev); }
+  .vp-frame[data-fade] .vp-shot { animation: vp-fade 120ms ease-out; }
+}
+@keyframes vp-fade { from { opacity: 0; } }
+/* One caption line: frame, date, the link out; honest badges below it. */
+.vp-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); padding-top: var(--space-2); color: var(--ink-2); font-size: 0.8rem; }
+.vp-cap > :first-child { color: var(--ink); font-weight: 700; }
+.vp-cap a { margin-left: auto; color: var(--ink); padding-block: var(--space-1); }
+.vp-cap a + a { margin-left: 0; }
+.vp-note { margin-bottom: var(--space-2); }
+.vp-badge, .vp-note { flex-basis: 100%; font-family: var(--font-ui); color: var(--ink); padding: var(--space-1) var(--space-2); border-left: 3px solid var(--rule-strong); font-size: 0.85rem; }
+
+/* The contact sheet: numbered frames; the shown one has a thick ink outline (on a paper gap, so it holds against any
+   thumbnail edge) and a caret above it. */
+.film-strip { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(4.4rem, 1fr); gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-2) var(--space-2); list-style: none; overflow-x: auto; }
+@media (prefers-reduced-motion: no-preference) { .film-strip { scroll-behavior: smooth; } }
+.frame { position: relative; display: grid; gap: var(--space-1); width: 100%; padding: 0; border: 0; background: none; color: var(--ink-2); text-align: left; cursor: pointer; }
+.frame img, .frame-none { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; border: 1px solid var(--rule-strong); }
+.frame-none { display: grid; place-content: center; border-style: dashed; font: 0.72rem var(--font-mono); }
+.frame[data-trivial] img { filter: grayscale(1) contrast(0.75); }
+.frame:hover img { border-color: var(--ink); }
+.frame[aria-current="true"] { color: var(--ink); }
+.frame[aria-current="true"] :is(img, .frame-none, .sil) { outline: 3px solid var(--ink); outline-offset: 2px; }
+.frame[aria-current="true"]::before { content: "▼" / ""; position: absolute; top: calc(-1 * var(--space-3)); left: 0; right: 0; text-align: center; font-size: 0.7rem; line-height: 1; color: var(--ink); }
+.frame[aria-current="true"] .frame-cap { font-weight: 700; }
+.frame-cap { display: flex; flex-wrap: wrap; gap: 0 var(--space-1); font-size: 0.7rem; line-height: 1.35; }
+.frame-trivial, .frame-partial { font-style: italic; }
+
+.tl-tip img { width: 160px; height: auto; border: 1px solid var(--rule); }
+
+@media (forced-colors: active) {
+  .frame[aria-current="true"] :is(img, .frame-none, .sil) { outline-color: Highlight; }
+  .frame[aria-current="true"]::before { color: CanvasText; }
+  :is(.vp-side[aria-checked="true"], .vp-mode:has(:checked)) { text-decoration-color: CanvasText; }
+  .vp-split::before { forced-color-adjust: none; background: CanvasText; box-shadow: 0 0 0 2px Canvas; }
+  .vp-split:focus-visible .vp-knob { background: Highlight; color: HighlightText; }
+  .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border-color: CanvasText; }
+}
+
+/* Live replay (phase 15): the archive's 1280×800 page scaled into the mat (`--k` from a ResizeObserver), its text
+   silhouette underneath until it loads, preloading neighbours hidden in the same box. */
+.lf { position: relative; overflow: hidden; }
+.lf iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; background: var(--replay-bg); transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
+.lf iframe:not([data-loaded]), .lf iframe[data-hidden] { visibility: hidden; }
+.sil { display: block; width: 100%; height: 100%; background: var(--card); }
+.sil rect { fill: var(--rule); }
+.sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--rule-strong); }
+/* While a run fetches, the pane's outline is quieter than the strip filling in below it. */
+:is([data-live="captures"], [data-live="snapshots"]) .vpane .sil { opacity: 0.6; }
+.frame-pending .frame-none { border-style: dotted; }
+.frame .sil { aspect-ratio: 16 / 10; height: auto; border: 1px solid var(--rule-strong); }
+.lf-tag, .lf-note p { position: absolute; left: var(--space-2); bottom: var(--space-2); padding: var(--space-1) var(--space-2); border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--card); color: var(--ink); font-size: 0.75rem; }
+/* The tag stays inside the picture at any width; on phones it keeps to one line (the full text stays readable to
+   assistive tech), so it never covers more than a sliver of the outline. */
+.lf-tag { max-width: calc(100% - 2 * var(--space-2)); }
+@media (max-width: 39.99rem) { .lf-tag { max-width: 60%; padding-block: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
+/* The pane's one "still loading" note sits below the picture(s) in normal flow, so nothing covers or clips it. */
+.lf-note p { position: static; margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-width: 0 0 0 3px; font: 0.9rem / 1.45 var(--font-ui); background: none; }
+.vpane .live-wait { display: grid; place-content: center; padding: var(--space-3); text-align: center; }
+@media (forced-colors: active) { .sil rect, .sil [data-kind] { fill: CanvasText; } .sil { background: Canvas; } }

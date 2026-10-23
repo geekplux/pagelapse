@@ -1,0 +1,51 @@
+{
+  "name": "pagelapse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "See how any web page looked and changed over the years, from web archive captures.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --strictPort --host 127.0.0.1",
+    "lint": "oxlint",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.worker.json",
+    "test": "vitest run",
+    "size": "node scripts/check-size.ts",
+    "check:docs": "node scripts/check-docs.ts",
+    "smoke": "node scripts/smoke.ts",
+    "record:samples": "node scripts/record-samples.ts",
+    "record:visuals": "node scripts/record-visuals.ts",
+    "bake:summaries": "node scripts/bake-sample-summaries.ts",
+    "render:social": "node scripts/render-social.ts",
+    "render:gif": "node scripts/render-hero-gif.ts",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check:deploy": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "deploy": "CLOUDFLARE_ENV=production pnpm build && wrangler deploy"
+  },
+  "dependencies": {
+    "htmlparser2": "^12.0.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.64.0",
+    "@cloudflare/workers-types": "^5.20261021.1",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "axe-core": "^4.14.0",
+    "oxlint": "^1.89.0",
+    "playwright-core": "^1.64.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.3"
+  }
+}
