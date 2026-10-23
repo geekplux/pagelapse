@@ -2,7 +2,7 @@
 
 Three built-in samples to start with, and five pages to try live. The sample links open a change and a compare mode directly.
 
-The links point at a local copy of Pagelapse. Run `pnpm i && pnpm dev` first ([quick start](../README.md#try-it-in-10-seconds)). If your dev server uses another port, change `5173` in the address. The samples need no network and no key.
+The links open the live demo at https://pagelapse.geekplux.com. To use a local copy instead, run `pnpm i && pnpm dev` ([quick start](../README.md#try-it-in-10-seconds)) and replace `https://pagelapse.geekplux.com` with `http://localhost:5173` in the address. The samples need no network and no key.
 
 ## The built-in samples
 
@@ -20,9 +20,9 @@ What to look for:
 
 Open it:
 
-- [2013·11·06 → 2025·12·18, the decade compare, in Slider](http://localhost:5173/?sample=git-scm&view=slider): the first view. Drag the divider across twelve years.
-- [2025·04·04 → 2025·12·18 in Slider](http://localhost:5173/?sample=git-scm&change=20250404010448-20251218145830&view=slider): the 2025 redesign of the lower half on its own.
-- [2013·11·06 → 2014·09·08 in Single](http://localhost:5173/?sample=git-scm&change=20131106090756-20140908183445&view=single): a tiny change. Flip Before / After and watch the release card.
+- [2013·11·06 → 2025·12·18, the decade compare, in Slider](https://pagelapse.geekplux.com/?sample=git-scm&view=slider): the first view. Drag the divider across twelve years.
+- [2025·04·04 → 2025·12·18 in Slider](https://pagelapse.geekplux.com/?sample=git-scm&change=20250404010448-20251218145830&view=slider): the 2025 redesign of the lower half on its own.
+- [2013·11·06 → 2014·09·08 in Single](https://pagelapse.geekplux.com/?sample=git-scm&change=20131106090756-20140908183445&view=single): a tiny change. Flip Before / After and watch the release card.
 
 ### Wikipedia: Internet Archive (2014–2026)
 
@@ -38,8 +38,8 @@ What to look for:
 
 Open it:
 
-- [2022·02·02 → 2023·03·26 in Slider](http://localhost:5173/?sample=wikipedia-internet-archive&change=20220202204805-20230326224104&view=slider): the 2022 design arrives.
-- [2024·03·16 → 2025·05·02 in Side by side](http://localhost:5173/?sample=wikipedia-internet-archive&change=20240316020238-20250502083649&view=side): the cyberattacks section.
+- [2022·02·02 → 2023·03·26 in Slider](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&change=20220202204805-20230326224104&view=slider): the 2022 design arrives.
+- [2024·03·16 → 2025·05·02 in Side by side](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&change=20240316020238-20250502083649&view=side): the cyberattacks section.
 
 ### rust-lang.org home page (2018–2026)
 
@@ -55,8 +55,8 @@ What to look for:
 
 Open it:
 
-- [2018·12·20 → 2019·06·24 in Slider](http://localhost:5173/?sample=rust-lang&change=20181220082130-20190624102109&view=slider): the banner goes, the tagline changes.
-- [2019·06·24 → 2020·01·12 in Onion skin](http://localhost:5173/?sample=rust-lang&change=20190624102109-20200112221536&view=onion): fade the newer capture over the older one.
+- [2018·12·20 → 2019·06·24 in Slider](https://pagelapse.geekplux.com/?sample=rust-lang&change=20181220082130-20190624102109&view=slider): the banner goes, the tagline changes.
+- [2019·06·24 → 2020·01·12 in Onion skin](https://pagelapse.geekplux.com/?sample=rust-lang&change=20190624102109-20200112221536&view=onion): fade the newer capture over the older one.
 
 ## Try these live
 
@@ -64,10 +64,10 @@ Paste any of these into the address field. A live lookup asks the Internet Archi
 
 | Page | Why it is interesting |
 | --- | --- |
-| [w3.org](http://localhost:5173/?url=https%3A%2F%2Fwww.w3.org%2F) | The Web's standards body, with decades of redesigns and changes to how it describes itself. |
-| [gnu.org](http://localhost:5173/?url=https%3A%2F%2Fwww.gnu.org%2F) | A famously steady design, so its text changes show up clearly. |
-| [kernel.org](http://localhost:5173/?url=https%3A%2F%2Fwww.kernel.org%2F) | The Linux release table: a new version line almost every capture. |
-| [nasa.gov](http://localhost:5173/?url=https%3A%2F%2Fwww.nasa.gov%2F) | A large public site whose front page has been rebuilt several times. |
-| [whatwg.org/faq](http://localhost:5173/?url=https%3A%2F%2Fwhatwg.org%2Ffaq) | A long FAQ page where answers are added and reworded over the years. |
+| [w3.org](https://pagelapse.geekplux.com/?url=https%3A%2F%2Fwww.w3.org%2F) | The Web's standards body, with decades of redesigns and changes to how it describes itself. |
+| [gnu.org](https://pagelapse.geekplux.com/?url=https%3A%2F%2Fwww.gnu.org%2F) | A famously steady design, so its text changes show up clearly. |
+| [kernel.org](https://pagelapse.geekplux.com/?url=https%3A%2F%2Fwww.kernel.org%2F) | The Linux release table: a new version line almost every capture. |
+| [nasa.gov](https://pagelapse.geekplux.com/?url=https%3A%2F%2Fwww.nasa.gov%2F) | A large public site whose front page has been rebuilt several times. |
+| [whatwg.org/faq](https://pagelapse.geekplux.com/?url=https%3A%2F%2Fwhatwg.org%2Ffaq) | A long FAQ page where answers are added and reworded over the years. |
 
 Live pictures come straight from the Internet Archive's replay, so some captures look unstyled or miss images. The pane marks them, and the text diff still works.

@@ -57,6 +57,11 @@ describe('social preview', () => {
     expect(statSync(join(root, 'assets/social-preview.png')).size).toBeLessThan(1_000_000);
   });
 
+  it('is also the site\'s og:image: public/social-preview.png is the same file, linked from index.html', () => {
+    expect(readFileSync(join(root, 'public/social-preview.png')).equals(readFileSync(join(root, 'assets/social-preview.png')))).toBe(true);
+    expect(read('index.html')).toContain('<meta property="og:image" content="https://pagelapse.geekplux.com/social-preview.png" />');
+  });
+
   it('sets its text in colours that pass AA on the paper and the label chips', () => {
     const { paper, card, ink, removed, added } = palette.light;
     expect(svg).toContain(`fill="${paper}"`);

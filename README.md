@@ -4,7 +4,7 @@
 
 `MIT licence` · `no API key needed` · `works offline for samples`
 
-**Live demo:** _coming soon_ · **Run it yourself:** [try it in 10 seconds](#try-it-in-10-seconds)
+**Live demo:** [pagelapse.geekplux.com](https://pagelapse.geekplux.com) · **Run it yourself:** [try it in 10 seconds](#try-it-in-10-seconds)
 
 ![Pagelapse playing the git-scm.com home page as a time-lapse: first a slider splits the 2013 capture from the 2025 one, then the page steps through its 14 captures from 2013 to 2025, one per frame](docs/hero.gif)
 
@@ -88,14 +88,13 @@ Pagelapse has no accounts, cookies or analytics. A live lookup sends the URL to 
 Pagelapse runs on Cloudflare: one Worker for `/api/*`, with the app and the sample pictures served as static assets. You need a Cloudflare account, one KV namespace and nothing else (no API keys). Check everything without an account first:
 
 ```sh
-CLOUDFLARE_ENV=production pnpm build && pnpm run check:deploy
+pnpm build && pnpm run check:deploy
 ```
 
-[docs/DEPLOY.md](docs/DEPLOY.md) has the prerequisites, the deploy command, post-deploy checks, rollback, costs and limits, and how to point the live-demo link and the [examples gallery](examples/README.md) at your deployment.
+[docs/DEPLOY.md](docs/DEPLOY.md) has the prerequisites, the Workers Builds settings, the deploy command, post-deploy checks, rollback, costs and limits, and which links to change for your own domain.
 
 ## Roadmap
 
-- A hosted live demo on Cloudflare.
 - Re-recording the samples from the Internet Archive itself.
 - An optional screenshot provider for live thumbnails (Cloudflare Browser Rendering). It is designed but not built: see [EXTENDING](docs/EXTENDING.md#optional-screenshot-provider-designed-not-built).
 - Smaller ideas are listed in [good first issues](docs/GOOD_FIRST_ISSUES.md).

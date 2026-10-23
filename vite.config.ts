@@ -19,10 +19,18 @@ function chunkModules(): Plugin {
   };
 }
 
-export default defineConfig({
+/**
+ * `vite build` reads wrangler.jsonc (production, what Workers Builds deploys). `vite dev` reads wrangler.local.jsonc
+ * (no AI binding, so no Cloudflare login). `vite preview` serves the production build with remote bindings off, so it
+ * needs no login either: the `AI` binding is present but unreachable, and summaries fall back to rules (D11).
+ */
+const workerConfig = (command: 'build' | 'serve', isPreview?: boolean) =>
+  command === 'build' ? {} : isPreview ? { remoteBindings: false } : { configPath: './wrangler.local.jsonc' };
+
+export default defineConfig(({ command, isPreview }) => ({
   // The Cloudflare plugin builds the Worker next to the client and runs `vite dev`/`preview` in workerd (D1).
   // Tests use a fake Env instead (D15), so Vitest skips it.
-  plugins: [react(), chunkModules(), process.env.VITEST ? [] : cloudflare()],
+  plugins: [react(), chunkModules(), process.env.VITEST ? [] : cloudflare(workerConfig(command, isPreview))],
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts', 'worker/**/*.test.ts'],
@@ -32,4 +40,4 @@ export default defineConfig({
     // Shared, RAM-tight machine: keep the worker pool small.
     maxWorkers: 2,
   },
-});
+}));

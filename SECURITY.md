@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Pagelapse has no releases yet. Security fixes go to the `main` branch and to the hosted demo once it exists.
+Pagelapse has no releases yet. Security fixes go to the `main` branch and to the hosted demo at https://pagelapse.geekplux.com.
 
 ## Reporting a vulnerability
 

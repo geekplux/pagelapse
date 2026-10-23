@@ -24,3 +24,25 @@ export async function cached<T>(kv: KVNamespace, key: string, ttlS: number | und
   if (!(value instanceof Response)) await kv.put(key, JSON.stringify(value), ttlS ? { expirationTtl: ttlS } : {});
   return value;
 }
+
+/** Keys kept by `memoryKv`: extracted captures are small, so this stays far below an isolate's 128 MB. */
+export const MEMORY_MAX = 200;
+
+/**
+ * A stand-in for KV when the Worker has no `CACHE` binding (Workers Builds previews, D11): per isolate, at most
+ * `max` keys (oldest dropped first), `expirationTtl` honoured. Only the `get`/`put` calls the Worker makes.
+ */
+export function memoryKv(max = MEMORY_MAX, now = () => Date.now()): KVNamespace {
+  const store = new Map<string, { value: string; until: number }>();
+  const get = async (key: string, type?: 'text' | 'json') => {
+    const hit = store.get(key);
+    if (!hit || hit.until <= now()) return (store.delete(key), null);
+    return type === 'json' ? JSON.parse(hit.value) : hit.value;
+  };
+  const put = async (key: string, value: string, opts?: { expirationTtl?: number }) => {
+    store.delete(key);
+    store.set(key, { value, until: opts?.expirationTtl ? now() + opts.expirationTtl * 1000 : Infinity });
+    while (store.size > max) store.delete(store.keys().next().value!);
+  };
+  return { get, put } as unknown as KVNamespace;
+}
