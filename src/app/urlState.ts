@@ -32,6 +32,14 @@ export function changeIndex(entries: readonly { from: string; to: string }[], ch
   return i >= 0 ? i : entries.length - 1;
 }
 
+/** The hero shows when the address names no sample and no page; anything else opens the workspace. */
+export const isHeroState = (s: UrlState): boolean => !s.sample && !s.url;
+
+/** Adds a history entry (leaving the hero for the workspace), so Back returns to the hero. */
+export function pushUrlState(state: UrlState): void {
+  history.pushState(null, '', `${location.pathname}${formatUrlState(state)}`);
+}
+
 /** Replaces the current history entry's query (no new history entries while scrubbing). */
 export function writeUrlState(state: UrlState): void {
   history.replaceState(history.state, '', `${location.pathname}${formatUrlState(state)}${location.hash}`);

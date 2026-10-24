@@ -3,13 +3,12 @@ import type { SampleFixture } from '../core/types.ts';
 import { overviewPair, shotSrc } from '../app/visual/visualState.ts';
 import gitScm from './git-scm.json';
 
-/** A built-in sample: metadata for the picker plus a loader for its fixture. */
+/** A built-in sample: its name and page (the hero's options, the address menu) plus a loader for its fixture. */
 export interface SampleEntry {
   id: string;
-  /** Short label for the sample chip. */
-  chip: string;
-  /** Shorter visible label on phones; `chip` (which contains it) stays the accessible name. */
-  short: string;
+  name: string;
+  /** The recorded page, as in samples.config.json. */
+  url: string;
   load: () => Promise<SampleFixture>;
 }
 
@@ -20,10 +19,19 @@ const lazy = (load: () => Promise<{ default: unknown }>) => () => load().then((m
 
 /** Registry of built-in samples (ids match samples.config.json); non-default ones load lazily. */
 export const samples: readonly SampleEntry[] = [
-  { id: defaultSample.id, chip: 'git-scm.com', short: 'git-scm', load: () => Promise.resolve(defaultSample) },
-  { id: 'wikipedia-internet-archive', chip: 'Wikipedia: Internet Archive', short: 'Wikipedia', load: lazy(() => import('./wikipedia-internet-archive.json')) },
-  { id: 'rust-lang', chip: 'rust-lang.org', short: 'Rust', load: lazy(() => import('./rust-lang.json')) },
+  { id: defaultSample.id, name: 'git-scm.com', url: defaultSample.url, load: () => Promise.resolve(defaultSample) },
+  { id: 'wikipedia-internet-archive', name: 'Wikipedia: Internet Archive', url: 'https://en.wikipedia.org/wiki/Internet_Archive', load: lazy(() => import('./wikipedia-internet-archive.json')) },
+  { id: 'rust-lang', name: 'rust-lang.org', url: 'https://www.rust-lang.org/', load: lazy(() => import('./rust-lang.json')) },
 ];
+
+/** The sample the hero deals as its deck of captures (DESIGN.md: Wikipedia, whatever the default sample is). */
+export const DECK_SAMPLE = 'wikipedia-internet-archive';
+
+/** A page address as the field shows it: no scheme, no trailing slash (`en.wikipedia.org/wiki/Internet_Archive`). */
+export const displayAddress = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+/** The host the address menu shows beside a sample's name, without `www.`. */
+export const hostOf = (url: string) => displayAddress(url).split('/')[0]!.replace(/^www\./, '');
 
 const decoded = new Map<string, Promise<void>>();
 

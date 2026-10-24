@@ -19,6 +19,7 @@ describe('committed samples', () => {
     const ids = config.map((c) => c.id);
     expect(Object.keys(RAW).sort()).toEqual(ids.map((id) => `./${id}.json`).sort());
     expect(samples.map((s) => s.id)).toEqual(ids);
+    expect(samples.map((s) => s.url)).toEqual(config.map((c) => c.url));
     expect(defaultSample.id).toBe('git-scm');
   });
 
