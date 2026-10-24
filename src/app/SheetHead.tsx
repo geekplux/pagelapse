@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { formatTimestampShort } from '../core/timestamp.ts';
+import { formatTimestampMonth as monthYear } from '../core/timestamp.ts';
 
 interface Props {
   id: string;
@@ -14,7 +14,6 @@ interface Props {
   children?: ReactNode;
 }
 
-const monthYear = (ts: string) => formatTimestampShort(ts).replace(/^\d+ /, '');
 const count = (n: number, one: string, many = `${one}s`) => (
   <span>
     <b className="num">{n}</b> {n === 1 ? one : many}

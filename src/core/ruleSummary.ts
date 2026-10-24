@@ -38,6 +38,16 @@ function versionBump(r: ChangeRecord): string | undefined {
   }
 }
 
+/** The sections a change added, removed and renamed; a heading that only changed case and moved is not news. */
+export function namedSections(record: ChangeRecord): { added: string[]; removed: string[]; renamed: [string, string][] } {
+  const same = (x: string, list: string[]) => list.some((y) => lower(y) === lower(x));
+  return {
+    added: record.headingsAdded.filter((h) => !same(h, record.headingsRemoved)),
+    removed: record.headingsRemoved.filter((h) => !same(h, record.headingsAdded)),
+    renamed: (record.headingsRenamed ?? []).filter(([x, y]) => lower(x) !== lower(y)),
+  };
+}
+
 /**
  * Deterministic one-line summary of a change record (the "auto summary"), never empty and at
  * most {@link MAX_RULE_SUMMARY_CHARS} chars. Names the title, renamed/added/removed headings
@@ -47,11 +57,7 @@ function versionBump(r: ChangeRecord): string | undefined {
  */
 export function ruleSummary(record: ChangeRecord): string {
   const { stats: s, title } = record;
-  // A heading that only changed case and moved is not news.
-  const same = (x: string, list: string[]) => list.some((y) => lower(y) === lower(x));
-  const added = record.headingsAdded.filter((h) => !same(h, record.headingsRemoved));
-  const removed = record.headingsRemoved.filter((h) => !same(h, record.headingsAdded));
-  const renamed = (record.headingsRenamed ?? []).filter(([x, y]) => lower(x) !== lower(y));
+  const { added, removed, renamed } = namedSections(record);
   const [from, to] = renamed[0] ?? ['', ''];
   const named = [
     record.titleChanged && `title changed to ${quote(title)}`,

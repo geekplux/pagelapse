@@ -33,6 +33,11 @@ export function formatTimestampShort(ts: string): string {
   return `${Number(ts.slice(6, 8))} ${MONTHS[Number(ts.slice(4, 6)) - 1]} ${ts.slice(0, 4)}`;
 }
 
+/** Month and year, e.g. `Mar 2014`. */
+export function formatTimestampMonth(ts: string): string {
+  return `${MONTHS[Number(ts.slice(4, 6)) - 1]} ${ts.slice(0, 4)}`;
+}
+
 /** Full, screen-reader friendly date, e.g. `17 March 2014`. */
 export function formatTimestampLong(ts: string): string {
   return new Intl.DateTimeFormat('en-GB', {

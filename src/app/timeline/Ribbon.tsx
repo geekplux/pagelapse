@@ -2,6 +2,7 @@ import { type KeyboardEvent, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { formatTimestampLong, formatTimestampShort } from '../../core/timestamp.ts';
 import type { Timeline as Model } from '../../core/types.ts';
 import { describeChange } from '../describe.ts';
+import { useMedia } from '../useMedia.ts';
 import { keepInView } from '../keepInView.ts';
 import { Silhouette } from '../visual/Silhouette.tsx';
 import type { CaptureView } from '../visual/visualState.ts';
@@ -52,19 +53,6 @@ interface Props {
 
 const NONE: ReadonlySet<string> = new Set();
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
-
-function useMedia(query: string): boolean {
-  const [on, setOn] = useState(() => typeof matchMedia === 'function' && matchMedia(query).matches);
-  useEffect(() => {
-    if (typeof matchMedia !== 'function') return;
-    const mq = matchMedia(query);
-    const sync = () => setOn(mq.matches);
-    sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
-  }, [query]);
-  return on;
-}
 
 const STRIP_KEYS: Record<string, (i: number, n: number) => number> = {
   ArrowLeft: (i) => i - 1,
@@ -333,18 +321,5 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
         </div>
       )}
     </div>
-  );
-}
-
-/** "3 captures only changed dates or counters." with Show them / Hide them: puts those captures on the slider too. */
-export function TrivialToggle({ count, on, onToggle }: { count: number; on: boolean; onToggle: (on: boolean) => void }) {
-  if (!count) return null;
-  return (
-    <p className="rb-trivial">
-      {count} {count === 1 ? 'capture' : 'captures'} only changed dates or counters.{' '}
-      <button type="button" className="btn-link" onClick={() => onToggle(!on)}>
-        {on ? 'Hide them' : 'Show them'}
-      </button>
-    </p>
   );
 }

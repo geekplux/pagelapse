@@ -3,15 +3,15 @@ import { ARCHIVES } from '../../archive/archives.ts';
 import { trivialEntries, withAiSummaries } from '../../core/timeline.ts';
 import type { TimelineEntry } from '../../core/types.ts';
 import { viewCaptureUrl } from '../../core/url.ts';
-import { ChangesList } from '../ChangesList.tsx';
+import { ChangeSection } from '../ChangeSection.tsx';
+import { EveryChange } from '../EveryChange.tsx';
 import { SheetHead } from '../SheetHead.tsx';
 import { hostOf } from '../../samples/index.ts';
-import { ChangeCard, DiffView } from '../diff/DiffView.tsx';
 import { EmptyState } from '../states/EmptyState.tsx';
 import { ErrorCard } from '../states/ErrorCard.tsx';
 import { LoadingStatus } from '../states/LoadingStatus.tsx';
 import { stepIndex, tsToMs } from '../timeline/scale.ts';
-import { Ribbon, TrivialToggle } from '../timeline/Ribbon.tsx';
+import { Ribbon } from '../timeline/Ribbon.tsx';
 import { type UrlState, changeIndex } from '../urlState.ts';
 import { StepNav } from '../visual/Controls.tsx';
 import { VisualPane } from '../visual/VisualPane.tsx';
@@ -47,8 +47,7 @@ const IA = ARCHIVES['internet-archive'];
 
 /**
  * A live run: the title block with the run's status line, then the empty or error card, or the replay stage and its
- * controls; the time ribbon (growing capture by capture), the selected change, the folded
- * changes list and the diff.
+ * controls; the time ribbon (growing capture by capture), the change and its text diff, and every change.
  */
 export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
   const { state, cancel } = useLiveTimeline(url);
@@ -279,19 +278,10 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
                 note={liveNote(strip.marks)}
               />
             </div>
-            <TrivialToggle count={trivialCaptures.length} on={showTrivial} onToggle={setShowTrivial} />
           </div>
         )}
-        {entry && <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)} />}
-        {entry && (
-          <div className="lists" data-region="changes">
-            <details className="fold changes-pane">
-              <summary id="changes-heading">All changes ({all.length})</summary>
-              <ChangesList entries={all} selected={selected} onSelect={select} />
-            </details>
-          </div>
-        )}
-        {entry && <DiffView entry={entry} from={page(entry.from)} to={page(entry.to)} />}
+        {entry && <ChangeSection entry={entry} from={page(entry.from)} to={page(entry.to)} archive="the Wayback Machine" captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)} />}
+        {captures.length > 0 && <EveryChange entries={all} selected={selected} onSelect={select} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial} />}
       </div>
     </article>
   );

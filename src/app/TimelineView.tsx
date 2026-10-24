@@ -5,10 +5,10 @@ import { viewCaptureUrl } from '../core/url.ts';
 import { fixtureToSnapshots } from '../core/fixture.ts';
 import { buildTimeline, compareCaptures, trivialEntries, withAiSummaries } from '../core/timeline.ts';
 import { changePictures, decodePicture } from '../samples/index.ts';
-import { ChangesList } from './ChangesList.tsx';
+import { ChangeSection } from './ChangeSection.tsx';
+import { EveryChange } from './EveryChange.tsx';
 import { SheetHead } from './SheetHead.tsx';
-import { ChangeCard, DiffView } from './diff/DiffView.tsx';
-import { Ribbon, TrivialToggle } from './timeline/Ribbon.tsx';
+import { Ribbon } from './timeline/Ribbon.tsx';
 import { Ts } from './Ts.tsx';
 import { type UrlState, changeIndex } from './urlState.ts';
 import { StepNav } from './visual/Controls.tsx';
@@ -29,7 +29,7 @@ interface Props {
   onChange: (q: Pick<UrlState, 'change' | 'at' | 'view'>) => void;
 }
 
-/** The sample: the title block, the stage and its controls, the time ribbon, the selected change, the folded lists, then the diff. */
+/** The sample: the title block, the stage and its controls, the time ribbon, the change and its text diff, every change, then all captures (folded). */
 export function TimelineView({ fixture, initialChange, initialAt, initialMode, overview = false, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
@@ -169,22 +169,17 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
             onCapture={(ts) => showCapture(ts)}
             labelledBy="timeline-heading"
           />
-          {!entry && (
-            <p className="panel-summary" id="diff" tabIndex={-1}>
-              Nothing meaningful changed across {snapshots.length} captures.
-            </p>
-          )}
-          <TrivialToggle count={trivialCaptures.length} on={showTrivial} onToggle={toggleTrivial} />
         </div>
-        {entry && shownEntry && <ChangeCard entry={shownEntry} index={selected} count={all.length} captureUrl={capUrl} overview={wide ? ends : undefined} />}
-        <div className="lists" data-region="changes">
-          {entry && (
-            // The timeline's text alternative, folded at every width (one Enter away).
-            <details className="fold changes-pane">
-              <summary id="changes-heading">All changes ({all.length})</summary>
-              <ChangesList entries={all} selected={selected} onSelect={select} />
-            </details>
-          )}
+        <ChangeSection
+          entry={shownEntry}
+          from={shownEntry && page(shownEntry.from)}
+          to={shownEntry && page(shownEntry.to)}
+          archive={ARCHIVES[fixture.source.archive].name}
+          captureUrl={capUrl}
+          empty={<p className="cs-empty">Nothing meaningful changed across {snapshots.length} captures.</p>}
+        />
+        <EveryChange entries={all} selected={selected} onSelect={select} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={toggleTrivial} />
+        <div className="lists">
           <details className="fold captures-all">
             <summary>All {snapshots.length} captures</summary>
             <p className="captures-source">
@@ -208,7 +203,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
                     {trivial.has(s.ts) && (
                       <>
                         {' '}
-                        <span className="source-label mono">trivial edit</span>
+                        <span className="tag">trivial edit</span>
                       </>
                     )}
                   </span>
@@ -217,7 +212,6 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
             </ol>
           </details>
         </div>
-        {shownEntry && <DiffView entry={shownEntry} from={page(shownEntry.from)!} to={page(shownEntry.to)!} />}
       </div>
     </article>
   );

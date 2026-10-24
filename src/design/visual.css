@@ -1,9 +1,9 @@
 /* The workspace. Regions in DOM order, which is the visual and keyboard order: the title block, the stage (the
-   picture, 1200 x 750 at full width) and its controls row, the time ribbon, the selected
-   change, the folded lists, the diff (target/V3Work.html). */
+   picture, 1200 x 750 at full width) and its controls row, the time ribbon, the change and its text diff, every
+   change, the folded list of captures (target/V3Work.html). */
 .stage { display: grid; gap: var(--space-4); }
 .stage > *, .hero > *, .scrub > *, .lists > * { min-width: 0; }
-.lists, .diff-panel { margin-top: var(--space-3); }
+.lists { margin-top: var(--space-3); }
 .lists { display: grid; gap: var(--space-3); justify-items: start; }
 .hero { display: grid; gap: var(--space-4); }
 .hero > .controls { margin-top: calc(-1 * var(--space-2)); }
@@ -177,7 +177,6 @@
 }
 .rb-tip b { font-weight: 600; }
 .rb-tip-cap { display: flex; gap: var(--space-2); pointer-events: none; white-space: nowrap; }
-.rb-trivial { color: var(--sand-11); }
 
 @media (forced-colors: active) {
   .rb-th:is([aria-current="true"], [data-side]) { outline: 3px solid Highlight; outline-offset: 2px; }

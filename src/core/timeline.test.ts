@@ -77,7 +77,7 @@ describe('ruleSummary', () => {
     // Minimal: a bare number, a date or a count on either side of a reworded heading is not a section name.
     const h = (text: string) => ({ kind: 'heading' as const, text, level: 2 as const });
     const page = (n: number, head: string) => ({ ...snap(n, BASE), blocks: [h(head), ...snap(n, BASE).blocks] });
-    for (const [x, y] of [['40', '2024 cyberattacks'], ['12 May 2024', 'May 2024 news'], ['1,204', '1,204 downloads']]) {
+    for (const [x, y] of [['40', '2024 cyberattacks'], ['12 May 2024', 'May 2024 news'], ['1,204', '1,204 downloads']] as const) {
       const [c, d] = [page(1, x), page(2, y)];
       const rec = toChangeRecord(diffPages(c, d), c, d);
       expect(rec.headingsRenamed ?? []).toEqual([]);

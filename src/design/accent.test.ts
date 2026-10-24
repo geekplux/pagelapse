@@ -12,8 +12,8 @@ const using = (re: RegExp) => decls.filter((d) => re.test(d.value));
 const outside = (re: RegExp, allowed: RegExp) => using(re).filter((d) => !allowed.test(d.selector)).map((d) => `${d.selector} { ${d.prop}: ${d.value} }`);
 
 describe('colour roles', () => {
-  it('cyan and amber appear only in the diff, the Before / After labels, the ribbon\'s pair and selected change, and the deck\'s latest / lifted capture', () => {
-    expect(outside(/--(cyan|amber)-/, /\.db|\.diff-|\bins\b|\bdel\b|\.w-(ins|del)|\.vp-(label|side)|\.rb-(th\[data-side|cv\[data-side|bar\.is-sel|dot\.is-sel|start)|\.deck-(latest|dot|bar\.is-on)/)).toEqual([]);
+  it('cyan and amber appear only in the diff, the Before / After labels and word counts, the ribbon\'s pair and selected change, the selected row of Every change, and the deck\'s latest / lifted capture', () => {
+    expect(outside(/--(cyan|amber)-/, /\.db|\bins\b|\bdel\b|\.cs-(when|plus|minus)|\.change\[aria-current="true"\] \.change-mag|\.vp-(label|side)|\.rb-(th\[data-side|cv\[data-side|bar\.is-sel|dot\.is-sel|start)|\.deck-(latest|dot|bar\.is-on)/)).toEqual([]);
   });
 
   it('every colour is a Radix token, the ground or a picture surface', () => {

@@ -82,32 +82,32 @@ main { flex: 1; min-height: 100vh; }
 .fold > summary:hover { text-decoration: underline; text-decoration-thickness: var(--line); text-decoration-color: var(--sand-8); }
 .fold[open] > summary { margin-bottom: var(--space-2); }
 
-/* Magnitude: size, the sand ramp and the word, in the changes list and the change card. */
-[data-magnitude="minor"] { --d: 12px; --c: var(--sand-9); }
-[data-magnitude="moderate"] { --d: 19px; --c: var(--sand-11); }
-[data-magnitude="major"] { --d: 27px; --c: var(--sand-12); }
-[data-magnitude="trivial"] { --d: 12px; --c: var(--sand-9); }
-.change-mag::before { content: ""; display: inline-block; width: var(--d); height: var(--d); margin: 0 var(--space-1) 0 var(--space-2); border-radius: 50%; background: var(--c); vertical-align: middle; }
-.change-mag::before { margin-left: 0; }
-.change-mag[data-magnitude="trivial"]::before { background: none; border: 1.5px solid var(--c); }
-/* The major dot carries an inner ring as a shape cue. */
-.change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px var(--c), inset 0 0 0 5.25px var(--bg); }
-.change-mag, .change-span { color: var(--sand-11); font-size: var(--fs-12); }
-/* The selected change, after the timeline: the change line, then "Change details". */
-/* Never a scroll anchor: its text changes on every selection, and anchoring to it would jump the page while scrubbing. */
-.change-panel { display: flex; flex-direction: column; gap: var(--space-3); overflow-anchor: none; }
-.diff-panel { display: grid; gap: var(--space-3); justify-items: start; }
-.sheet .change-panel h3 { font: 500 var(--fs-14) / var(--lh-14) var(--font-mono); }
-.panel-kicker { display: block; margin-bottom: var(--space-1); font-weight: 400; }
-.panel-summary { font: 600 var(--fs-20) / var(--lh-20) var(--font-ui); max-width: 60ch; text-wrap: balance; }
-/* Phones: the strip sits below the change line, so reserve its usual height: scrubbing must not move the strip under the finger. */
-@media (max-width: 39.99rem) { .change-panel .panel-summary { min-height: 4lh; } }
-.source-label { display: inline-flex; align-items: center; padding: 0 var(--space-1); border-radius: var(--radius-4); background: var(--sand-3); color: var(--sand-11); font: 400 var(--fs-12) / var(--lh-12) var(--font-ui); white-space: nowrap; vertical-align: middle; }
-.panel-stats, .panel-links { color: var(--sand-11); }
-.panel-links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); margin-top: var(--space-2); }
-.panel-links a { color: var(--sand-12); }
-/* Inline links get a >= 24 px tall target without changing the line box. */
-.panel-links a, .site-footer a { padding-block: var(--space-1); }
+/* The change (target/V3Work.html): a 352 px column (the two captures, the summary and its source, a few facts, the
+   captures in the archive), 96 px, then the text diff; one column on narrower screens (V3WorkPhone.html). Never a
+   scroll anchor: its text changes on every selection, and anchoring to it would jump the page while scrubbing. */
+.change-section { display: grid; gap: calc(8 * var(--space-1)); margin-top: var(--space-3); padding-top: calc(8 * var(--space-1)); border-top: var(--line) solid var(--sand-6); overflow-anchor: none; }
+@media (min-width: 40rem) { .change-section { margin-top: calc(8 * var(--space-1)); padding-top: var(--space-5); } }
+@media (min-width: 64rem) { .change-section { grid-template-columns: 22rem minmax(0, 1fr); gap: calc(4 * var(--space-4)); } }
+.change-section > * { min-width: 0; }
+.cs-side { display: flex; flex-direction: column; align-items: flex-start; }
+.cs-when { display: grid; gap: var(--space-1); }
+.cs-when > span { display: flex; align-items: center; gap: var(--space-2); }
+.cs-when b { width: 3rem; font-weight: 600; }
+.cs-when [data-side="before"] b, .cs-minus { color: var(--cyan-11); }
+.cs-when [data-side="after"] b, .cs-plus { color: var(--amber-11); }
+.sheet .cs-summary { font: 600 var(--fs-20) / var(--lh-20) var(--font-ui); }
+/* Stacked, the summary keeps some air above and below (target/V3WorkPhone.html). */
+@media (max-width: 63.99rem) { .sheet .cs-summary { margin: var(--space-3) 0 calc(3 * var(--space-1)); } }
+.cs-facts { display: grid; gap: calc(3 * var(--space-1)); margin-top: calc(8 * var(--space-1)); align-self: stretch; }
+.cs-facts > div { display: grid; grid-template-columns: 8rem 1fr; gap: var(--space-3); }
+.cs-facts dt { color: var(--sand-11); }
+.cs-plus, .cs-minus { font-family: var(--font-mono); font-weight: 500; }
+.cs-links { display: grid; justify-items: start; gap: var(--space-2); margin-top: calc(8 * var(--space-1)); }
+.cs-links a { display: inline-flex; align-items: center; gap: calc(1.5 * var(--space-1)); color: var(--sand-11); text-decoration: none; transition: color var(--dur) var(--ease); }
+.cs-links a > span { text-decoration: underline; text-decoration-thickness: var(--line); text-underline-offset: 3px; }
+.cs-links a:hover { color: var(--sand-12); }
+.cs-links time { font-family: var(--font-ui); }
+.cs-empty { color: var(--sand-11); }
 .cap-out::after { content: " ↗" / ""; }
 .btn {
   display: inline-flex; align-items: center; gap: var(--space-2); min-height: 2.5rem; padding: 0 var(--space-3);
@@ -119,60 +119,73 @@ main { flex: 1; min-height: 100vh; }
 .btn[aria-disabled="true"] { border-style: dashed; color: var(--sand-11); font-weight: 400; cursor: not-allowed; }
 .btn[aria-disabled="true"]:hover { background: var(--bg); }
 .btn-link { min-height: 24px; padding: var(--space-1) 0; border: 0; background: none; color: var(--sand-12); font: 500 var(--fs-14) / var(--lh-14) var(--font-ui); text-decoration: underline; text-decoration-thickness: var(--line); text-underline-offset: 3px; cursor: pointer; }
-.diff-structure { list-style: none; padding: 0; margin: 0; }
-.diff-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); color: var(--sand-11); }
-.diff-legend b { font-family: var(--font-mono); }
-
-/* The diff: the gutter symbol and the text style carry the meaning; cyan (removed) and amber (added) repeat it. */
-.diff-body { display: grid; gap: var(--space-1); max-width: 72ch; font: var(--fs-14) / var(--lh-14-text) var(--font-ui); animation: fade var(--dur) var(--ease); }
-.db, .diff-structure li { position: relative; padding: var(--space-1) var(--space-2) var(--space-1) var(--space-5); border-radius: var(--radius-4); }
-.db::before, .diff-structure li::before { position: absolute; left: var(--space-3); font: 500 var(--fs-14) / var(--lh-14-text) var(--font-mono); color: var(--sand-9); }
-.db-t { margin: 0; overflow-wrap: anywhere; }
+/* The diff: + − ~ hang 28 px outside the column; added blocks sit on amber-2, removed ones on cyan-2 in sand-11; words
+   are underlined (added) or struck through (removed). The symbol and the line style carry the meaning, the hue repeats
+   it. Lines stay under 680 px. It swaps at once on a new selection (no transition). */
+.diff-body { display: grid; margin-left: calc(-7 * var(--space-1)); font: var(--fs-14) / var(--lh-14-text) var(--font-ui); }
+.db { position: relative; padding: calc(1.75 * var(--space-1)) calc(3 * var(--space-1)) calc(1.75 * var(--space-1)) calc(7 * var(--space-1)); }
+.db::before { position: absolute; left: 0; width: calc(7 * var(--space-1)); text-align: center; font: var(--fs-14) / var(--lh-14-text) var(--font-mono); color: var(--sand-9); }
+.db-t { max-width: 42.5rem; margin: 0; overflow-wrap: anywhere; text-wrap: pretty; }
 .db-t.is-clamped { max-height: 12lh; overflow: hidden; }
 .db[data-op="equal"] { color: var(--sand-11); }
-:is(.db, .diff-structure li)[data-op="added"]::before { content: "+" / ""; }
-:is(.db, .diff-structure li)[data-op="removed"]::before { content: "−" / ""; }
-:is(.db, .diff-structure li)[data-op="modified"]::before { content: "~" / ""; color: var(--sand-12); }
-:is(.db, .diff-structure li)[data-op="moved"]::before { content: "↕" / ""; }
-.diff-structure [data-op="added"]::before, .db[data-op="added"]::before, .diff-legend [data-op="added"] { color: var(--amber-11); }
-.diff-structure [data-op="removed"]::before, .db[data-op="removed"]::before, .diff-legend [data-op="removed"] { color: var(--cyan-11); }
+.db[data-op="added"]::before { content: "+" / ""; color: var(--amber-11); }
+.db[data-op="removed"]::before { content: "−" / ""; color: var(--cyan-11); }
+.db[data-op="modified"]::before { content: "~" / ""; color: var(--sand-12); }
+.db[data-op="moved"]::before { content: "↕" / ""; }
 .db[data-op="added"] { background: var(--amber-2); }
 .db[data-op="removed"] { background: var(--cyan-2); color: var(--sand-11); }
 .db[data-op="moved"] { font-style: italic; }
-ins, .w-ins, .db[data-op="added"] .db-t { text-decoration: underline 1px var(--amber-11); text-underline-offset: 3px; text-decoration-skip-ink: none; }
-del, .w-del, .db[data-op="removed"] .db-t { text-decoration: line-through 1px var(--cyan-11); }
-ins, .w-ins { background: var(--amber-4); border-radius: var(--radius-4); }
-del, .w-del { background: var(--cyan-3); color: var(--sand-11); border-radius: var(--radius-4); }
+ins { background: var(--amber-4); text-decoration: underline 1px var(--amber-11); text-underline-offset: 3px; text-decoration-skip-ink: none; }
+del { background: var(--cyan-3); color: var(--sand-11); text-decoration: line-through 1px var(--cyan-11); }
 /* Spoken word marks (generated content reaches the accessibility tree, not the screen). */
 ins::before, ins::after, del::before, del::after { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 ins::before { content: " [added: "; }
 del::before { content: " [removed: "; }
 ins::after, del::after { content: "] "; }
-.db[data-kind="heading"] .db-t { font-weight: 600; color: var(--sand-12); }
+.db[data-kind="heading"] .db-t { font-weight: 600; }
+.db[data-kind="heading"][data-op="equal"] .db-t { color: var(--sand-12); }
 .db[data-kind="list-item"] .db-t::before { content: "•" / ""; display: inline-block; margin-right: var(--space-2); }
 .db[data-kind="code"] .db-t { font: var(--fs-12) / var(--lh-12) var(--font-mono); white-space: pre-wrap; }
 .db[data-kind="quote"] .db-t { font-style: italic; }
-.db-gap { min-height: 2.25rem; padding: 0 var(--space-3); border: var(--line) dashed var(--sand-8); border-radius: var(--radius-8); background: none; color: var(--sand-11); font: var(--fs-12) / var(--lh-12) var(--font-mono); text-align: left; cursor: pointer; transition: color var(--dur) var(--ease); }
-.db-gap::before { content: "⋯ " / ""; }
+.db .btn-link { margin-top: var(--space-1); }
+.db-gap { display: flex; align-items: center; gap: var(--space-2); min-height: 2.25rem; padding: 0 0 0 calc(7 * var(--space-1)); border: 0; background: none; color: var(--sand-11); font: var(--fs-14) / var(--lh-14) var(--font-ui); text-align: left; cursor: pointer; transition: color var(--dur) var(--ease); }
 .db-gap:hover { color: var(--sand-12); }
-.db-open { display: grid; gap: var(--space-1); }
-/* The changes list: one column in time order; the selected row sits on sand-2 with its summary in semibold. */
-.changes-note { color: var(--sand-11); font-size: var(--fs-12); }
-.changes { list-style: none; padding: 0; margin-top: var(--space-2); max-width: 72ch; }
+.db-open { display: grid; }
+.db-more { margin-top: var(--space-3); padding-left: calc(7 * var(--space-1)); }
+
+/* Every change: one row per change, newest first (when, how much, what); the selected row and a hovered one sit on
+   sand-2. The rows' padding hangs 12 px outside the column, so their text lines up with the heading. */
+.every { margin-top: var(--space-4); }
+@media (min-width: 40rem) { .every { margin-top: calc(2 * var(--space-4)); } }
+.changes { list-style: none; padding: 0; margin: var(--space-3) calc(-3 * var(--space-1)) 0; }
 .change {
-  display: grid; grid-template-columns: auto 1fr; gap: 0 var(--space-3); width: 100%; min-height: 2.75rem; padding: var(--space-2) var(--space-3);
+  display: grid; gap: calc(1.5 * var(--space-1)); width: 100%; min-height: 3rem; padding: calc(2.5 * var(--space-1)) calc(3 * var(--space-1));
   border: 0; border-top: var(--line) solid var(--sand-6); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
   transition: background-color var(--dur) var(--ease);
 }
 .change:hover, .change[aria-current="true"] { background: var(--sand-2); }
-.change[aria-current="true"] .change-sum { font-weight: 600; }
-.change-sum { grid-column: 1 / -1; }
+.change-when { color: var(--sand-11); }
+.change-mag { display: flex; align-items: center; gap: var(--space-2); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); }
+.change-mag i { flex: none; height: 4px; border-radius: var(--radius-4); background: var(--sand-9); }
+.change[aria-current="true"] .change-mag i { background: var(--amber-11); }
+/* Phones: the dates and the bar share the first line, the summary takes the second (target/V3WorkPhone.html). */
+@media (max-width: 39.99rem) {
+  .change { grid-template-columns: 1fr auto; }
+  .change-when { font-size: var(--fs-12); line-height: var(--lh-12); }
+  .change-sum { grid-column: 1 / -1; }
+}
+@media (min-width: 40rem) { .change { grid-template-columns: 12.5rem 8.75rem 1fr; align-items: center; gap: var(--space-4); } }
+.changes-trivial { padding: calc(3.5 * var(--space-1)) 0; border-top: var(--line) solid var(--sand-6); color: var(--sand-11); }
+.changes + .changes-trivial { margin-inline: calc(-3 * var(--space-1)); padding-inline: calc(3 * var(--space-1)); }
+.changes-trivial .btn-link { padding-block: 0; }
 .loading { padding-block: var(--space-5); color: var(--sand-11); }
 
 /* Footer: the mark and one line on the left, "Made by GeekPlux" on the right; keyboard keys and the details below. */
 .site-footer { padding-block: var(--space-5) var(--space-6); margin-top: var(--space-6); border-top: var(--line) solid var(--sand-6); display: grid; gap: var(--space-4); color: var(--sand-11); }
 .site-footer a { color: var(--sand-11); text-decoration: none; transition: color var(--dur) var(--ease); }
 .site-footer a:hover { color: var(--sand-12); }
+/* Inline links get a >= 24 px tall target without changing the line box. */
+.site-footer a { padding-block: var(--space-1); }
 .foot-grid { display: grid; gap: var(--space-4) var(--space-6); }
 @media (min-width: 48rem) { .foot-grid { grid-template-columns: 1fr auto; } }
 .foot-about { display: grid; gap: var(--space-3); align-content: start; }
@@ -205,9 +218,8 @@ kbd { padding: 0 var(--space-1); border-radius: var(--radius-4); background: var
 }
 @media (forced-colors: active) {
   :focus-visible { outline-color: Highlight; }
-  .change-mag::before { forced-color-adjust: none; background: CanvasText; }
-  .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px CanvasText, inset 0 0 0 5.25px Canvas; }
+  .change-mag i { forced-color-adjust: none; background: CanvasText; }
   .change[aria-current="true"] { outline: 2px solid Highlight; }
-  ins, del, .w-ins, .w-del, .db[data-op] .db-t { text-decoration-color: CanvasText; }
+  ins, del { text-decoration-color: CanvasText; }
   .btn[aria-disabled="true"] { color: GrayText; }
 }
