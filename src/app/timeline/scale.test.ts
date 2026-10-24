@@ -43,6 +43,8 @@ describe('yearLabels', () => {
     expect(labels.map((l) => l.year)).toEqual([2014, 2016, 2018, 2020, 2022, 2024, 2026]);
     const box = (l: (typeof labels)[number]) => (l.anchor === 'start' ? [l.x, l.x + 29] : l.anchor === 'end' ? [l.x - 29, l.x] : [l.x - 14.5, l.x + 14.5]);
     labels.slice(1).forEach((l, i) => expect(box(l)[0]!).toBeGreaterThanOrEqual(box(labels[i]!)[1]! + 8));
+    // 320 px (a 288 px column): the start label would crowd 2016, so the stride widens evenly instead of dropping one.
+    expect(yearLabels(yearScale([y(2014, 8), y(2026, 1)], 288).ticks, 288).map((l) => l.year)).toEqual([2014, 2019, 2024]);
     // 30 years in 358 px: a five-year stride.
     expect(yearLabels(yearScale([y(1996), y(2025)], 358).ticks, 358).map((l) => l.year)).toEqual([1996, 2001, 2006, 2011, 2016, 2021, 2026]);
   });

@@ -34,24 +34,22 @@ export const hairline = (cx: number, x: number, end: number) =>
 export type Anchor = 'start' | 'middle' | 'end';
 
 /**
- * Which ticks get a label, and how each is anchored: every `stride` years from the first (1, 2, 5, 10 ... the
- * smallest that keeps ticks `minGap` px apart), then any label that would come within `gap` px of the one before it
- * (labels are `w` px wide) is dropped, so labels never overlap at any width.
+ * Which ticks get a label, and how each is anchored: every `stride` years from the first, with the smallest stride
+ * (1, 2, 5, 10 ...) whose labels (`w` px wide) all keep `gap` px apart and ticks `minGap` px apart. Labels stay evenly
+ * spaced at any width: only the last one may give way, when it would crowd the edge-anchored end.
  */
 export function yearLabels(ticks: readonly { year: number; x: number }[], width: number, w = 29, minGap = 44, gap = 8) {
   const per = ticks.length > 1 ? ticks[1]!.x - ticks[0]!.x : width;
-  const stride = [1, 2, 5, 10, 20, 50].find((s) => s * per >= minGap) ?? 100;
-  const out: { year: number; x: number; anchor: Anchor }[] = [];
-  let right = -Infinity;
-  ticks.forEach((k, i) => {
-    if (i % stride) return;
-    const anchor: Anchor = k.x - w / 2 < 0 ? 'start' : k.x + w / 2 > width ? 'end' : 'middle';
-    const left = anchor === 'start' ? k.x : anchor === 'end' ? k.x - w : k.x - w / 2;
-    if (left < right + gap) return;
-    out.push({ ...k, anchor });
-    right = left + w;
-  });
-  return out;
+  const anchorOf = (x: number): Anchor => (x - w / 2 < 0 ? 'start' : x + w / 2 > width ? 'end' : 'middle');
+  const left = (x: number, a: Anchor) => (a === 'start' ? x : a === 'end' ? x - w : x - w / 2);
+  const fits = (a: { x: number; anchor: Anchor }, b: { x: number; anchor: Anchor }) => left(b.x, b.anchor) >= left(a.x, a.anchor) + w + gap;
+  for (const stride of [1, 2, 5, 10, 20, 50, 100]) {
+    if (stride * per < minGap && stride < 100) continue;
+    const out = ticks.filter((_, i) => i % stride === 0).map((k) => ({ ...k, anchor: anchorOf(k.x) }));
+    if (out.length > 1 && !fits(out.at(-2)!, out.at(-1)!)) out.pop();
+    if (out.every((l, i) => i === 0 || fits(out[i - 1]!, l))) return out;
+  }
+  return ticks.slice(0, 1).map((k) => ({ ...k, anchor: anchorOf(k.x) }));
 }
 
 /**
