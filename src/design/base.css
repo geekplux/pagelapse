@@ -197,10 +197,12 @@ ins::after, del::after { content: "] "; }
 .foot-by { display: grid; gap: var(--space-3); align-content: start; }
 @media (min-width: 48rem) { .foot-by { justify-items: end; } }
 .foot-by p { color: var(--sand-12); font-weight: 500; }
-.foot-by ul { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); margin: 0; padding: 0; list-style: none; }
+.foot-by ul { display: flex; flex-wrap: wrap; gap: calc(3 * var(--space-1)) var(--space-4); margin: 0; padding: 0; list-style: none; }
 .foot-by li:first-child a { color: var(--sand-12); font-weight: 500; }
 .foot-keys { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; }
 .foot-keys li { display: inline-flex; align-items: center; gap: var(--space-1); }
+/* Phones have no keyboard to speak of (target/V3WorkPhone.html); the full list stays folded below. */
+@media (max-width: 39.99rem) { .foot-keys { display: none; } }
 kbd { padding: 0 var(--space-1); border-radius: var(--radius-4); background: var(--sand-3); color: var(--sand-12); font: var(--fs-12) / var(--lh-12) var(--font-mono); }
 .site-footer .fold p + p { margin-top: var(--space-2); }
 .keys div { display: grid; grid-template-columns: 10rem 1fr; gap: var(--space-3); padding-block: var(--space-1); }

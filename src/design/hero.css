@@ -21,7 +21,8 @@
   .is-work .gh-link { margin-left: 0; }
 }
 @media (max-width: 47.99rem) {
-  /* V3WorkPhone: the field over a full-width button, both 44 px, under the logo row. */
+  /* V3WorkPhone: the field over a full-width button, both 44 px, under the 56 px logo row. */
+  .is-work .brand { display: flex; align-items: center; min-height: 3.5rem; }
   .is-work .addr { order: 1; flex-basis: 100%; min-width: 0; flex-direction: column; margin-bottom: var(--space-3); }
   .is-work .addr-field { height: 2.75rem; }
   .is-work .addr .btn-go { min-height: 2.75rem; justify-content: center; }
@@ -126,12 +127,18 @@ main.is-intro { padding-top: 0; }
 /* Phones (target/V3HeroPhone.html): a 56 px header, everything left-aligned and stacked. */
 @media (max-width: 39.99rem) {
   .head-row { min-height: 3.5rem; }
+  /* V3WorkPhone: no hairline under the header; the title block's 28 px start under the button. */
+  .site-header.is-work { border-bottom: 0; }
+  .is-work .addr { margin-bottom: 0; }
   .wordmark .logo { width: 24px; height: 24px; }
   .intro-head { align-items: stretch; padding-top: var(--space-5); text-align: left; }
   .intro-lede { margin-top: calc(3 * var(--space-1)); font-size: var(--fs-14); line-height: var(--lh-14); }
   .addr.is-hero { flex-direction: column; row-gap: var(--space-2); width: auto; margin-top: var(--space-4); }
   .is-hero .addr-field input { font-size: var(--fs-14); line-height: var(--lh-14); }
   .is-hero .btn-go { justify-content: center; }
+  /* The empty alert takes no row (the column's gap would add 8 px above "Or open a sample"). */
+  .is-hero .url-error { margin-top: 0; }
+  .is-hero .url-error:empty { margin-top: calc(-1 * var(--space-2)); }
   .intro-samples { flex-direction: column; align-items: stretch; margin-top: calc(2 * var(--space-3)); }
   .intro-samples > span { margin-right: 0; }
   .sample-opt { min-height: 2.75rem; }
