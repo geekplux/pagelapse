@@ -21,7 +21,7 @@
 .ctrl-end > .vp-copy { margin-right: calc(-1 * var(--space-2)); }
 /* Copy link's failure note hangs under the row, right-aligned, in the gap before the strip: nothing moves. */
 .controls, .ctrl-end { position: relative; }
-.vp-copy-note:not(:empty) { position: absolute; top: 100%; right: 0; margin-top: var(--space-1); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); white-space: nowrap; }
+.vp-copy-note { position: absolute; top: 100%; right: 0; margin-top: var(--space-1); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); white-space: nowrap; }
 .vp-copy[data-said] { color: var(--sand-12); }
 .diff-nav { display: flex; align-items: center; gap: var(--space-1); }
 .step-label { min-width: 8.25rem; text-align: center; white-space: nowrap; }
