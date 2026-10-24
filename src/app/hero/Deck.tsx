@@ -31,7 +31,8 @@ interface Props {
   /** The deck's sample, once loaded; until then the deck keeps the height of `count` cards. */
   fixture: SampleFixture | undefined;
   count: number;
-  onOpen: (ts: string) => void;
+  /** Opens capture `ts`; `from` is the card pressed. */
+  onOpen: (ts: string, from: HTMLElement) => void;
 }
 
 /**
@@ -62,7 +63,7 @@ export function Deck({ fixture, count, onOpen }: Props) {
         <>
           {d.cards.map((c, i) => {
             const latest = i === last;
-            const style = { left: c.x, top: c.y, width: d.cardW, height: d.cardH, zIndex: i + 1, animationDelay: `${(last - i) * STAGGER}ms`, '--deck-from': `${front.x - c.x}px` };
+            const style = { left: c.x, top: c.y, width: d.cardW, height: d.cardH, zIndex: i + 1, animationDelay: `${(last - i) * STAGGER}ms`, '--deck-from': `${front.x - c.x}px`, '--deck-from-y': `${front.y - c.y}px` };
             return (
               <button
                 key={c.ts}
@@ -70,7 +71,7 @@ export function Deck({ fixture, count, onOpen }: Props) {
                 className={`deck-card${latest ? ' is-front' : ''}${hot === i ? ' is-hot' : ''}`}
                 style={style as CSSProperties}
                 aria-label={`${latest ? 'Latest, ' : ''}${formatTimestampLong(c.ts)}, open this capture`}
-                onClick={() => onOpen(c.ts)}
+                onClick={(e) => onOpen(c.ts, e.currentTarget)}
                 onPointerEnter={() => setHot(i)}
                 onPointerLeave={() => setHot((h) => (h === i ? -1 : h))}
                 onFocus={() => setHot(i)}

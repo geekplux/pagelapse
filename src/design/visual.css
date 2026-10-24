@@ -168,6 +168,8 @@
 .rb-dot.is-sel { stroke: var(--amber-11); stroke-width: 1.5; }
 .rb-span { fill: var(--sand-3); transition: transform var(--dur) var(--ease); }
 .rb-start { fill: var(--cyan-11); transition: transform var(--dur) var(--ease); }
+/* Play: the span slides linearly to the next capture through each 1.2 s hold. */
+.rb[data-playing] :is(.rb-span, .rb-start) { transition-duration: var(--dur-play); transition-timing-function: linear; }
 .rb-ax { stroke: var(--sand-8); stroke-width: var(--line); }
 .rb-yr { font: var(--fs-12) var(--font-mono); fill: var(--sand-11); }
 .rb-tip {

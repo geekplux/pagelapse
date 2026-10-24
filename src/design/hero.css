@@ -120,9 +120,19 @@ main.is-intro { padding-top: 0; }
 .deck-bar.is-on { fill: var(--amber-11); }
 .is-dealing .deck-card { animation: deck-deal var(--dur-deal) var(--ease) backwards; }
 .is-dealing .deck-bar { transform-box: fill-box; transform-origin: bottom; animation: deck-grow var(--dur) var(--ease) backwards; }
-@keyframes deck-deal { from { opacity: 0; transform: translateX(var(--deck-from)); } }
+/* A slide only: every card starts hidden under the latest one, which shows at once (a fade left its text light grey). */
+@keyframes deck-deal { from { transform: translate(var(--deck-from), var(--deck-from-y)); } }
 @keyframes deck-grow { from { transform: scaleY(0); } }
 @media (min-width: 40rem) { main.is-intro ~ .site-footer { margin-top: calc(4 * var(--space-4)); } }
+
+/* Open (openTransition.ts): the card or sample option pressed becomes the stage, the address field settles into the
+   header, the rest crossfades; 350 ms ease-out. Pointer input passes through the overlay, so nothing waits on it. */
+.addr-field { view-transition-name: pl-field; }
+::view-transition { pointer-events: none; }
+::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: var(--dur-open); animation-timing-function: var(--ease); }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 0s !important; }
+}
 
 /* Phones (target/V3HeroPhone.html): a 56 px header, everything left-aligned and stacked. */
 @media (max-width: 39.99rem) {

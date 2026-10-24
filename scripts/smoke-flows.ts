@@ -184,7 +184,7 @@ async function switchTo(page: Page, f: (typeof fixtures)[number]): Promise<strin
   await page.locator('#sample-label', { hasText: f.label }).waitFor({ timeout: 2_000 });
   await page.waitForSelector('[data-ready="true"]');
   if ((await option.getAttribute('aria-selected')) !== 'true') throw new Error(`${f.id}: not checked after Enter`);
-  // Let the sheet's entry fade finish so axe measures settled colours.
+  // Let any picture fade finish so axe measures settled colours.
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   return checkSample(page, f);
 }
@@ -487,6 +487,56 @@ export const flows: readonly Flow[] = [
     },
   },
   {
+    name: 'open-transition',
+    description: 'Open: a sample option and a deck card grow into the stage as a 350 ms view transition (the field settles into the header); focus lands on the content; none under reduced motion',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const notes: string[] = [];
+      for (const [how, reduce] of [['option', false], ['card', false], ['option', true]] as const) {
+        await page.emulateMedia({ reducedMotion: reduce ? 'reduce' : 'no-preference' });
+        await openHero(page, baseUrl);
+        // Record each view transition: its named groups, their duration, and where focus is once it has finished.
+        await page.evaluate(() => {
+          const w = window as unknown as { vts: { groups: string[]; ms: number[]; focus?: string }[] };
+          w.vts = [];
+          const start = document.startViewTransition.bind(document);
+          document.startViewTransition = ((cb: ViewTransitionUpdateCallback) => {
+            const t = start(cb);
+            const rec: (typeof w.vts)[number] = { groups: [], ms: [] };
+            w.vts.push(rec);
+            void t.ready.then(() => {
+              const anims = document.getAnimations().map((a) => a.effect as KeyframeEffect).filter((e) => e.pseudoElement?.startsWith('::view-transition-group'));
+              rec.groups = anims.map((e) => /\((.*)\)/.exec(e.pseudoElement!)![1]!).sort();
+              rec.ms = [...new Set(anims.map((e) => Number(e.getTiming().duration)))];
+            });
+            void t.finished.then(() => (rec.focus = document.activeElement?.id));
+            return t;
+          }) as typeof document.startViewTransition;
+        });
+        if (how === 'option') await page.locator('.sample-opt').first().click();
+        else {
+          // By keyboard: the cards overlap, so a pointer reaches most of them only by their slivers.
+          await page.locator('.deck-card').nth(3).focus();
+          await page.keyboard.press('Enter');
+        }
+        await page.waitForSelector('[data-ready="true"]');
+        await page.waitForTimeout(600);
+        const vts = await page.evaluate(() => (window as unknown as { vts: { groups: string[]; ms: number[]; focus?: string }[] }).vts);
+        const focus = await page.evaluate(() => document.activeElement?.id);
+        if (focus !== 'content') throw new Error(`${how}${reduce ? ' (reduce)' : ''}: focus on ${focus}, expected #content`);
+        if (reduce) {
+          if (vts.length) throw new Error(`a view transition ran under reduced motion: ${JSON.stringify(vts)}`);
+          notes.push(`${how} under reduce: no view transition, focus on #content`);
+          continue;
+        }
+        const v = vts[0];
+        if (vts.length !== 1 || v!.groups.join() !== 'pl-field,pl-stage,root' || v!.ms.join() !== '350' || v!.focus !== 'content') throw new Error(`${how}: ${JSON.stringify(vts)}`);
+        notes.push(`${how}: groups ${v!.groups.join(', ')}, ${v!.ms.join()} ms, focus on #${v!.focus}`);
+      }
+      return { notes };
+    },
+  },
+  {
     name: 'timeline',
     description: 'Default sample ribbon: a thumbnail and hairline per capture, a bar per change (height from score), the pair ringed, latest change selected, SVG hidden',
     schemes: ['light', 'dark'],
@@ -623,7 +673,7 @@ export const flows: readonly Flow[] = [
       if (new URL(page.url()).search !== `?sample=${defaultFixture.id}`) throw new Error(`bogus sample not replaced: ${page.url()}`);
       await page.setViewportSize({ width: 320, height: 800 });
       await noPageOverflow(page);
-      // Let the last load's entry fade finish so axe measures settled colours.
+      // Let any picture fade finish so axe measures settled colours.
       await settle(page);
       return { timeToReadyMs, notes: [said, `${ticks} hollow dots; bogus change -> latest; no page overflow at 320 px`] };
     },
@@ -1263,6 +1313,9 @@ export const flows: readonly Flow[] = [
       const quiet = await page.locator('.diff-nav [aria-live]').getAttribute('aria-live');
       const pause = await page.getByRole('button', { name: 'Pause time-lapse', exact: true }).count();
       if (pause !== 1 || (await button.getAttribute('data-playing')) === null || (await button.getAttribute('aria-pressed')) !== null || (await checkedMode(page)) !== 'single' || quiet !== 'off') throw new Error(`playing: "${await button.textContent()}" (${pause} "Pause time-lapse"), mode ${await checkedMode(page)}, nav live ${quiet}`);
+      // The playhead (the shaded span and its start line) slides linearly through each 1.2 s hold.
+      const slide = await page.locator('.rb-span').evaluate((el) => `${getComputedStyle(el).transitionDuration} ${getComputedStyle(el).transitionTimingFunction}`);
+      if (slide !== '1.2s linear') throw new Error(`playhead transition "${slide}" while playing`);
       await page.waitForTimeout(PLAY_MS * 3 + 300);
       const at = await shownIndex(page);
       if (at !== from + 3) throw new Error(`after 3 steps at #${at + 1}, expected #${from + 4}`);
@@ -1274,7 +1327,7 @@ export const flows: readonly Flow[] = [
       if (named !== 1 || (await shownIndex(page)) !== at || (await button.getAttribute('data-playing')) !== null || !status.startsWith('Stopped at capture')) throw new Error(`a key did not stop Play (status "${status}")`);
       await button.click();
       await page.waitForTimeout(PLAY_MS + 300);
-      return { notes: [`from #${from + 1} (start #${start + 1}) to #${at + 1} in 3 steps`, `stopped by a key: "${status}"`, 'shot mid-play'] };
+      return { notes: [`from #${from + 1} (start #${start + 1}) to #${at + 1} in 3 steps`, `playhead slide while playing: ${slide}`, `stopped by a key: "${status}"`, 'shot mid-play'] };
     },
   },
   {

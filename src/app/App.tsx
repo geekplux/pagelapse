@@ -4,6 +4,7 @@ import { DECK_SAMPLE, defaultSample, displayAddress, type SampleEntry, samples }
 import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
 import { Hero } from './hero/Hero.tsx';
+import { openTransition } from './openTransition.ts';
 import { validateTargetUrl } from '../core/url.ts';
 import { throttleLatest } from './throttle.ts';
 import { workspace } from './workspace.ts';
@@ -97,7 +98,8 @@ export function App() {
     );
   }, [hero, Timeline, failed]);
 
-  const load = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}, how: Write = 'replace') => {
+  /** Opens sample `entry`; from the hero, `from` (the card or option clicked) grows into the stage (Open). */
+  const load = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}, how: Write = 'replace', from?: HTMLElement) => {
     setLive(null);
     progress.cancel();
     wanted.current = entry.id;
@@ -105,9 +107,11 @@ export function App() {
     return Promise.all([entry.load(), workspace.load()]).then(([fixture, m]) => {
       // Last click wins if loads resolve out of order.
       if (wanted.current !== entry.id) return;
-      setTimeline(() => m.TimelineView);
-      setCurrent({ id: entry.id, fixture, ...q });
-      setHero(false);
+      openTransition(from, () => {
+        setTimeline(() => m.TimelineView);
+        setCurrent({ id: entry.id, fixture, ...q });
+        setHero(false);
+      });
       if (!how) return;
       write(how, { sample: entry.id, ...q });
       setAnnouncement(`Showing: ${fixture.label}, ${fixture.snapshots.length} captures`);
@@ -115,7 +119,7 @@ export function App() {
       if (wanted.current === entry.id) setFailed(() => () => location.assign(`${location.pathname}${formatUrlState({ sample: entry.id, ...q })}`));
     });
   };
-  const fromHero = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}) => void load(entry, q, 'push');
+  const fromHero = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}, from?: HTMLElement) => void load(entry, q, 'push', from);
   // Leaving the hero removes the control that was used: the workspace opens at its top, with focus on its content.
   const wasHero = useRef(hero);
   useEffect(() => {
@@ -193,11 +197,11 @@ export function App() {
         <main id="content" className="is-intro" tabIndex={-1}>
           <Hero
             samples={samples}
-            onSample={(entry) => fromHero(entry)}
+            onSample={(entry, from) => fromHero(entry, {}, from)}
             onUrl={(url) => startLive(url, false, 'push')}
             deck={deck}
             failed={failed && <LoadFailed onRetry={failed} />}
-            onCapture={(at) => deckEntry && fromHero(deckEntry, { at })}
+            onCapture={(at, from) => deckEntry && fromHero(deckEntry, { at }, from)}
           />
         </main>
         {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}

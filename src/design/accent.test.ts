@@ -18,8 +18,8 @@ describe('colour roles', () => {
 
   it('every colour is a Radix token, the ground or a picture surface', () => {
     const vars = decls.flatMap((d) => [...d.value.matchAll(/var\((--[a-z0-9-]+)/g)].map((m) => m[1]!));
-    // --deck-from is the deck's deal offset (a length): the one exact name outside the shared non-colour prefixes.
-    const colours = vars.filter((v) => v !== '--deck-from' && !/^--(space|fs|lh|track|line|radius|ease|dur|font|split|prev|k|d|c|op|details-h|shadow)(-|$)/.test(v));
+    // --deck-from(-y) is the deck's deal offset (lengths): the exact names outside the shared non-colour prefixes.
+    const colours = vars.filter((v) => !/^--deck-from(-y)?$/.test(v) && !/^--(space|fs|lh|track|line|radius|ease|dur|font|split|prev|k|d|c|op|details-h|shadow)(-|$)/.test(v));
     expect(colours.filter((v) => !/^--((sand|cyan|amber)-([1-9]|1[0-2])|bg|frame|divider(-edge|-ink)?|replay-bg)$/.test(v))).toEqual([]);
   });
 

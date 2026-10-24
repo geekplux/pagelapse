@@ -83,8 +83,21 @@ describe('motion', () => {
     expect(designed.filter((d) => /--dur-menu/.test(d.value)).map((d) => d.selector)).toEqual(['.addr-menu']);
   });
 
+  it('Open runs 350 ms ease-out as a view transition; Play\'s playhead alone is linear, over the 1.2 s hold', () => {
+    expect(tokens).toMatch(/--dur-open: 350ms;/);
+    expect(tokens).toMatch(/--dur-play: 1200ms;/);
+    const open = designed.filter((d) => /--dur-open/.test(d.value));
+    expect(open.map((d) => `${d.selector} ${d.prop}`)).toEqual(['::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) animation-duration']);
+    expect(designed.filter((d) => d.selector === open[0]!.selector && d.prop === 'animation-timing-function').map((d) => d.value)).toEqual(['var(--ease)']);
+    // Longhands set nothing else: the playhead's linear slide is the one exception, pinned to its selector.
+    const longhands = designed.filter((d) => /^(transition|animation)-(duration|timing-function)$/.test(d.prop) && !d.value.endsWith('!important') && d.selector !== open[0]!.selector);
+    expect(longhands.map((d) => `${d.selector} ${d.prop}: ${d.value}`)).toEqual(['.rb[data-playing] :is(.rb-span, .rb-start) transition-duration: var(--dur-play)', '.rb[data-playing] :is(.rb-span, .rb-start) transition-timing-function: linear']);
+  });
+
   it('reduced motion turns every animation and transition off', () => {
     expect(base).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\*, \*::before, \*::after \{\s*animation-duration: 0s !important;[^}]*transition-duration: 0s !important;/);
+    // The view transition too (openTransition.ts also skips it under reduce).
+    expect(hero).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*::view-transition-group\(\*\), ::view-transition-old\(\*\), ::view-transition-new\(\*\) \{ animation-duration: 0s !important; \}/);
   });
 });
 

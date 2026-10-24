@@ -33,9 +33,12 @@
   /* Motion: one curve, one base duration. */
   --ease: ease-out;
   --dur: 250ms;
-  /* The two named exceptions (target/V3Motion.html): the hero deck's deal and the address menu's rise. */
+  /* The named exceptions (target/V3Motion.html): the hero deck's deal, the address menu's rise, Open (a card or sample
+     grows into the stage) and Play's playhead, which slides linearly through each capture's hold (usePlay's PLAY_MS). */
   --dur-deal: 450ms;
   --dur-menu: 150ms;
+  --dur-open: 350ms;
+  --dur-play: 1200ms;
 
   /* The one spacing scale (spacing.test.ts allows nothing else). */
   --space-1: 4px;

@@ -168,6 +168,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
             onSelect={select}
             onCapture={(ts) => showCapture(ts)}
             labelledBy="timeline-heading"
+            playing={play.playing}
           />
         </div>
         <ChangeSection

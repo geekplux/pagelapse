@@ -59,8 +59,6 @@ main:focus { outline: none; }
 /* The sample or live run: no card, grouped by space and alignment. */
 /* The footer always starts below the first viewport, so a short state view shows only its message. */
 main { flex: 1; min-height: 100vh; }
-/* Backwards fill only: a transform left on after the entry would make it the containing block of the fixed bar. */
-.sheet { animation: settle var(--dur) var(--ease) backwards; }
 .sheet-head { display: grid; gap: var(--space-1); }
 .sheet h2 { font: 700 var(--fs-40) / var(--lh-40) var(--font-ui); letter-spacing: var(--track-40); }
 .sheet-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-height: var(--lh-14); color: var(--sand-11); }
@@ -210,7 +208,6 @@ kbd { padding: 0 var(--space-1); border-radius: var(--radius-4); background: var
 .licence-link { white-space: nowrap; }
 
 @keyframes fade { from { opacity: 0; } }
-@keyframes settle { from { opacity: 0; transform: translateY(4px); } }
 
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }

@@ -49,6 +49,8 @@ interface Props {
   labelledBy: string;
   /** Live runs: what is still coming, for the slider's description. */
   note?: string;
+  /** Play is stepping: the span slides linearly through each hold (CSS). */
+  playing?: boolean;
 }
 
 const NONE: ReadonlySet<string> = new Set();
@@ -71,7 +73,7 @@ const STRIP_KEYS: Record<string, (i: number, n: number) => number> = {
  * Two tab stops: the thumbnails (one stop, roving with Left/Right/Home/End; Enter or Space shows that capture) and the
  * axis, an APG slider over the changes whose value text is the change's description.
  */
-export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at, failed = NONE, onSelect, onCapture, labelledBy, note }: Props) {
+export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at, failed = NONE, onSelect, onCapture, labelledBy, note, playing = false }: Props) {
   const outer = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLOListElement>(null);
@@ -210,7 +212,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
   /** A tip's left: content x minus the live scroll offset, kept `edge` px inside the column. */
   const follow = (x: number, edge: number) => `clamp(${edge}px, calc(${x}px - var(--rb-sx, 0px)), ${Math.max(edge, cw - edge)}px)`;
   return (
-    <div className="rb" ref={outer}>
+    <div className="rb" ref={outer} data-playing={playing || undefined}>
       <p id="rb-hint" hidden>
         {entries.length} {entries.length === 1 ? 'change' : 'changes'} across {n} captures. Bar height shows how much the text changed
         {trivial.size > 0 ? '; a hollow dot is a capture that only changed dates or counters.' : '.'}

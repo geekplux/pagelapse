@@ -7,14 +7,15 @@ import { monthYear } from './deck.ts';
 
 interface Props {
   samples: readonly SampleEntry[];
-  onSample: (entry: SampleEntry) => void;
+  /** Opens a sample; `from` is the option pressed (it grows into the stage). */
+  onSample: (entry: SampleEntry, from: HTMLElement) => void;
   onUrl: (url: string) => void;
   /** The sample dealt as the deck (Wikipedia), once loaded. */
   deck: SampleFixture | undefined;
   /** A sample or the workspace failed to load: the notice, under the options. */
   failed?: ReactNode;
-  /** Opens the deck's sample on capture `ts`. */
-  onCapture: (ts: string) => void;
+  /** Opens the deck's sample on capture `ts`; `from` is the card pressed. */
+  onCapture: (ts: string, from: HTMLElement) => void;
 }
 
 /** The first view (no `?sample=` or `?url=`): the headline, the address field, the samples, and the deck of captures. */
@@ -30,7 +31,7 @@ export function Hero({ samples, onSample, onUrl, deck, failed, onCapture }: Prop
         <div className="intro-samples">
           <span>Or open a sample</span>
           {samples.map((s) => (
-            <button key={s.id} type="button" className="sample-opt" data-sample={s.id} onClick={() => onSample(s)}>
+            <button key={s.id} type="button" className="sample-opt" data-sample={s.id} onClick={(e) => onSample(s, e.currentTarget)}>
               <PageIcon />
               <span>{s.name}</span>
             </button>
