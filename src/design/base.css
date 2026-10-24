@@ -63,7 +63,10 @@ main { flex: 1; min-height: 100vh; }
 .sheet { animation: settle var(--dur) var(--ease) backwards; }
 .sheet-head { display: grid; gap: var(--space-1); }
 .sheet h2 { font: 700 var(--fs-40) / var(--lh-40) var(--font-ui); letter-spacing: var(--track-40); }
-.sheet-meta { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); color: var(--sand-11); }
+.sheet-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-height: var(--lh-14); color: var(--sand-11); }
+@media (min-width: 40rem) { .sheet-meta { gap: 0 calc(5 * var(--space-1)); } }
+.sheet-meta b { color: var(--sand-12); font-weight: 500; }
+.tag { display: inline-flex; align-items: center; height: 1.25rem; padding: 0 calc(1.5 * var(--space-1)); border-radius: var(--radius-4); background: var(--sand-3); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); }
 .sheet h3 { font: 600 var(--fs-20) / var(--lh-20) var(--font-ui); }
 .captures { list-style: none; padding: 0; margin-top: var(--space-2); }
 .captures li { display: grid; grid-template-columns: 2.5ch 11ch 1fr; gap: 0 var(--space-3); align-items: baseline; padding-block: var(--space-1); }
@@ -127,7 +130,7 @@ main { flex: 1; min-height: 100vh; }
 .tl-tip b { font-weight: 600; }
 @keyframes tl-in { from { opacity: 0; transform: scale(0.3); } }
 
-/* The selected change beside the picture: the change line, then the controls row. */
+/* The selected change, after the timeline: the change line, then "Change details". */
 /* Never a scroll anchor: its text changes on every selection, and anchoring to it would jump the page while scrubbing. */
 .change-panel { display: flex; flex-direction: column; gap: var(--space-3); overflow-anchor: none; }
 .diff-panel { display: grid; gap: var(--space-3); justify-items: start; }
@@ -192,8 +195,6 @@ ins::after, del::after { content: "] "; }
 .db-gap::before { content: "⋯ " / ""; }
 .db-gap:hover { color: var(--sand-12); }
 .db-open { display: grid; gap: var(--space-1); }
-.diff-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.diff-nav > * { white-space: nowrap; }
 /* The changes list: one column in time order; the selected row sits on sand-2 with its summary in semibold. */
 .changes-note { color: var(--sand-11); font-size: var(--fs-12); }
 .changes { list-style: none; padding: 0; margin-top: var(--space-2); max-width: 72ch; }
