@@ -7,7 +7,7 @@ import type { Page } from 'playwright-core';
 import { shownSummary } from '../src/app/describe.ts';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { API_ERRORS, GIT_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
-import { type Flow, openReady } from './smoke-flows.ts';
+import { DEFAULT_ID, type Flow, openReady } from './smoke-flows.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 
 const git = mockFromSample('git-scm');
@@ -436,7 +436,7 @@ export const liveFlows: readonly Flow[] = [
       if (save !== 'https://web.archive.org/save/https://example.org/about') throw new Error(`Save it now -> ${save}`);
       await page.getByRole('button', { name: 'Open a sample' }).click();
       await page.waitForSelector('[data-ready="true"]');
-      if (!page.url().endsWith('?sample=git-scm')) throw new Error(`Open a sample -> ${page.url()}`);
+      if (!page.url().endsWith(`?sample=${DEFAULT_ID}`)) throw new Error(`Open a sample -> ${page.url()}`);
       // "Open a sample" goes away with the live view: focus lands on the content (WCAG 2.4.3).
       const sampled = await expectFocus(page, '#content', 'empty state Open a sample');
       await openLive(page, baseUrl, 'example.org/about', 'error');

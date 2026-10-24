@@ -1,7 +1,9 @@
 // Calm-layout smoke flows (phase 17, PLAN section 4 "Calm layout", D35). `calm-audit:<view>` measures the first
 // viewport of each audited view at 1440×900 and 390×844 against the caps and saves a first-view shot of it (the
 // "calm shots"). Set CALM_BASELINE=1 to report without failing (the before/after baseline run).
+import { fileURLToPath } from 'node:url';
 import type { Page } from 'playwright-core';
+import { recordedSamples } from './lib/sampleConfig.ts';
 import { mockFromSample } from '../test/fixtures/api/live.ts';
 import { assertAxeClean } from './smoke-a11y.ts';
 import { type Flow, type FlowContext, openReady } from './smoke-flows.ts';
@@ -10,7 +12,7 @@ import { framesPainted, mockApi, openLive } from './smoke-live.ts';
 const baseline = !!process.env.CALM_BASELINE;
 /** First-load caps per width: regions, tab stops, framed boxes, eyebrow labels, solid accent fills (section 4 §3). */
 const CAPS = { wide: [3, 13, 2, 2, 1], mobile: [3, 12, 2, 1, 1] } as const;
-const HEROES = new Set(['hero', 'hero-wikipedia', 'single', 'live-done']);
+const HEROES = new Set(['hero', 'hero-git-scm', 'single', 'live-done']);
 
 /** Opens every closed disclosure (native or `aria-expanded`) and returns a function that closes them again. */
 export async function openAll(page: Page): Promise<() => Promise<void>> {
@@ -107,7 +109,8 @@ const sample = (path: string) => async (page: Page, baseUrl: string) => {
 };
 const VIEWS: View[] = [
   { name: 'hero', setup: sample('/') },
-  { name: 'hero-wikipedia', setup: sample('/?sample=wikipedia-internet-archive') },
+  // `hero` is the default sample (Wikipedia); this one keeps a second sample in the audit.
+  { name: 'hero-git-scm', setup: sample('/?sample=git-scm') },
   { name: 'compare-side', setup: sample('/?view=side') },
   { name: 'single', setup: sample('/?view=single') },
   {
@@ -204,8 +207,10 @@ async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
 /** Every feature reachable by Tab, Enter and Space only, opening at most one disclosure (AC 5). */
 /** `wide`: a feature phones do not have (the ribbon's thumbnails, target/V3WorkPhone.html). */
 type Item = { name: string; sel: string; path?: string; via?: string; wide?: boolean };
-const SAMPLE_IDS = ['git-scm', 'wikipedia-internet-archive', 'rust-lang'];
-const wiki = '/?sample=wikipedia-internet-archive';
+/** Every offered sample (the recorded entries of samples.config.json), the default first. */
+const SAMPLE_IDS = recordedSamples(fileURLToPath(new URL('..', import.meta.url))).map((c) => c.id);
+/** Wikipedia's 2022 design change: its diff has unchanged runs to collapse (the decade compare, the default's first view, has few). */
+const wiki = '/?sample=wikipedia-internet-archive&change=20220202204805-20230326224104';
 const INVENTORY: Item[] = [
   // The samples are options of the address field's menu (a combobox): reached through the field, not by Tab.
   { name: 'Address field (samples menu)', sel: '#url-input[role="combobox"]' },

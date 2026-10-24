@@ -60,7 +60,7 @@ export interface Flow {
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 /** The default sample (the first recorded entry of samples.config.json, Wikipedia): what a workspace flow opens unless it names another. */
-const DEFAULT_ID = recordedSamples(root)[0]!.id;
+export const DEFAULT_ID = recordedSamples(root)[0]!.id;
 
 /**
  * Opens the workspace at `path` and waits until the app reports ready; returns time-to-ready. A path that names no
@@ -1538,7 +1538,8 @@ export const flows: readonly Flow[] = [
         await openReady(page, baseUrl, path);
         const m = await page.evaluate(() => ({
           label: document.querySelector('#sample-label')?.textContent?.trim(),
-          dates: [...document.querySelectorAll('#change-heading time [aria-hidden="true"]')].map((t) => t.textContent?.trim()),
+          // The change section's Before and After dates (the summary heading holds no dates since phase 5).
+          dates: [...document.querySelectorAll('.cs-when time [aria-hidden="true"]')].map((t) => t.textContent?.trim()),
           mode: document.querySelector<HTMLInputElement>('input[name="vp-mode"]:checked')?.value,
         }));
         const problems = [
