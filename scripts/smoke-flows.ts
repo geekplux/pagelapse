@@ -1527,7 +1527,7 @@ export const flows: readonly Flow[] = [
     firstView: true,
     async run({ page, baseUrl }) {
       const md = readFileSync(new URL('../examples/README.md', import.meta.url), 'utf8');
-      const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Single)\]\(https:\/\/pagelapse\.geekplux\.com(\/\?sample=[^)]+)\)/g)];
+      const links = [...md.matchAll(/\[(\d{4}-\d\d-\d\d) → (\d{4}-\d\d-\d\d)[^\]]* in (Slider|Side by side|Single)\]\(https:\/\/pagelapse\.geekplux\.com(\/\?sample=[^)]+)\)/g)];
       const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', Single: 'single' };
       const all = md.match(/\]\(https:\/\/pagelapse\.geekplux\.com\/\?sample=/g)?.length ?? 0;
       if (all !== 7 || links.length !== all) throw new Error(`examples/README.md: ${links.length} of ${all} sample links parsed, expected 7`);
@@ -1543,15 +1543,15 @@ export const flows: readonly Flow[] = [
         }));
         const problems = [
           m.label !== f?.label && `sample "${m.label}"`,
-          // The gallery writes dates as YYYY·MM·DD; the app shows them as `17 Mar 2014`.
+          // The gallery writes dates as YYYY-MM-DD; the app shows them as `17 Mar 2014`.
           m.dates.join() !== [from, to].map((d) => formatTimestampShort(`${d!.replace(/\D/g, '')}000000`)).join() && `change ${m.dates.join(' → ')}`,
           m.mode !== MODE[mode!] && `mode ${m.mode}`,
         ].filter(Boolean);
         if (problems.length) throw new Error(`${path}: ${problems.join('; ')}, expected ${from} → ${to} in ${mode}`);
         notes.push(`${q.get('sample')} ${from} → ${to} in ${mode}`);
       }
-      // The shot: the gallery's Wikipedia redesign link (the git-scm decade compare is the hero shot already).
-      await openReady(page, baseUrl, links.find((l) => l[4]!.includes('wikipedia') && l[3] === 'Slider')![4]);
+      // The shot: the gallery's Wikipedia redesign link (the decade compare is the workspace shot already).
+      await openReady(page, baseUrl, links.find((l) => l[4]!.includes('wikipedia') && l[4]!.includes('&change=') && l[3] === 'Slider')![4]);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       return { notes: [`${links.length} links`, ...notes] };
     },

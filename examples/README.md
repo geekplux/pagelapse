@@ -6,6 +6,24 @@ The links open the live demo at https://pagelapse.geekplux.com. To use a local c
 
 ## The built-in samples
 
+### Wikipedia: Internet Archive (2014–2026)
+
+![The Wikipedia article "Internet Archive" as captured in March 2023, in Wikipedia's 2022 design with the contents in a left sidebar](../public/samples/wikipedia-internet-archive/20230326224104-b954134e.thumb.webp)
+
+The encyclopedia article about the archive itself, and the default sample: the first view deals its captures. Pagelapse shows a trimmed excerpt of the text, and the pictures hide the rows that state monetary figures.
+
+What to look for:
+
+- The skin change. Wikipedia's 2022 design moves the contents into a sidebar and brings a new header.
+- The article growing and being reworded. The text diff marks each added and removed passage.
+- The "Cyberattacks" section added in 2025 and renamed "2024 cyberattacks" later.
+
+Open it:
+
+- [2018-04-25 → 2026-02-10, the decade compare, in Slider](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&view=slider): what the sample opens on, its earliest complete capture against its latest. Drag the divider across eight years.
+- [2022-02-02 → 2023-03-26 in Slider](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&change=20220202204805-20230326224104&view=slider): the 2022 design arrives.
+- [2024-03-16 → 2025-05-02 in Side by side](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&change=20240316020238-20250502083649&view=side): the cyberattacks section.
+
 ### git-scm.com home page (2013–2025)
 
 ![The git-scm.com home page as captured in December 2025: the tagline, the branching diagram, six topic tiles and the latest release card](../public/samples/git-scm/20251218145830-286cd682.thumb.webp)
@@ -20,26 +38,8 @@ What to look for:
 
 Open it:
 
-- [2013·11·06 → 2025·12·18, the decade compare, in Slider](https://pagelapse.geekplux.com/?sample=git-scm&view=slider): the first view. Drag the divider across twelve years.
-- [2025·04·04 → 2025·12·18 in Slider](https://pagelapse.geekplux.com/?sample=git-scm&change=20250404010448-20251218145830&view=slider): the 2025 redesign of the lower half on its own.
-- [2013·11·06 → 2014·09·08 in Single](https://pagelapse.geekplux.com/?sample=git-scm&change=20131106090756-20140908183445&view=single): a tiny change. Flip Before / After and watch the release card.
-
-### Wikipedia: Internet Archive (2014–2026)
-
-![The Wikipedia article "Internet Archive" as captured in March 2023, in Wikipedia's 2022 design with the contents in a left sidebar](../public/samples/wikipedia-internet-archive/20230326224104-b954134e.thumb.webp)
-
-The encyclopedia article about the archive itself. Pagelapse shows a trimmed excerpt of the text, and the pictures hide the rows that state monetary figures.
-
-What to look for:
-
-- The skin change. Wikipedia's 2022 design moves the contents into a sidebar and brings a new header.
-- The article growing and being reworded. The text diff marks each added and removed passage.
-- The "Cyberattacks" section added in 2025 and renamed "2024 cyberattacks" later.
-
-Open it:
-
-- [2022·02·02 → 2023·03·26 in Slider](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&change=20220202204805-20230326224104&view=slider): the 2022 design arrives.
-- [2024·03·16 → 2025·05·02 in Side by side](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&change=20240316020238-20250502083649&view=side): the cyberattacks section.
+- [2025-04-04 → 2025-12-18 in Slider](https://pagelapse.geekplux.com/?sample=git-scm&change=20250404010448-20251218145830&view=slider): the 2025 redesign of the lower half, what the sample opens on.
+- [2013-11-06 → 2014-09-08 in Single](https://pagelapse.geekplux.com/?sample=git-scm&change=20131106090756-20140908183445&view=single): a tiny change. Flip Before / After and watch the release card.
 
 ### rust-lang.org home page (2018–2026)
 
@@ -55,8 +55,8 @@ What to look for:
 
 Open it:
 
-- [2018·12·20 → 2019·06·24 in Slider](https://pagelapse.geekplux.com/?sample=rust-lang&change=20181220082130-20190624102109&view=slider): the banner goes, the tagline changes.
-- [2019·06·24 → 2020·01·12 in Side by side](https://pagelapse.geekplux.com/?sample=rust-lang&change=20190624102109-20200112221536&view=side): the older and the newer capture next to each other.
+- [2018-12-20 → 2019-06-24 in Slider](https://pagelapse.geekplux.com/?sample=rust-lang&change=20181220082130-20190624102109&view=slider): the banner goes, the tagline changes.
+- [2019-06-24 → 2020-01-12 in Side by side](https://pagelapse.geekplux.com/?sample=rust-lang&change=20190624102109-20200112221536&view=side): the older and the newer capture next to each other.
 
 ## Try these live
 
