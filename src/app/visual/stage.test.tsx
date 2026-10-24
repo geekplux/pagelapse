@@ -17,6 +17,8 @@ const git = parseSampleFixture(gitScm);
 const text = (html: string) => html.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"');
 const radios = (html: string) => [...html.matchAll(/<input[^>]*name="vp-mode"[^>]*>/g)].map(([tag]) => ({ value: /value="(\w+)"/.exec(tag)?.[1], checked: tag.includes('checked') }));
 const checked = (html: string) => radios(html).find((r) => r.checked)?.value;
+/** The ribbon thumbnail marked as shown. */
+const current = (html: string) => /<[^>]*class="rb-th[^"]*"[^>]*aria-current="true"[^>]*>/.exec(html)?.[0] ?? /<[^>]*aria-current="true"[^>]*class="rb-th[^"]*"[^>]*>/.exec(html)?.[0];
 
 describe('workspace stage', () => {
   it('a retired `view=onion` link opens Slider', () => {
@@ -57,10 +59,19 @@ describe('workspace stage', () => {
 
   it('under the decade compare the ribbon keeps the latest change, not the featured one (Play then starts from the first capture)', () => {
     const latest = fixture.snapshots.at(-1)!.ts;
-    const current = (html: string) => /<[^>]*class="rb-th[^"]*"[^>]*aria-current="true"[^>]*>/.exec(html)?.[0] ?? /<[^>]*aria-current="true"[^>]*class="rb-th[^"]*"[^>]*>/.exec(html)?.[0];
     expect(fixture.featured).not.toMatch(new RegExp(`-${latest}$`));
     expect(current(render({ overview: true }))).toContain(`data-ts="${latest}"`);
     expect(current(render())).toContain(`data-ts="${fixture.featured!.split('-')[1]}"`);
+  });
+
+  it('the default sample opens on its featured change whenever the decade compare is not shown (?view=single)', () => {
+    const [, to] = fixture.featured!.split('-');
+    const single = render({ overview: true, view: 'single' });
+    expect(current(single)).toContain(`data-ts="${to}"`);
+    expect(text(single)).toContain('Change 9 of 13');
+    expect(text(single)).not.toContain('First and latest');
+    // The decade compare itself still keeps the latest change (73f8313).
+    expect(text(render({ overview: true, view: 'side' }))).toContain('First and latest');
   });
 
   it('has Play, Previous / Next, the compare control and Copy link in one row', () => {

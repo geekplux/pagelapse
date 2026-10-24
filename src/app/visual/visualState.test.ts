@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MODE, MODES, captureForChange, changeForCapture, frameNo, initialView, overviewPair, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
+import { DEFAULT_MODE, MODES, captureForChange, changeForCapture, firstCaptures, frameNo, initialView, opensOnDecade, overviewPair, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
 
 const caps = ['2013', '2014', '2015', '2016', '2017'].map((y) => `${y}0101000000`);
 // 2015 is a trivial capture: the 2014 -> 2016 change skips it.
@@ -109,5 +109,26 @@ describe('visualState', () => {
     expect(overviewPair(snaps.map((s) => ({ ...s, shot: shot('ok') })))).toEqual({ from: caps[0], to: caps[4], skipped: 0 });
     expect(overviewPair(snaps.slice(0, 3))).toBeUndefined();
     expect(overviewPair([])).toBeUndefined();
+  });
+
+  it('opens the default sample on its decade compare only when the address names no change, capture or Single', () => {
+    expect(opensOnDecade(true, {})).toBe(true);
+    expect(opensOnDecade(true, { view: 'side' })).toBe(true);
+    expect(opensOnDecade(true, { view: 'single' })).toBe(false);
+    expect(opensOnDecade(true, { change: 'a-b' })).toBe(false);
+    expect(opensOnDecade(true, { at: caps[1] })).toBe(false);
+    expect(opensOnDecade(false, {})).toBe(false);
+  });
+
+  it('names the pictures the workspace shows first, without the timeline', () => {
+    const ok = { status: 'ok' as const, settle: 'quiet' as const, file: 'x' };
+    const f = { snapshots: caps.map((ts) => ({ ts, shot: ok })), featured: `${caps[1]}-${caps[3]}` };
+    expect(firstCaptures(f, {}, true)).toEqual([caps[0], caps[4]]);
+    expect(firstCaptures(f, { view: 'single' }, true)).toEqual([caps[3]]);
+    expect(firstCaptures(f, { view: 'side' }, false)).toEqual([caps[1], caps[3]]);
+    expect(firstCaptures(f, { change: `${caps[3]}-${caps[4]}` }, true)).toEqual([caps[3], caps[4]]);
+    expect(firstCaptures(f, { at: caps[2], view: 'single' }, true)).toEqual([caps[2]]);
+    expect(firstCaptures(f, { at: caps[2] }, true)).toEqual([caps[2]]);
+    expect(firstCaptures({ snapshots: f.snapshots }, { view: 'single' }, false)).toEqual([caps[4]]);
   });
 });

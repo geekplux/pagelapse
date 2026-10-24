@@ -141,3 +141,26 @@ export function overviewPair(snapshots: readonly { ts: string; shot?: ShotRef | 
   if (!first || !last || first === last) return undefined;
   return { from: first.ts, to: last.ts, skipped: snapshots.indexOf(first) };
 }
+
+/** The address's view of a sample: `?change=`, `?at=`, `?view=`. */
+export interface OpenQuery {
+  change?: string | undefined;
+  at?: string | undefined;
+  view?: string | undefined;
+}
+
+/** The default sample (`overview`) opens on its decade compare unless the address names a change, a capture or Single. */
+export const opensOnDecade = (overview: boolean, q: OpenQuery): boolean => overview && !q.change && !q.at && parseMode(q.view) !== 'single';
+
+/**
+ * The captures whose pictures the workspace shows first, worked out without the timeline (main.tsx decodes them before
+ * the first render): the decade compare's two; else in Single the capture shown; else the change's two (the featured
+ * change when the address names none). A capture named alone stands for its change. Unknown values are dropped later.
+ */
+export function firstCaptures(f: { snapshots: readonly { ts: string; shot?: ShotRef | undefined }[]; featured?: string | undefined }, q: OpenQuery, overview: boolean): string[] {
+  const decade = opensOnDecade(overview, q) ? overviewPair(f.snapshots) : undefined;
+  if (decade) return [decade.from, decade.to];
+  const pair = (q.change ?? (q.at ? undefined : f.featured))?.split('-') ?? [];
+  if (parseMode(q.view) === 'single') return [q.at ?? pair[1] ?? f.snapshots.at(-1)?.ts].filter((ts): ts is string => !!ts);
+  return q.at && !q.change ? [q.at] : pair;
+}

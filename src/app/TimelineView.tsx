@@ -14,7 +14,7 @@ import { type UrlState, changeIndex } from './urlState.ts';
 import { StepNav } from './visual/Controls.tsx';
 import { usePlay } from './visual/usePlay.ts';
 import { VisualPane } from './visual/VisualPane.tsx';
-import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, overviewPair, pairOf, parseMode, sampleView, showingText, sideOf, viewQuery } from './visual/visualState.ts';
+import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, opensOnDecade, overviewPair, pairOf, parseMode, sampleView, showingText, sideOf, viewQuery } from './visual/visualState.ts';
 
 interface Props {
   fixture: SampleFixture;
@@ -46,10 +46,12 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     [showTrivial, entries, timeline],
   );
   const shown = useMemo(() => ({ ...timeline, entries: all, trivialCaptures: showTrivial ? [] : trivialCaptures }), [timeline, all, showTrivial, trivialCaptures]);
+  // The default sample opens on its decade compare unless the address names a change, a capture or Single.
+  const [decade] = useState(() => opensOnDecade(overview, { change: initialChange, at: initialAt, view: initialMode }));
   const [view, setView] = useState(() => {
-    // Under the decade compare the timeline keeps the latest change selected (so Play starts from the first capture):
-    // a featured change is for samples that open on it.
-    const featured = overview ? undefined : fixture.featured;
+    // Under the decade compare the timeline keeps the latest change selected (so Play starts from the first capture);
+    // otherwise the sample opens on its featured change.
+    const featured = decade ? undefined : fixture.featured;
     const v = initialView(entries, snapshots.map((s) => s.ts), { change: initialChange, at: initialAt, featured });
     return { key: entries[v.index] ? pairOf(entries[v.index]!) : '', at: v.at };
   });
@@ -61,7 +63,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     const [a, b] = [pair?.from, pair?.to].map((ts) => timeline.snapshots.find((s) => s.ts === ts));
     return pair && a && b ? { entry: compareCaptures(a, b), skipped: pair.skipped, latest: pair.to === snapshots.at(-1)?.ts } : undefined;
   }, [overview, snapshots, timeline]);
-  const [wide, setWide] = useState(() => !!span && entries.length > 0 && !initialChange && !initialAt && parseMode(initialMode) !== 'single');
+  const [wide, setWide] = useState(() => !!span && entries.length > 0 && decade);
   const selected = changeIndex(all, view.key);
   const entry = all[selected];
   const shownEntry = wide && span ? span.entry : entry;
