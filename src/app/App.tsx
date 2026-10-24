@@ -4,7 +4,6 @@ import { DECK_SAMPLE, defaultSample, displayAddress, type SampleEntry, samples }
 import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
 import { Hero } from './hero/Hero.tsx';
-import { TimelineView } from './TimelineView.tsx';
 import { validateTargetUrl } from '../core/url.ts';
 import { throttleLatest } from './throttle.ts';
 import { type UrlState, isHeroState, parseUrlState, pushUrlState, writeUrlState } from './urlState.ts';
@@ -16,6 +15,14 @@ interface Current {
   at?: string | undefined;
   view?: string | undefined;
 }
+
+/**
+ * The sample workspace loads on first use: the hero is the first view. Loading resolves together with the sample, so
+ * the swap from the hero is one step (no loading line in between).
+ */
+let workspace: Promise<typeof import('./TimelineView.tsx')> | undefined;
+const loadWorkspace = () => (workspace ??= import('./TimelineView.tsx'));
+type Workspace = (typeof import('./TimelineView.tsx'))['TimelineView'];
 
 /** Live mode loads on first use, so the sample first view does not carry it. */
 const LiveView = lazy(() => import('./live/LiveView.tsx').then((m) => ({ default: m.LiveView })));
@@ -68,13 +75,20 @@ export function App() {
       if (!active || active === document.body) document.getElementById('content')?.focus();
     });
 
+  const [Timeline, setTimeline] = useState<Workspace>();
+  useEffect(() => {
+    // A deep link to the bundled default sample renders as soon as the workspace has loaded.
+    if (!hero && !Timeline) void loadWorkspace().then((m) => setTimeline(() => m.TimelineView));
+  }, [hero, Timeline]);
+
   const load = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}, how: Write = 'replace') => {
     setLive(null);
     progress.cancel();
     wanted.current = entry.id;
-    return entry.load().then((fixture) => {
+    return Promise.all([entry.load(), loadWorkspace()]).then(([fixture, m]) => {
       // Last click wins if loads resolve out of order.
       if (wanted.current !== entry.id) return;
+      setTimeline(() => m.TimelineView);
       setCurrent({ id: entry.id, fixture, ...q });
       setHero(false);
       if (!how) return;
@@ -99,6 +113,12 @@ export function App() {
   useEffect(() => {
     if (hero && !deck) void deckEntry?.load().then(setDeck);
   }, [hero, deck, deckEntry]);
+  // While the hero is up, fetch the workspace in the background so a sample or a card opens at once.
+  useEffect(() => {
+    if (!hero) return;
+    const t = setTimeout(loadWorkspace, 1500);
+    return () => clearTimeout(t);
+  }, [hero]);
 
   const startLive = (url: string, focus = false, how: Write = 'replace') => {
     wanted.current = undefined;
@@ -108,11 +128,17 @@ export function App() {
   };
   const openSample = () => void load(samples.find((s) => s.id === defaultSample.id)!).then(focusContent);
 
+  // The page shown (hero, a sample, a live run), so Back and Forward between entries of the same page (a skip link's
+  // #hash, a change scrubbed since) leave it as it is: a live run is not started again.
+  const page = useRef('');
+  page.current = hero ? 'hero' : live ? `url:${live.url}` : `sample:${current?.id}`;
   // Back and Forward between the hero and the workspace: show what the address now names.
   useEffect(() => {
     const onPop = () => {
       const s = parseUrlState(location.search);
       const check = s.url ? validateTargetUrl(s.url) : null;
+      const entry = samples.find((e) => e.id === s.sample) ?? samples[0]!;
+      if (page.current === (isHeroState(s) ? 'hero' : check?.ok ? `url:${check.url}` : `sample:${entry.id}`)) return;
       if (isHeroState(s)) {
         wanted.current = undefined;
         progress.cancel();
@@ -121,7 +147,7 @@ export function App() {
       } else if (check?.ok) {
         setHero(false);
         setLive((l) => ({ url: check.url, run: (l?.run ?? 0) + 1, change: s.change, at: s.at, view: s.view }));
-      } else void load(samples.find((e) => e.id === s.sample) ?? samples[0]!, { change: s.change, at: s.at, view: s.view }, false);
+      } else void load(entry, { change: s.change, at: s.at, view: s.view }, false);
     };
     addEventListener('popstate', onPop);
     return () => removeEventListener('popstate', onPop);
@@ -187,8 +213,8 @@ export function App() {
               onSample={openSample}
             />
           </Suspense>
-        ) : current ? (
-          <TimelineView
+        ) : current && Timeline ? (
+          <Timeline
             key={current.id}
             fixture={current.fixture}
             initialChange={current.change}

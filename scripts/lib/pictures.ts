@@ -2,8 +2,10 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseSampleFixture } from '../../src/core/fixture.ts';
-import { overviewPair } from '../../src/app/visual/visualState.ts';
 import { webpSize } from './webpInfo.ts';
+
+/** The sample the hero deals as its deck (src/samples/index.ts DECK_SAMPLE). */
+const DECK_SAMPLE = 'wikipedia-internet-archive';
 
 export const PICTURE_BUDGET = { full: 64_000, thumb: 8_000, total: 2_200_000, firstView: 160_000 };
 
@@ -12,7 +14,7 @@ export interface PictureReport {
   largestFull: number;
   largestThumb: number;
   total: number;
-  /** The default sample's first-view pair (its decade compare, full size) plus all its thumbnails. */
+  /** The hero deck: the deck sample's thumbnails behind the latest card, plus the latest capture full size. */
   firstView: number;
   /** Share of captures with a picture (`ok` or `partial`). */
   pictured: number;
@@ -24,12 +26,11 @@ export function checkPictures(root: string): PictureReport {
   const ids = (JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as { id: string }[]).map((c) => c.id);
   const r: PictureReport = { count: 0, largestFull: 0, largestThumb: 0, total: 0, firstView: 0, pictured: 0, problems: [] };
   let captures = 0;
-  for (const [i, id] of ids.entries()) {
+  for (const id of ids) {
     const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', `${id}.json`), 'utf8')));
     const dir = join(root, 'public/samples', id);
     const seen = new Set<string>();
-    const hero = overviewPair(f.snapshots);
-    const heroTs = hero ? [hero.from, hero.to] : (f.featured?.split('-') ?? []);
+    const latest = f.snapshots.findLast((s) => s.shot?.file)?.ts;
     for (const s of f.snapshots) {
       captures++;
       if (!s.shot) r.problems.push(`${id} ${s.ts}: no shot`);
@@ -49,7 +50,7 @@ export function checkPictures(root: string): PictureReport {
         r[key] = Math.max(r[key], bytes.length);
         r.count++;
         r.total += bytes.length;
-        if (i === 0 && (suffix === '.thumb.webp' || heroTs.includes(s.ts))) r.firstView += bytes.length;
+        if (id === DECK_SAMPLE && (suffix === '.webp') === (s.ts === latest)) r.firstView += bytes.length;
       }
     }
     for (const name of existsSync(dir) ? readdirSync(dir) : []) if (!seen.has(name)) r.problems.push(`${id}/${name} is an orphan`);

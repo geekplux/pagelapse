@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fixtureToSnapshots, parseSampleFixture } from '../../src/core/fixture.ts';
@@ -34,6 +34,14 @@ describe('committed sample pictures', () => {
     const report = checkPictures(root);
     expect(report.problems).toEqual([]);
     expect(report.count).toBeGreaterThan(0);
+  });
+
+  it('counts the hero deck as the first view: thumbnails behind the latest card, the latest full size', () => {
+    const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', 'wikipedia-internet-archive.json'), 'utf8')));
+    const files = f.snapshots.flatMap((s) => (s.shot?.file ? [s.shot.file] : []));
+    const size = (name: string) => statSync(join(root, 'public/samples/wikipedia-internet-archive', name)).size;
+    const want = files.slice(0, -1).reduce((n, file) => n + size(`${file}.thumb.webp`), 0) + size(`${files.at(-1)}.webp`);
+    expect(checkPictures(root).firstView).toBe(want);
   });
 
   it.each(['git-scm', 'rust-lang', 'wikipedia-internet-archive'])('%s features a meaningful change with two good pictures', (id) => {
