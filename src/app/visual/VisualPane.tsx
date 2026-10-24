@@ -1,11 +1,11 @@
 import { type KeyboardEvent, type ReactNode, useCallback, useState } from 'react';
-import { formatTimestampLong } from '../../core/timestamp.ts';
+import { formatTimestampLong, formatTimestampShort } from '../../core/timestamp.ts';
 import type { TimelineEntry } from '../../core/types.ts';
 import { Ts } from '../Ts.tsx';
 import { CompareSlider } from './CompareSlider.tsx';
+import { Controls, PlayButton } from './Controls.tsx';
 import { LiveFrame, SlowNote } from './LiveFrame.tsx';
 import { ModePicker } from './ModePicker.tsx';
-import { OnionSkin } from './OnionSkin.tsx';
 import { Shot } from './Shot.tsx';
 import { useFramePool } from './useFramePool.ts';
 import { type CaptureView, MODES, type Mode, type Side, captureForChange, frameNo, shotAlt, sideOf } from './visualState.ts';
@@ -32,34 +32,36 @@ interface Props {
   runActive?: boolean;
   /** Live: the selection only follows the run (nothing picked yet), so no frame loads until a pick or the run's end. */
   hold?: boolean;
-  /** Says what a compare pair is when it is not one change, e.g. `first and latest capture`. */
-  pairNote?: string | undefined;
-  /** The side column, given the pane's controls: Play (`lead`), then the compare picker and Before / After (`tools`). */
-  side: (lead: ReactNode, tools: ReactNode) => ReactNode;
+  /** Previous / next change, for the controls row. */
+  nav?: ReactNode;
 }
 
 const SIDES = [
-  ['before', '−', 'Before', 'removed'],
-  ['after', '+', 'After', 'added'],
+  ['before', 'Before'],
+  ['after', 'After'],
 ] as const;
-
-/** `− Before 4 Apr 2025` / `+ After 18 Dec 2025`: the sides are told apart by symbol, word, date and corner. */
-const Label = ({ side, ts }: { side: Side; ts: string }) => {
-  const [, sym, word, op] = SIDES.find(([s]) => s === side)!;
-  return (
-    <span className="vp-label mono" data-side={side} aria-hidden="true">
-      <b data-op={op}>{sym}</b> {word} <Ts ts={ts} />
-    </span>
-  );
-};
+const WORD: Record<Side, string> = { before: 'Before', after: 'After' };
 
 /**
- * The page itself, as a mounted print: the picture(s) in the compare mode (Single, Side by side, Slider, Onion skin), a
- * one-line caption (frame, date, the link out in Single and Side by side) and honest states for captures recorded
- * without some styles or with no picture. A compare mode needs both pictures, else it shows Single. Its controls (Play,
- * the compare picker, Single's `− Before | + After` toggle) go to the side column's controls row, after the picture.
+ * `◦ Before 16 Mar 2024` / `• After 2 May 2025`: a ring or a filled dot, the word in cyan-11 or amber-11 and the mono
+ * date, so the sides are told apart by shape, word, date and corner, never by hue alone. Decorative: the picture's
+ * alt text names the side and date. A capture that is neither side shows its date alone.
  */
-export function VisualPane({ label, captures, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false, hold = false, pairNote, side: renderSide }: Props) {
+const Tag = ({ side, ts, trivial = false, over = true }: { side: Side | null; ts: string; trivial?: boolean; over?: boolean }) => (
+  <span className={over ? 'vp-label' : 'vp-tag'} data-side={side ?? 'none'} aria-hidden="true">
+    {side && <i className="vp-dot" />}
+    {side ? <b>{WORD[side]}</b> : trivial && <b>Trivial edit</b>}{' '}
+    {/* The space keeps textContent readable; a flex container drops it from the layout. */}
+    <span className="vp-date mono">{formatTimestampShort(ts)}</span>
+  </span>
+);
+
+/**
+ * The page itself on the stage: the picture(s) in the compare mode (Slider, Side by side, Single) with Before / After
+ * tags on them, honest states for captures recorded without some styles or with no picture, then the controls row
+ * (Play, Previous / Next, the compare control, Copy link). A compare mode needs both pictures, else it shows Single.
+ */
+export function VisualPane({ label, captures, link, view, entry, at, trivial, mode, onMode, onSide, play, steps = captures, runActive = false, hold = false, nav }: Props) {
   const [broken, setBroken] = useState<string[]>([]);
   const index = (ts: string) => captures.indexOf(ts);
   const pic = (ts: string) => {
@@ -81,7 +83,8 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
   const note = (
     <SlowNote
       links={stalled.map((ts) => {
-        const word = shown === 'single' ? undefined : SIDES.find(([s]) => s === sideOf(entry, ts))?.[2];
+        const s = shown === 'single' ? null : sideOf(entry, ts);
+        const word = s ? WORD[s] : undefined;
         return { href: link(ts), label: word ? `Open ${word} capture` : 'Open capture' };
       })}
     />
@@ -118,38 +121,27 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
         <p className="mono">{p.broken ? 'The picture could not be loaded.' : p.reason}</p>
       </div>
     );
-  // Frame and date, the link out (Single and each Side by side mat; the compare pair's links are in Change details),
-  // and the honest badges. Archive name and recording notes are in the footer's "About these captures".
-  const caption = (ps: Pic[]) => (
-    <figcaption className="vp-cap mono">
-      <span>{ps.map((p) => frameNo(index(p.ts))).join(' → ')}</span>
-      {ps.length === 1 && <Ts ts={ps[0]!.ts} />}
-      {ps.length > 1 && pairNote && <span>{pairNote}</span>}
-      {shown === 'single' && trivial && <span>trivial edit</span>}
-      {(shown === 'single' || shown === 'side') &&
-        ps.map((p) => {
-          const word = SIDES.find(([s]) => s === sideOf(entry, p.ts))?.[2];
-          return shown === 'side' ? (
-            // Named with the date, starting with the visible text (WCAG 2.5.3): "Open Before capture, 6 November 2013 (…)".
-            <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer" aria-label={`Open ${word} capture, ${formatTimestampLong(p.ts)} (opens in a new tab)`}>
-              {`Open ${word} capture`}
-            </a>
-          ) : (
+  // The honest badges, and in Single the link out (the pair's links are in Change details).
+  const caption = (ps: Pic[], out = false) => {
+    const partial = ps.filter((p) => p.status === 'partial');
+    if (!out && !partial.length) return null;
+    return (
+      <figcaption className="vp-cap">
+        {out && shown === 'single' && trivial && <span>Trivial edit</span>}
+        {out &&
+          ps.map((p) => (
             <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
               Open capture<span className="sr-only"> (opens in a new tab)</span>
             </a>
-          );
-        })}
-      {ps.map(
-        (p) =>
-          p.status === 'partial' && (
-            <span key={p.ts} className="vp-badge">
-              <span aria-hidden="true">◐ </span>Partial{ps.length > 1 && ` (${formatTimestampLong(p.ts)})`}: the archive's copy is missing some styles or images.
-            </span>
-          ),
-      )}
-    </figcaption>
-  );
+          ))}
+        {partial.map((p) => (
+          <span key={p.ts} className="vp-badge">
+            <span aria-hidden="true">◐ </span>Partial{ps.length > 1 && ` (${formatTimestampLong(p.ts)})`}: the archive's copy is missing some styles or images.
+          </span>
+        ))}
+      </figcaption>
+    );
+  };
   // Roving radio group: Left / Up and Right / Down wrap, Home / End go to the ends; selection follows focus.
   const sideKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     const radios = [...(e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])];
@@ -164,83 +156,75 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
   };
   const tools = (
     <>
-      <ModePicker mode={mode} onMode={onMode} />
       {shown === 'single' && (
-        // A radio group of two buttons, not native radios: each holds a symbol, a word and a date.
+        // A radio group of two buttons, not native radios: each holds a dot, a word and a date.
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         <div className="vp-sides" role="radiogroup" aria-label="Show the change's capture">
-          {SIDES.map(([s, sym, word, op]) => (
+          {SIDES.map(([s, word]) => (
             // One tab stop for the pair (arrow keys move and select), like the filmstrip.
             // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
             <button key={s} type="button" role="radio" className="vp-side" aria-checked={side === s} tabIndex={(side ?? 'after') === s ? 0 : -1} onClick={() => onSide(s)} onKeyDown={sideKey}>
-              <b aria-hidden="true" data-op={op}>
-                {sym}
-              </b>{' '}
+              <i className="vp-dot" data-side={s} aria-hidden="true" />
               {word} <Ts ts={captureForChange(entry, s)} />
             </button>
           ))}
         </div>
       )}
+      <ModePicker mode={mode} onMode={onMode} />
     </>
   );
-  const lead = play && (
-    <button type="button" className="btn vp-play" data-play data-playing={playing || undefined} onClick={play.toggle}>
-      <span aria-hidden="true">{playing ? '❚❚ ' : '▶ '}</span>
-      {playing ? 'Pause' : 'Play'}
-      <span className="sr-only"> time-lapse</span>
-    </button>
-  );
+  const tags =
+    shown === 'single' ? <Tag side={side} ts={at} trivial={trivial} /> : SIDES.map(([s]) => <Tag key={s} side={s} ts={pair[s].ts} />);
 
   return (
     <>
-    <section className="vpane" aria-labelledby="vpane-heading" data-mode={shown}>
-      <h3 id="vpane-heading" className="sr-only">
-        How it looked
-      </h3>
-      {/* Always mounted, so the note is announced when a compare mode falls back to Single. */}
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-      <div role="status">
-        {lacking && (
-          <p className="vp-note">
-            <span aria-hidden="true">◑ </span>
-            {MODES.find(([m]) => m === mode)![1]} needs a picture of both captures. The {lacking[2]} capture, {formatTimestampLong(pair[lacking[0]].ts)}, has none,
-            so this shows one capture at a time.
-          </p>
-        )}
-      </div>
-      {shown === 'side' ? (
-        <>
+      <section className="vpane" aria-labelledby="vpane-heading" data-mode={shown}>
+        <h3 id="vpane-heading" className="sr-only">
+          How it looked
+        </h3>
+        {/* Always mounted, so the note is announced when a compare mode falls back to Single. */}
+        {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+        <div role="status">
+          {lacking && (
+            <p className="vp-note">
+              <span aria-hidden="true">◑ </span>
+              {MODES.find(([m]) => m === mode)![1]} needs a picture of both captures. The {WORD[lacking[0]]} capture, {formatTimestampLong(pair[lacking[0]].ts)}, has none,
+              so this shows one capture at a time.
+            </p>
+          )}
+        </div>
+        {shown === 'side' ? (
           <div className="vp-pair">
-            {SIDES.map(([s]) => (
-              <figure key={s} className="vp-mat">
-                {shot(pair[s])}
-                <Label side={s} ts={pair[s].ts} />
+            {SIDES.map(([s, word]) => (
+              <figure key={s} className="vp-fig">
+                <figcaption className="vp-cap vp-cap-side">
+                  <Tag side={s} ts={pair[s].ts} over={false} />
+                  {/* Named with the date, starting with the visible text (WCAG 2.5.3): "Open Before capture, 6 November 2013 (…)". */}
+                  <a className="cap-out" href={link(pair[s].ts)} target="_blank" rel="noopener noreferrer" aria-label={`Open ${word} capture, ${formatTimestampLong(pair[s].ts)} (opens in a new tab)`}>
+                    {`Open ${word} capture`}
+                  </a>
+                </figcaption>
+                <div className="vp-mat">{shot(pair[s])}</div>
                 {caption([pair[s]])}
               </figure>
             ))}
           </div>
-          {note}
-        </>
-      ) : (
-        <figure className="vp-mat">
-          {shown === 'slider' ? (
-            <CompareSlider entry={entry} before={shot(pair.before)} after={shot(pair.after)} />
-          ) : shown === 'onion' ? (
-            <OnionSkin before={shot(pair.before)} after={shot(pair.after)} />
-          ) : (
-            shot(pic(at))
-          )}
-          {note}
-          {shown === 'single' ? side && <Label side={side} ts={at} /> : SIDES.map(([s]) => <Label key={s} side={s} ts={pair[s].ts} />)}
-          {caption(shown === 'single' ? [pic(at)] : [pair.before, pair.after])}
-        </figure>
-      )}
-      {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-      <span className="sr-only vp-said" role="status">
-        {said.text}
-      </span>
-    </section>
-    {renderSide(lead, tools)}
+        ) : (
+          <figure className="vp-fig">
+            <div className="vp-mat">
+              {shown === 'slider' ? <CompareSlider entry={entry} before={shot(pair.before)} after={shot(pair.after)} /> : shot(pic(at))}
+              {tags}
+            </div>
+            {caption(shown === 'single' ? [pic(at)] : [pair.before, pair.after], shown === 'single')}
+          </figure>
+        )}
+        {note}
+        {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+        <span className="sr-only vp-said" role="status">
+          {said.text}
+        </span>
+      </section>
+      <Controls play={play && <PlayButton playing={playing} toggle={play.toggle} />} nav={nav} tools={tools} view={`${entry.from}-${entry.to} ${at} ${shown}`} />
     </>
   );
 }

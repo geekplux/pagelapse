@@ -6,11 +6,13 @@ import { fixtureToSnapshots } from '../core/fixture.ts';
 import { buildTimeline, compareCaptures, trivialEntries, withAiSummaries } from '../core/timeline.ts';
 import { changePictures, decodePicture } from '../samples/index.ts';
 import { ChangesList } from './ChangesList.tsx';
+import { SheetHead } from './SheetHead.tsx';
 import { ChangeCard, DiffView } from './diff/DiffView.tsx';
 import { Legend } from './timeline/Legend.tsx';
 import { Timeline } from './timeline/Timeline.tsx';
 import { Ts } from './Ts.tsx';
 import { type UrlState, changeIndex } from './urlState.ts';
+import { StepNav } from './visual/Controls.tsx';
 import { Filmstrip } from './visual/Filmstrip.tsx';
 import { usePlay } from './visual/usePlay.ts';
 import { VisualPane } from './visual/VisualPane.tsx';
@@ -29,7 +31,7 @@ interface Props {
   onChange: (q: Pick<UrlState, 'change' | 'at' | 'view'>) => void;
 }
 
-/** The sample: the hero (title, picture, change line and controls), the scrub strip (filmstrip over timeline), the folded lists, then the diff. */
+/** The sample: the title block, the stage and its controls, the scrub strip (filmstrip over timeline), the selected change, the folded lists, then the diff. */
 export function TimelineView({ fixture, initialChange, initialAt, initialMode, overview = false, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
@@ -63,7 +65,6 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
   const entry = all[selected];
   const shownEntry = wide && span ? span.entry : entry;
   const ends = span && ([span.skipped ? 'earliest complete' : 'first', span.latest ? 'latest' : 'latest complete'] as const);
-  const years = `${snapshots[0]?.ts.slice(0, 4)}–${snapshots.at(-1)?.ts.slice(0, 4)}`;
   const capUrl = (ts: string) => viewCaptureUrl(fixture.source.archive, ts, fixture.url);
   const page = (ts: string) => timeline.snapshots.find((s) => s.ts === ts);
   /** Selects change `e`, showing capture `at` (default: the same side as now, so Before stays Before while scrubbing). */
@@ -141,15 +142,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     <article className="sheet" aria-labelledby="sample-label" ref={root}>
       <div className="stage">
         <div className="hero" data-region="hero">
-          <div className="sheet-head">
-            <h2 id="sample-label">{fixture.label}</h2>
-            <p className="sheet-meta">
-              <span>
-                <span className="num">{snapshots.length}</span> captures
-              </span>
-              <span className="num">{years}</span>
-            </p>
-          </div>
+          <SheetHead id="sample-label" title={fixture.label} captures={captures} changes={entries.length} trivial={trivialCaptures.length} sample />
           {entry && shownEntry && (
             <VisualPane
               label={fixture.label}
@@ -163,12 +156,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
               onMode={changeMode}
               onSide={(side: Side) => choose(entry, captureForChange(entry, side))}
               play={{ ...play, toggle: togglePlay }}
-              pairNote={wide && ends ? `${ends[0]} and ${ends[1]} capture` : undefined}
-              side={(lead, tools) => (
-                <div className="side">
-                  <ChangeCard entry={shownEntry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} showing={showingText(captures, shownEntry, view.at, trivial.has(view.at))} quiet={play.playing} lead={lead} tools={tools} overview={wide ? ends : undefined} />
-                </div>
-              )}
+              nav={<StepNav entry={shownEntry} index={selected} count={all.length} onSelect={select} showing={showingText(captures, shownEntry, view.at, trivial.has(view.at))} quiet={play.playing} overview={wide ? ends : undefined} />}
             />
           )}
         </div>
@@ -188,6 +176,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
             <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={toggleTrivial} />
           </div>
         </div>
+        {entry && shownEntry && <ChangeCard entry={shownEntry} index={selected} count={all.length} captureUrl={capUrl} overview={wide ? ends : undefined} />}
         <div className="lists" data-region="changes">
           {entry && (
             // The timeline's text alternative, folded at every width (one Enter away).
