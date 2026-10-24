@@ -1,5 +1,4 @@
 import { barHeight } from './timeline/scale.ts';
-import { formatTimestampLong } from '../core/timestamp.ts';
 import type { TimelineEntry } from '../core/types.ts';
 import { shownSummary } from './describe.ts';
 import { Ts } from './Ts.tsx';
@@ -19,10 +18,6 @@ export const mixedSources = (entries: readonly TimelineEntry[]): boolean => entr
 
 /** The magnitude bar's length: the ribbon's bar height, plus a little, so minor still reads as a bar. */
 export const magnitudeWidth = (score: number): number => Math.round(barHeight(score) + 12);
-
-/** A row's name, said in one go: "22 January 2026 to 10 February 2026, minor, Added 4 passages". */
-const rowName = (e: TimelineEntry, mixed: boolean) =>
-  `${formatTimestampLong(e.from)} to ${formatTimestampLong(e.to)}, ${e.significance.magnitude}, ${shownSummary(e)}${mixed && e.aiSummary ? ' (AI summary)' : ''}`;
 
 /** "3 captures only changed dates or counters." with Show them / Hide them: puts those captures on the ribbon and here. */
 export function TrivialToggle({ count, on, onToggle }: { count: number; on: boolean; onToggle: (on: boolean) => void }) {
@@ -55,13 +50,17 @@ export function EveryChange({ entries, selected, onSelect, trivial, showTrivial,
       <ol className="changes" role="list">
         {rows.map(([e, i]) => (
           <li key={`${e.from}-${e.to}`}>
-            <button type="button" className="change" aria-current={i === selected ? 'true' : undefined} aria-label={rowName(e, mixed)} onClick={() => onSelect(i)}>
+            <button type="button" className="change" aria-current={i === selected ? 'true' : undefined} onClick={() => onSelect(i)}>
               <span className="change-when mono">
                 <Ts ts={e.from} month /> to <Ts ts={e.to} month />
               </span>
               <span className="change-mag" data-magnitude={e.significance.magnitude}>
                 <i style={{ width: magnitudeWidth(e.significance.score) }} aria-hidden="true" />
-                {e.significance.magnitude}
+                <span>
+                  {e.significance.magnitude}
+                  {/* Hidden in place, not lifted out of the line: the row's name then reads "minor, Added …". */}
+                  <span className="sr-comma">,</span>
+                </span>
               </span>
               <span className="change-sum">
                 {shownSummary(e)}

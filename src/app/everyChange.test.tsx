@@ -21,8 +21,8 @@ describe('EveryChange (one row per change, newest first)', () => {
     expect(out.match(/aria-current="true"[^]*?<\/button>/)?.[0]).toContain('“2020”');
     expect(out).toContain('<span aria-hidden="true">Mar 2019</span><span class="sr-only">1 March 2019</span>');
     expect(out).toContain('major');
-    // One name per row, without stray spaces; the list itself is unnamed (the region is "Every change").
-    expect(out).toContain('aria-label="1 March 2019 to 1 March 2020, minor, Added section “2020”"');
+    // The comma is clipped in place, so the name reads "minor, Added …"; the list itself is unnamed (the region is "Every change").
+    expect(out).toContain('minor<span class="sr-comma">,</span></span></span><span class="change-sum">Added section “2020”');
     expect(out).toMatch(/<ol class="changes" role="list">/);
   });
 
