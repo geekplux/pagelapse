@@ -504,12 +504,23 @@ export const flows: readonly Flow[] = [
         ['option', 'no API'],
         ['option', 'press the field'],
         ['option', 'press Play'],
+        ['option', 'press Side by side'],
+        ['option', 'drag from Play'],
+        ['option', 'press the heading'],
       ] as const;
+      // What each press mid-transition aims at.
+      const AIM = {
+        'press the field': '#url-input',
+        'press Play': '.vp-play',
+        'press Side by side': '.vp-mode[data-mode="side"]',
+        'drag from Play': '.vp-play',
+        'press the heading': '#content h2',
+      } as const;
       for (const [what, how] of cases) {
         const name = `${what} (${how})`;
         await page.emulateMedia({ reducedMotion: how === 'reduce' ? 'reduce' : 'no-preference' });
         // Play sits below an 800 px viewport's fold; a press can only aim at what is on screen.
-        await page.setViewportSize({ width: 1280, height: how === 'press Play' ? 1300 : 800 });
+        await page.setViewportSize({ width: 1280, height: /Play|Side/.test(how) ? 1300 : 800 });
         await openHero(page, baseUrl);
         // Record each view transition: its named groups, their duration, and where focus is once it has finished; and
         // whether each press came while one ran.
@@ -539,12 +550,12 @@ export const flows: readonly Flow[] = [
             return t;
           }) as typeof document.startViewTransition;
         }, how === 'no API');
-        const press = how.startsWith('press');
+        const press = how.startsWith('press') || how.startsWith('drag');
         // A press mid-transition: the animations run at a tenth of their speed, so the press surely lands inside one.
         const cdp = press ? await page.context().newCDPSession(page) : undefined;
         await cdp?.send('Animation.enable');
         await cdp?.send('Animation.setPlaybackRate', { playbackRate: 0.1 });
-        let plays = 0;
+        let hits = { clicks: 0, changes: 0 };
         if (what === 'option' && how === 'keyboard') {
           await page.locator('.sample-opt').first().focus();
           await page.keyboard.press('Enter');
@@ -570,21 +581,26 @@ export const flows: readonly Flow[] = [
         }
         if (press) {
           await page.waitForFunction(() => (window as unknown as W).running, null, { timeout: 10_000 });
-          if (how === 'press the field') {
-            const box = (await page.locator('#url-input').boundingBox())!;
-            await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-            await page.keyboard.type('example.org');
-          } else {
-            await page.evaluate(() => {
-              const w = window as unknown as { plays: number };
-              w.plays = 0;
-              document.querySelector('.vp-play')!.addEventListener('click', () => w.plays++);
-            });
-            const box = (await page.locator('.vp-play').boundingBox())!;
-            await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-            await page.waitForTimeout(300);
-            plays = await page.evaluate(() => (window as unknown as { plays: number }).plays);
-          }
+          const aim = AIM[how as keyof typeof AIM];
+          // Count the clicks the aimed element gets (the press's own goes to <html>) and its radio's changes.
+          await page.evaluate((sel) => {
+            const w = window as unknown as { hits: { clicks: number; changes: number } };
+            w.hits = { clicks: 0, changes: 0 };
+            const el = document.querySelector(sel)!;
+            el.addEventListener('click', () => w.hits.clicks++);
+            el.querySelector('input')?.addEventListener('change', () => w.hits.changes++);
+          }, aim);
+          const box = (await page.locator(aim).boundingBox())!;
+          const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+          if (how === 'drag from Play') {
+            await page.mouse.move(x, y);
+            await page.mouse.down();
+            await page.mouse.move(x + 150, y, { steps: 5 });
+            await page.mouse.up();
+          } else await page.mouse.click(x, y);
+          if (how === 'press the field') await page.keyboard.type('example.org');
+          await page.waitForTimeout(300);
+          hits = await page.evaluate(() => (window as unknown as { hits: { clicks: number; changes: number } }).hits);
           await cdp!.send('Animation.setPlaybackRate', { playbackRate: 1 });
           await cdp!.detach();
         }
@@ -593,20 +609,36 @@ export const flows: readonly Flow[] = [
         const w = await page.evaluate(() => {
           const { vts, downs } = window as unknown as W;
           const input = document.querySelector<HTMLInputElement>('#url-input')!;
-          return { vts, downs, focus: document.activeElement?.id, value: input.value, playing: document.querySelector('.vp-play')?.hasAttribute('data-playing') };
+          const mode = document.querySelector<HTMLInputElement>('.vp-modes input:checked')?.value;
+          return { vts, downs, focus: document.activeElement?.id, value: input.value, playing: document.querySelector('.vp-play')?.hasAttribute('data-playing'), mode };
         });
         const v = w.vts[0];
+        if (press && !w.downs.at(-1)) throw new Error(`${name}: the press came after the transition (${JSON.stringify(w)})`);
         if (how === 'press the field') {
-          if (!w.downs.at(-1)) throw new Error(`${name}: the press came after the transition (${JSON.stringify(w)})`);
           if (w.focus !== 'url-input' || !w.value.endsWith('example.org')) throw new Error(`${name}: focus on #${w.focus}, field "${w.value}"`);
           notes.push(`${name} mid-transition: focus on #url-input, typing reached it ("${w.value}")`);
           continue;
         }
         if (how === 'press Play') {
-          if (!w.downs.at(-1)) throw new Error(`${name}: the press came after the transition (${JSON.stringify(w)})`);
-          if (plays !== 1 || !w.playing) throw new Error(`${name}: ${plays} activations, playing ${w.playing}`);
+          if (hits.clicks !== 1 || !w.playing) throw new Error(`${name}: ${hits.clicks} activations, playing ${w.playing}`);
           await page.keyboard.press('Escape'); // any key stops the time-lapse
           notes.push(`${name} mid-transition: exactly 1 activation, playing`);
+          continue;
+        }
+        if (how === 'press Side by side') {
+          const view = new URL(page.url()).searchParams.get('view');
+          if (hits.changes !== 1 || w.mode !== 'side' || view !== 'side') throw new Error(`${name}: ${hits.changes} change events, mode ${w.mode}, view=${view}`);
+          notes.push(`${name} mid-transition: checked, exactly 1 change event, view=side`);
+          continue;
+        }
+        if (how === 'drag from Play') {
+          if (hits.clicks !== 0 || w.playing) throw new Error(`${name}: ${hits.clicks} activations, playing ${w.playing}`);
+          notes.push(`${name} 150 px right mid-transition: 0 activations, not playing`);
+          continue;
+        }
+        if (how === 'press the heading') {
+          if (hits.clicks !== 0) throw new Error(`${name}: ${hits.clicks} clicks forwarded to the heading`);
+          notes.push(`${name} mid-transition: 0 clicks forwarded to it`);
           continue;
         }
         if (w.focus !== 'content') throw new Error(`${name}: focus on ${w.focus}, expected #content`);
