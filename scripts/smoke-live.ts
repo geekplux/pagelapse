@@ -4,6 +4,7 @@
 // times per request) that the flows assert on: concurrency, cancel, stale runs, caching, frame dwell, pool and preload.
 import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
+import { shownSummary } from '../src/app/describe.ts';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { API_ERRORS, GIT_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
 import { type Flow, openReady } from './smoke-flows.ts';
@@ -476,7 +477,7 @@ export const liveFlows: readonly Flow[] = [
       await openLive(page, baseUrl, 'git-scm.com', 'done');
       const text = await expectText(page, '.state-card', /14 captures, 2013–2025: nothing meaningful changed\. 13 trivial edits hidden \(dates, counters, whitespace\)\./);
       if (await page.locator('.rb-slider').count()) throw new Error('a slider with no changes');
-      if (!(await page.locator('.rb-trivial').getByRole('button', { name: 'Show them' }).count())) throw new Error('no "Show them" toggle for the trivial edits');
+      if (!(await page.locator('.changes-trivial').getByRole('button', { name: 'Show them' }).count())) throw new Error('no "Show them" toggle for the trivial edits');
       return { notes: [text] };
     },
   },
@@ -809,12 +810,16 @@ async function aiSummaries({ page, baseUrl }: { page: Page; baseUrl: string }) {
   await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
   const prev = page.getByRole('button', { name: 'Previous' });
   await prev.focus();
-  // textContent: the label is uppercased by CSS, which innerText would report.
+  // The change's summary, then its source tag.
   const last = `${GIT_AI_SUMMARIES.at(-1)} AI summary`;
-  const read = (want: string) => document.querySelector('.panel-summary')?.textContent?.replace(/\s+/g, ' ').trim() === want;
+  const read = (want: string) => {
+    const said = [document.querySelector('#change-heading')?.textContent, document.querySelector('.cs-side .tag')?.textContent];
+    return said.join(' ').replace(/\s+/g, ' ').trim() === want;
+  };
   await page.waitForFunction(read, last, { timeout: 10_000 });
+  // Every change lists newest first.
   const listed = await page.locator('.changes .change-sum').evaluateAll((els) => els.map((e) => e.textContent));
-  if (listed.join('|') !== GIT_AI_SUMMARIES.join('|')) throw new Error(`list shows ${listed.join(' | ')}`);
+  if (listed.join('|') !== [...GIT_AI_SUMMARIES].reverse().join('|')) throw new Error(`list shows ${listed.join(' | ')}`);
   if (!(await prev.evaluate((el) => el === document.activeElement))) throw new Error(`focus moved to ${await focusAt(page)}`);
   await sleep(2500); // past the progress announcer's 2 s throttle, so a late update would be caught
   const said = await page.evaluate(() => (window as unknown as { live: string[] }).live);
@@ -828,12 +833,12 @@ async function aiSummaries({ page, baseUrl }: { page: Page; baseUrl: string }) {
 
 export const summaryFlows: readonly Flow[] = [
   { name: 'live-summary-ai', shot: 'summary-ai', description: 'Mocked /api/summaries: AI lines swap in, labelled, batched, no focus move or chatter', viewports: ['desktop'], run: aiSummaries },
-  { name: 'live-summary-label', shot: 'summary-label', description: 'The "AI summary" text label on a phone', viewports: ['mobile'], clip: '.change-panel', run: aiSummaries },
+  { name: 'live-summary-label', shot: 'summary-label', description: 'The "AI summary" text label on a phone', viewports: ['mobile'], clip: '.cs-side', run: aiSummaries },
   {
     name: 'live-summary-fallback',
     shot: 'summary-fallback',
     apiErrors: true,
-    description: '/api/summaries answers 500: rule summaries stay, labelled "auto summary", and no error shows',
+    description: '/api/summaries answers 500: rule summaries stay, labelled "Auto summary", and no error shows',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { summaries: 'error' });
@@ -841,8 +846,8 @@ export const summaryFlows: readonly Flow[] = [
       for (let i = 0; i < 40 && api.sums().some((l) => !l.end); i++) await sleep(100);
       await sleep(300);
       if (!api.sums().length) throw new Error('no /api/summaries request');
-      const want = `${gitTimeline.at(-1)!.ruleSummary} auto summary`;
-      const shown = (await page.locator('.panel-summary').textContent())?.replace(/\s+/g, ' ').trim();
+      const want = `${shownSummary(gitTimeline.at(-1)!)} Auto summary`;
+      const shown = [await page.locator('#change-heading').textContent(), await page.locator('.cs-side .tag').textContent()].join(' ').replace(/\s+/g, ' ').trim();
       if (shown !== want) throw new Error(`panel "${shown}", expected "${want}"`);
       const alerts = (await page.locator('[role="alert"]').allTextContents()).filter((t) => t.trim());
       if (alerts.length || (await page.locator('[data-error], [data-live="error"]').count())) throw new Error(`error UI after a failed summaries request ${alerts}`);

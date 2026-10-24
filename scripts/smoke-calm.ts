@@ -75,11 +75,11 @@ function measure() {
   const mat = document.querySelector('.vpane .vp-mat');
   const m = mat?.getBoundingClientRect();
   const controls = document.querySelector('.controls') ?? document.querySelector('.diff-nav');
-  const order = [document.querySelector('.sheet h2'), mat, controls, document.querySelector('.change-panel')];
+  const order = [document.querySelector('.sheet h2'), mat, controls, document.querySelector('.change-section')];
   const inOrder = order.every(Boolean) && order.every((el, i) => i === 0 || !!(order[i - 1]!.compareDocumentPosition(el!) & Node.DOCUMENT_POSITION_FOLLOWING));
   const status = document.querySelector('.live-status');
   const frames = [...document.querySelectorAll('.rb-strip .rb-th')].map((f) => f.getBoundingClientRect()).filter((r) => r.right > 0 && r.left < vw);
-  // The changes list's rows (when open): left edge and top, in DOM order.
+  // Every change's rows: left edge and top, in DOM order.
   const rows = [...document.querySelectorAll('.changes .change')].filter((el) => el.checkVisibility()).map((el) => el.getBoundingClientRect()).map((r) => [Math.round(r.left), Math.round(r.top)] as const);
   return {
     status: status ? seen(status) : null,
@@ -113,11 +113,7 @@ const VIEWS: View[] = [
     name: 'text-diff',
     async setup(page, baseUrl) {
       await sample('/')(page, baseUrl);
-      await page.evaluate(() => {
-        const list = document.querySelector<HTMLDetailsElement>('.changes-pane');
-        if (list) list.open = true;
-        scrollTo(0, document.getElementById('diff')!.getBoundingClientRect().top + scrollY - 16);
-      });
+      await page.evaluate(() => scrollTo(0, document.getElementById('diff')!.getBoundingClientRect().top + scrollY - 16));
     },
   },
   {
@@ -179,13 +175,13 @@ async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
     // target/V3Work.html: the stage spans the column, 40 + 48 + 4 + 20 + 24 px under the header (phones: 28 and a
     // two-line title); a live run's status line adds its row until it joins the meta line (redesign phase 6).
     if (wide ? m.picture.width < 0.58 * w || m.picture.top > 250 : m.picture.width < w - 32 || m.picture.top > 400) problems.push(`picture ${m.picture.width} px wide at top ${m.picture.top}`);
-    if (!m.inOrder) problems.push('hero DOM order is not title → picture → controls → change line');
+    if (!m.inOrder) problems.push('hero DOM order is not title → picture → controls → change section');
     if (m.align !== 16) problems.push(`controls row starts ${m.align} px under the picture, expected 16`);
   }
   // A running run shows its progress line (counter, bar, Cancel) in the first viewport. The strip follows the
   // 1200 x 750 stage, below the fold at 1440 x 900 (target/V3Work.html, V1Live.html).
   if (view.name === 'live-running' && !m.status) problems.push('the status line is not in the first viewport');
-  // Carry-over 9e: the opened changes list is one column in chronological order (tops strictly increase).
+  // Carry-over 9e: Every change is one column, one row under the other (tops strictly increase).
   if (view.name === 'text-diff') {
     const one = m.rows.length > 1 && m.rows.every(([l, t], i) => i === 0 || (l === m.rows[0]![0] && t > m.rows[i - 1]![1]));
     if (!one) problems.push(`changes list is not one column in order: ${m.rows.map(([l, t]) => `${l},${t}`).join(' ')}`);
@@ -221,16 +217,15 @@ const INVENTORY: Item[] = [
   { name: 'Previous', sel: '.diff-nav .btn:first-child' },
   { name: 'Next', sel: '.diff-nav .btn:last-child' },
   { name: 'Copy link', sel: '.controls .vp-copy' },
-  { name: 'View capture (Before)', sel: '.change-details a.cap-out:first-of-type', via: '.change-details > summary' },
-  { name: 'View capture (After)', sel: '.change-details a.cap-out:nth-of-type(2)', via: '.change-details > summary' },
+  { name: 'View capture (Before)', sel: '.cs-links a:first-of-type' },
+  { name: 'View capture (After)', sel: '.cs-links a:nth-of-type(2)' },
   { name: 'Open capture', sel: '.vpane .cap-out', path: '/?view=single' },
   { name: 'ribbon thumbnails', sel: '.rb-th', wide: true },
   { name: 'ribbon slider', sel: '.rb-slider' },
-  { name: 'Show them (trivial edits)', sel: '.rb-trivial button', path: '/?sample=git-scm' },
-  { name: 'changes list items', sel: '.change', via: '.changes-pane > summary' },
-  { name: 'Structure', sel: '.diff-panel details:first-of-type > summary' },
-  { name: 'Diff key', sel: '.diff-panel details:last-of-type > summary' },
+  { name: 'Show them (trivial edits)', sel: '.changes-trivial button', path: '/?sample=git-scm' },
+  { name: 'Every change rows', sel: '.changes .change' },
   { name: 'Show unchanged blocks', sel: '.db-gap', path: wiki },
+  { name: 'Show more changes', sel: '.db-more .btn' },
   { name: 'Skip to diff', sel: '.skip-link[href="#diff"]' },
   { name: 'About these captures', sel: '.site-footer details:first-of-type > summary' },
   { name: 'Keyboard shortcuts', sel: '.site-footer details:last-of-type > summary' },
@@ -314,31 +309,9 @@ async function sticky(page: Page, scroll: boolean) {
   return [...notes, `scrolled to the diff: bar fixed at ${later.bar.map(Math.round).join('-')}, stage ${later.cap.map(Math.round).join('-')} (clear)`];
 }
 
-/** Opens "Change details" with the keyboard: its summary (and the rows above it) stay put, the panel opens downward. */
-async function detailsStay(page: Page): Promise<string> {
-  const summary = page.locator('.change-details > summary');
-  const top = () => summary.evaluate((el) => el.getBoundingClientRect().top + scrollY);
-  const prev = () => page.locator('.diff-nav .btn').first().evaluate((el) => el.getBoundingClientRect().top + scrollY);
-  // The view settles in (a short translate) after load: measure once it has finished.
-  await settled(page);
-  const before = [await top(), await prev()];
-  await summary.focus();
-  await page.keyboard.press('Enter');
-  await page.waitForFunction(() => document.querySelector<HTMLDetailsElement>('.change-details')?.open);
-  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
-  const after = [await top(), await prev()];
-  const moved = after.map((a, i) => Math.round(Math.abs(a - before[i]!)));
-  if (moved.some((d) => d > 2)) throw new Error(`opening Change details moved its summary by ${moved[0]} px and Previous by ${moved[1]} px (${before.map(Math.round)} → ${after.map(Math.round)})`);
-  const panel = await page.evaluate(() => {
-    const d = document.querySelector('.change-details')!.getBoundingClientRect();
-    return { bottom: Math.round(d.bottom + scrollY), picture: Math.round(document.querySelector('.vpane .vp-mat')!.getBoundingClientRect().bottom + scrollY) };
-  });
-  await page.keyboard.press('Enter');
-  return `Change details opened: summary moved ${moved[0]} px, Previous ${moved[1]} px; panel ends at ${panel.bottom} (picture ${panel.picture})`;
-}
-
 const live = (page: Page, baseUrl: string) => VIEWS.find((v) => v.name === 'live-done')!.setup(page, baseUrl);
-const SOURCES = { rule: 'Summaries: auto summary (rules)', ai: 'Summaries: AI summary (Workers AI)', some: 'Summaries: mixed: items marked AI are by Workers AI' } as const;
+/** Every change tags AI lines only in a list that mixes sources; the change section always names its own source. */
+const SOURCES = { rule: 'Auto summary', ai: 'AI summary', some: /^(AI|Auto) summary$/ } as const;
 
 export const calmFlows: readonly Flow[] = [
   ...VIEWS.map(
@@ -357,7 +330,7 @@ export const calmFlows: readonly Flow[] = [
   { name: 'calm-inventory', description: 'Every feature reachable by Tab, Enter and Space, opening at most one disclosure, named in the tree', viewports: ['wide', 'mobile'], widthTag: true, firstView: true, run: inventory },
   {
     name: 'calm-fit',
-    description: 'Every sample at 1280×800 and 1440×900 (and git-scm at 960×800): the controls row starts 16 px under the picture; opening Change details does not move its summary or Previous',
+    description: 'Every sample at 1280×800 and 1440×900 (and git-scm at 960×800): the controls row starts 16 px under the picture',
     viewports: ['desktop', 'wide'],
     widthTag: true,
     firstView: true,
@@ -370,13 +343,15 @@ export const calmFlows: readonly Flow[] = [
           return { gap: Math.round(r('.controls').top - r('.vpane').bottom) };
         });
         if (m.gap !== 16) throw new Error(`${id}: controls ${m.gap} px under the picture, expected 16`);
-        notes.push(`${id}: controls ${m.gap} px under the picture; ${await detailsStay(page)}`);
+        notes.push(`${id}: controls ${m.gap} px under the picture`);
       }
       const size = page.viewportSize()!;
       if (size.width === 1440) {
         await page.setViewportSize({ width: 960, height: 800 });
-        await openReady(page, baseUrl);
-        notes.push(`git-scm at 960: ${await detailsStay(page)}`);
+        await openReady(page, baseUrl, '/?sample=git-scm');
+        const gap = await page.evaluate(() => Math.round(document.querySelector('.controls')!.getBoundingClientRect().top - document.querySelector('.vpane')!.getBoundingClientRect().bottom));
+        if (gap !== 16) throw new Error(`git-scm at 960: controls ${gap} px under the picture, expected 16`);
+        notes.push(`git-scm at 960: controls ${gap} px under the picture`);
         await page.setViewportSize(size);
       }
       return { notes };
@@ -440,7 +415,7 @@ export const calmFlows: readonly Flow[] = [
       });
       const first = await where();
       if (first !== 'title block:button:Cancel') throw new Error(`Cancel focused before the first change: focus on ${first}`);
-      await page.locator('.change-panel').waitFor({ timeout: 10_000 });
+      await page.locator('.change-section #change-heading').waitFor({ timeout: 10_000 });
       const kept = await where();
       if (kept !== 'title block:button:Cancel') throw new Error(`after the first change arrived, focus on ${kept} (was ${first})`);
       await page.keyboard.press('Enter');
@@ -465,10 +440,10 @@ export const calmFlows: readonly Flow[] = [
     },
   },
   {
-    name: 'calm-kbd-disclosure',
-    description: 'Keyboard only: Tab to Change details, Enter, Tab: focus is on a folded item (shot)',
+    name: 'calm-kbd-archive-link',
+    description: 'Keyboard only: Tab to the Before capture\'s archive link in the change section (shot)',
     shot: 'hero',
-    suffix: '-kbd-disclosure',
+    suffix: '-kbd-archive-link',
     viewports: ['wide'],
     widthTag: true,
     firstView: true,
@@ -479,19 +454,30 @@ export const calmFlows: readonly Flow[] = [
   ...(Object.keys(SOURCES) as (keyof typeof SOURCES)[]).map(
     (v): Flow => ({
       name: `calm-source:${v}`,
-      description: `The changes list says once where its summaries come from (${v}); the ribbon tooltip says it per change`,
+      description: `Summary sources (${v}): the change section's tag, AI tags in Every change only when mixed; the ribbon tooltip says it per change`,
       viewports: ['desktop'],
       async run({ page, baseUrl }) {
         await mockApi(page, v === 'rule' ? {} : { summaries: v });
         await openLive(page, baseUrl, 'git-scm.com', 'done');
-        await page.waitForFunction((want) => document.querySelector('.changes-note')?.textContent === want, SOURCES[v], { timeout: 10_000 });
-        const marks = await page.locator('.changes .change-sum .source-label').count();
-        if ((v === 'some') !== marks > 0) throw new Error(`${marks} items marked AI in a "${v}" list`);
+        // AI lines arrive after the run: wait until the list shows what this source mix should.
+        await page.waitForFunction(
+          (want) => {
+            const tags = document.querySelectorAll('.changes .change-sum .tag').length;
+            const own = document.querySelector('.cs-side .tag')?.textContent ?? '';
+            return want === 'some' ? tags > 0 : tags === 0 && own === (want === 'ai' ? 'AI summary' : 'Auto summary');
+          },
+          v,
+          { timeout: 10_000 },
+        );
+        const marks = await page.locator('.changes .change-sum .tag').count();
+        const own = (await page.locator('.cs-side .tag').textContent()) ?? '';
+        const want = SOURCES[v];
+        if ((v === 'some') !== marks > 0 || (typeof want === 'string' ? own !== want : !want.test(own))) throw new Error(`${marks} rows tagged AI, the change says "${own}" in a "${v}" list`);
         await page.locator('.rb-slider').focus();
         await page.keyboard.press('Home');
         const tip = (await page.locator('.rb-tip').textContent()) ?? '';
         if (!/AI summary|auto summary/.test(tip)) throw new Error(`tooltip "${tip}"`);
-        return { notes: [SOURCES[v], `${marks} items marked AI`, `tooltip: ${tip.slice(0, 80)}`] };
+        return { notes: [`the change: ${own}`, `${marks} rows tagged AI`, `tooltip: ${tip.slice(0, 80)}`] };
       },
     }),
   ),

@@ -3,12 +3,13 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { ARCHIVES } from '../src/archive/archives.ts';
-import { describeChange } from '../src/app/describe.ts';
+import { describeChange, shownSummary } from '../src/app/describe.ts';
 import { collapseUnchanged } from '../src/app/diff/rows.ts';
 import { stepIndex, tsToMs } from '../src/app/timeline/scale.ts';
 import { fixtureToSnapshots, parseSampleFixture } from '../src/core/fixture.ts';
+import { namedSections } from '../src/core/ruleSummary.ts';
 import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
-import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
+import { formatTimestampLong, formatTimestampMonth, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
 import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
 import { changeForCapture, overviewPair, shotAlt, shotSrc, splitText } from '../src/app/visual/visualState.ts';
@@ -89,15 +90,15 @@ const defaultTimeline = timelineOf(defaultFixture);
 const slider = (page: Page) => page.locator('.rb-slider');
 const settle = (page: Page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
 
-/** The slider value, its valuetext and the list's single `aria-current` all point at change `i` of `f`. */
+/** The slider value, its valuetext and the single `aria-current` row of Every change (newest first) all point at change `i` of `f`. */
 async function expectSelected(page: Page, f: Fixture, i: number): Promise<string> {
   const { entries } = timelineOf(f);
   const want = describeChange(entries[i]!, i, entries.length);
   await page.locator(`.rb-slider[aria-valuenow="${i + 1}"]`).waitFor({ timeout: 2_000 });
   const text = await slider(page).getAttribute('aria-valuetext');
   if (text !== want) throw new Error(`valuetext "${text}", expected "${want}"`);
-  const current = await page.locator('.change').evaluateAll((bs) => bs.flatMap((b, j) => (b.getAttribute('aria-current') === 'true' ? [j] : [])));
-  if (current.join() !== String(i)) throw new Error(`list aria-current at [${current.join()}], expected ${i}`);
+  const current = await page.locator('.changes .change').evaluateAll((bs) => bs.flatMap((b, j) => (b.getAttribute('aria-current') === 'true' ? [bs.length - 1 - j] : [])));
+  if (current.join() !== String(i)) throw new Error(`list aria-current at change [${current.join()}], expected ${i}`);
   return want;
 }
 
@@ -206,18 +207,17 @@ async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<st
 }
 
 /**
- * The list's `aria-current` change sits in the open, full-width changes list after the timeline, which never scrolls
+ * The list's `aria-current` change sits in Every change, after the timeline and the change, which never scrolls
  * inside a box of its own (so no change is clipped there); the page itself has not scrolled from `pageY`.
  */
 async function currentInList(page: Page, pageY = 0): Promise<string> {
   const m = await page.evaluate((y) => {
-    const pane = document.querySelector<HTMLDetailsElement>('.stage .changes-pane')!;
+    const pane = document.querySelector<HTMLElement>('.stage .every')!;
     const item = document.querySelector('.changes .change[aria-current="true"]')!.getBoundingClientRect();
     const box = pane.getBoundingClientRect();
     const tl = document.querySelector('.stage .rb')!.getBoundingClientRect();
     const boxes = [pane, ...pane.querySelectorAll('*')].filter((el) => el.scrollHeight > el.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(el).overflowY));
     const problems = [
-      !pane.open && 'the list is closed',
       boxes.length > 0 && `${boxes.length} scroll boxes inside the list`,
       box.top < tl.bottom - 0.5 && 'the list is not below the timeline',
       (item.top < box.top - 0.5 || item.bottom > box.bottom + 0.5) && 'the selected change is outside the list box',
@@ -229,48 +229,37 @@ async function currentInList(page: Page, pageY = 0): Promise<string> {
   return m.text;
 }
 
-/**
- * Opens a folded part (phase 17): the `<details>` whose summary starts with `name`, or the `aria-expanded` button
- * named so (the compare picker). Set in script, so the page does not scroll to it.
- */
-export async function openDisclosure(page: Page, name: string): Promise<void> {
-  await page.evaluate((n) => {
-    const summary = [...document.querySelectorAll('summary')].find((x) => x.textContent?.trim().startsWith(n));
-    if (summary) (summary.parentElement as HTMLDetailsElement).open = true;
-    const button = [...document.querySelectorAll<HTMLButtonElement>('button[aria-expanded="false"]')].find((b) => b.textContent?.trim().startsWith(n));
-    button?.click();
-    if (!summary && !button && !document.querySelector(`button[aria-expanded="true"]`)) throw new Error(`no disclosure "${n}"`);
-  }, name);
-}
-
-/** Opens the "All changes (N)" disclosure (folded at every width). */
-const openChanges = (page: Page) => openDisclosure(page, 'All changes');
-
 const SPOKEN: Record<string, string> = { added: 'Added:', removed: 'Removed:', modified: 'Changed:', moved: 'Moved:' };
 
-/** The diff of change `i` reads "Added: …" / "Removed: …" / "Changed: …" in document order, every mark styled by line, not hue. */
+/**
+ * The diff of change `i` reads "Added: …" / "Removed: …" / "Changed: …" in document order (after "Show n more changes"),
+ * every block marked by its symbol and every word by its line, not hue.
+ */
 async function checkDiff(page: Page, f: Fixture, i: number): Promise<string[]> {
   const e = timelineOf(f).entries[i]!;
+  const more = page.locator('.db-more .btn');
+  const shownFirst = await page.locator('.diff-body .sr-only').count();
+  if (await more.count()) await more.click();
   const want = collapseUnchanged(e.diff.ops).flatMap((r) => ('op' in r && r.op.type !== 'equal' ? [SPOKEN[r.op.type] ?? r.op.type] : []));
   const got = await page.locator('.diff-body .sr-only').allTextContents();
   if (got.map((t) => t.trim()).join() !== want.join()) throw new Error(`diff prefixes ${got.join()} != ${want.join()}`);
   const bad = await page.evaluate(() => {
     const line = (sel: string, want: string) => [...document.querySelectorAll(sel)].filter((el) => !getComputedStyle(el).textDecorationLine.includes(want)).map(() => sel);
     const sym = [...document.querySelectorAll('.diff-body .db:not([data-op="equal"])')].filter((el) => getComputedStyle(el, '::before').content === 'none');
-    return [...line('.diff-body ins', 'underline'), ...line('.diff-body del', 'line-through'), ...line('.db[data-op="added"] .db-t', 'underline'), ...line('.db[data-op="removed"] .db-t', 'line-through'), ...sym.map(() => 'gutter')];
+    return [...line('.diff-body ins', 'underline'), ...line('.diff-body del', 'line-through'), ...sym.map(() => 'gutter')];
   });
   if (bad.length) throw new Error(`marks without symbol/line style: ${bad.join(', ')}`);
-  const links = await page.locator('.change-panel a.cap-out').evaluateAll((as) => as.map((a) => [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel'), a.textContent]));
+  const links = await page.locator('.cs-links a').evaluateAll((as) => as.map((a) => [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel'), a.textContent]));
   const hrefs = [e.from, e.to].map((ts) => viewCaptureUrl(f.source.archive, ts, f.url));
   links.forEach(([href, target, rel, text], k) => {
     if (href !== hrefs[k] || target !== '_blank' || rel !== 'noopener noreferrer' || !text?.includes(formatTimestampLong(k ? e.to : e.from))) throw new Error(`capture link ${k}: ${href} ${target} ${rel} "${text}"`);
   });
-  if (links.length !== 2) throw new Error(`${links.length} capture links in the diff header`);
+  if (links.length !== 2) throw new Error(`${links.length} capture links in the change section`);
   // What a screen reader gets: the accessibility tree of the diff, in document order.
   const tree = (await page.locator('.diff-body').ariaSnapshot()).split('\n').map((l) => l.replace(/^[\s-]*(?:(?:paragraph|blockquote|code|text):)?\s*"?/, '').replace(/"$/, ''));
   const spoken = tree.filter((l) => /^(Added|Removed|Changed|Moved):/.test(l));
   if (spoken.map((l) => l.split(':')[0]).join() !== want.map((w) => w.slice(0, -1)).join()) throw new Error(`a11y tree reads ${spoken.join(' | ')}`);
-  return [`${want.length} marked blocks in order; a11y dump: ${spoken.map((l) => l.slice(0, 60)).join(' | ')}`];
+  return [`${want.length} marked blocks in order (${shownFirst} before "Show more changes"); a11y dump: ${spoken.map((l) => l.slice(0, 60)).join(' | ')}`];
 }
 
 export const flows: readonly Flow[] = [
@@ -281,13 +270,12 @@ export const flows: readonly Flow[] = [
     cvd: true,
     async run({ page, baseUrl, scheme }) {
       const timeToReadyMs = await openReady(page, baseUrl);
-      await openChanges(page);
       for (const { to: ts } of defaultTimeline.entries) {
-        const time = page.locator(`.changes time[datetime="${timestampToIso(ts)}"]`);
+        const time = page.locator(`.changes time[datetime="${timestampToIso(ts)}"]`).first();
         await time.waitFor({ state: 'visible', timeout: 2_000 });
         const shown = (await time.locator('[aria-hidden="true"]').textContent())?.trim();
         const spoken = (await time.locator('.sr-only').textContent())?.trim();
-        if (shown !== formatTimestampShort(ts) || spoken !== formatTimestampLong(ts)) {
+        if (shown !== formatTimestampMonth(ts) || spoken !== formatTimestampLong(ts)) {
           throw new Error(`change ${ts}: got "${shown}" / "${spoken}"`);
         }
       }
@@ -639,7 +627,7 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'diff-default',
-    description: 'The latest change\'s diff: capture links, hidden prefixes in order, symbols and line styles, < 1,500 nodes for the largest change, list collapsed on mobile',
+    description: 'The latest change\'s diff: capture links, hidden prefixes in order, symbols and line styles, < 1,500 nodes for the largest change; Every change lists every change, newest first',
     shot: 'diff',
     schemes: ['light', 'dark'],
     cvd: true,
@@ -654,11 +642,11 @@ export const flows: readonly Flow[] = [
       const last = defaultTimeline.entries.at(-1)!;
       const timeToReadyMs = await openReady(page, baseUrl, `/?change=${last.from}-${last.to}`);
       const notes = await checkDiff(page, defaultFixture, defaultTimeline.entries.length - 1);
-      // Folded at every width since phase 17 (Calm layout); it was open on desktop before.
-      const open = await page.locator('.changes-pane').evaluate((d) => (d as HTMLDetailsElement).open);
-      if (open) throw new Error(`changes list open=${open} on ${viewport}`);
-      const summary = (await page.locator('.changes-pane summary').textContent())?.trim();
-      if (summary !== `All changes (${defaultTimeline.entries.length})`) throw new Error(`summary "${summary}"`);
+      // Every change: open at every width (redesign phase 5), one row per change, newest first.
+      const heading = (await page.locator('#changes-heading').textContent())?.trim();
+      const rows = await page.locator('.changes .change-sum').allTextContents();
+      const want = defaultTimeline.entries.map(shownSummary).reverse();
+      if (heading !== 'Every change' || rows.join('|') !== want.join('|')) throw new Error(`${viewport}: "${heading}" lists ${rows.join(' | ')}`);
       await noPageOverflow(page);
       return { timeToReadyMs, notes: [...notes, `largest change ${lf.id} #${li + 1} (${le.diff.ops.length} ops): ${nodes} nodes`] };
     },
@@ -696,6 +684,8 @@ export const flows: readonly Flow[] = [
       await page.keyboard.press('Enter');
       await expectSelected(page, f, n - 2);
       await checkDiff(page, f, n - 2);
+      // checkDiff opened "Show more changes", which takes focus: back to Previous, then Tab to Next.
+      await page.locator('.diff-nav .btn').first().focus();
       await page.keyboard.press('Tab');
       await page.keyboard.press('Enter');
       await page.keyboard.press('Enter');
@@ -706,17 +696,20 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'diff-expanded',
-    description: 'A change with structure edits: expanding every unchanged run and long block shows the whole later page',
+    description: 'A change with structure edits: the facts name its sections; Show more changes, every unchanged run and long block show the whole later page',
     async run({ page, baseUrl }) {
       const e = defaultTimeline.entries.at(-2)!;
       await openReady(page, baseUrl, `/?change=${e.from}-${e.to}`);
-      const structure = await page.locator('.diff-structure li').allTextContents();
-      if (structure.length !== e.record.headingsAdded.length + e.record.headingsRemoved.length + (e.diff.titleChanged ? 1 : 0)) throw new Error(`structure list: ${structure.join(' | ')}`);
+      const facts = await page.locator('.cs-facts > div').evaluateAll((ds) => ds.map((d) => `${d.querySelector('dt')?.textContent}: ${d.querySelector('dd')?.textContent}`));
+      const { added, removed, renamed } = namedSections(e.record);
+      const want = [added.length && `New sections: ${added.join(', ')}`, removed.length && `Gone: ${removed.join(', ')}`, renamed.length && 'Renamed'].filter(Boolean) as string[];
+      if (!facts[0]?.startsWith('Words: ') || want.some((w) => !facts.some((x) => x.startsWith(w)))) throw new Error(`facts: ${facts.join(' | ')}`);
+      if (await page.locator('.db-more .btn').count()) await page.locator('.db-more .btn').click();
       while (await page.locator('.db-gap').count()) await page.locator('.db-gap').first().click();
       for (const b of await page.locator('.db .btn-link').all()) await b.click();
       const blocks = await page.locator('.diff-body .db').count();
       if (blocks !== e.diff.ops.length || (await page.locator('.is-clamped').count())) throw new Error(`${blocks} blocks for ${e.diff.ops.length} ops`);
-      return { notes: [`structure: ${structure.join(' | ')}`, `${blocks} blocks shown, none clamped`] };
+      return { notes: [`facts: ${facts.join(' | ')}`, `${blocks} blocks shown, none clamped`] };
     },
   },
   {
@@ -742,14 +735,13 @@ export const flows: readonly Flow[] = [
       await expectSelected(page, f, t.entries.length - 2);
       // "Show them" turns the hollow dots into selectable, labelled entries.
       const trivial = trivialEntries(t);
-      await page.locator('.rb-trivial button', { hasText: 'Show them' }).click();
-      await page.locator('.rb-trivial button', { hasText: 'Hide them' }).waitFor({ timeout: 2_000 });
+      await page.locator('.changes-trivial button', { hasText: 'Show them' }).click();
+      await page.locator('.changes-trivial button', { hasText: 'Hide them' }).waitFor({ timeout: 2_000 });
       const marks = await page.locator('.rb-slider .rb-dot[data-index]').count();
       const items = await page.locator('.changes li').count();
       if (marks !== trivial.length || items !== t.entries.length + trivial.length) throw new Error(`${marks} trivial dots on the slider, ${items} list items`);
-      await openChanges(page);
-      await page.locator('.change', { hasText: 'trivial' }).first().click();
-      await page.locator('.panel-kicker', { hasText: 'trivial' }).waitFor({ timeout: 2_000 });
+      await page.locator('.change', { hasText: 'trivial' }).last().click();
+      await page.locator('.change[aria-current="true"]', { hasText: 'trivial' }).waitFor({ timeout: 2_000 });
       if (!page.url().includes(`change=${trivial[0]!.from}-${trivial[0]!.to}`)) throw new Error(`trivial entry not selected: ${page.url()}`);
       return { notes: [`copied ${new URL(copied).search}, reopened it; ${marks} trivial entries shown and selectable`] };
     },
@@ -860,18 +852,17 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'changes-list-follows',
-    description: 'Desktop: the full-width changes list after the ribbon marks the selected change after load, Previous, a thumbnail and the slider; it has no scroll box of its own and the page never scrolls',
+    description: 'Desktop: Every change, after the ribbon and the change, marks the selected change after load, Previous, a thumbnail and the slider; it has no scroll box of its own and the page never scrolls',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
       const { entries } = defaultTimeline;
-      await openChanges(page);
       const notes = [`load: ${await currentInList(page)}`];
       // Dispatched clicks: a real click would let Playwright scroll the page to the target first.
       // From the decade compare, Previous first narrows to the selected latest change, then steps back.
       await page.locator('.diff-nav .btn').first().dispatchEvent('click');
       await expectSelected(page, defaultFixture, entries.length - 1);
-      await page.locator('#change-heading .change-mag').waitFor({ timeout: 2_000 });
+      await page.locator('#change-heading', { hasText: shownSummary(entries.at(-1)!) }).waitFor({ timeout: 2_000 });
       await page.locator('.diff-nav .btn').first().dispatchEvent('click');
       await expectSelected(page, defaultFixture, entries.length - 2);
       notes.push(`Previous: ${await currentInList(page)}`);
@@ -897,7 +888,7 @@ export const flows: readonly Flow[] = [
       const notes: string[] = [];
       for (const [width, height] of [[390, 844], [320, 844], [320, 568]] as const) {
         await page.setViewportSize({ width, height });
-        // Single: the caption's own "Open capture" (in compare modes the pair's links are in Change details).
+        // Single: the caption's own "Open capture" (in compare modes the captures' links are in the change section).
         await openReady(page, baseUrl, '/?view=single');
         await settle(page);
         // Short screens cannot show the caption on first view; there the link must come clear when tabbed to.
@@ -974,11 +965,11 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-tab-order',
-    description: 'Desktop: the workspace tabs in visual order: the stage, its controls row, the ribbon thumbnails and slider, the change card, changes list, diff',
+    description: 'Desktop: the workspace tabs in visual order: the stage, its controls row, the ribbon thumbnails and slider, the change and its diff, Every change',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
-      const parts = ['vpane', 'controls', 'rb-strip', 'rb-slider', 'change-panel', 'changes-pane', 'diff-panel'];
+      const parts = ['vpane', 'controls', 'rb-strip', 'rb-slider', 'change-section', 'every'];
       const seen: string[] = [];
       for (let k = 0; k < 120; k++) {
         await page.keyboard.press('Tab');
@@ -990,8 +981,7 @@ export const flows: readonly Flow[] = [
         if (part === null) break;
         if (part && seen.at(-1) !== part) seen.push(part);
       }
-      // The diff has stops only when it has collapsed runs or long blocks; the rest always do.
-      if (seen.length < 6 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
+      if (seen.length < parts.length || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
       // The stage's last stop (the divider in Slider) leads to Play, the first control under it.
       await page.locator('.vpane .vp-split').focus();
       await page.keyboard.press('Tab');
