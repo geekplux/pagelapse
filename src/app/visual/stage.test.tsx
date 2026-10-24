@@ -1,14 +1,16 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { parseSampleFixture } from '../../core/fixture.ts';
+import gitScm from '../../samples/git-scm.json';
 import wikipedia from '../../samples/wikipedia-internet-archive.json';
 import { TimelineView } from '../TimelineView.tsx';
 import { spanText } from '../SheetHead.tsx';
 
 const fixture = parseSampleFixture(wikipedia);
 const PAIR = '20240316020238-20250502083649';
-const render = (q: { change?: string; view?: string; overview?: boolean } = {}) =>
-  renderToStaticMarkup(<TimelineView fixture={fixture} initialChange={q.change} initialMode={q.view} overview={q.overview} onChange={() => {}} />);
+const render = (q: { change?: string; at?: string; view?: string; overview?: boolean } = {}, f = fixture) =>
+  renderToStaticMarkup(<TimelineView fixture={f} initialChange={q.change} initialAt={q.at} initialMode={q.view} overview={q.overview} onChange={() => {}} />);
+const git = parseSampleFixture(gitScm);
 const text = (html: string) => html.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"');
 const radios = (html: string) => [...html.matchAll(/<input[^>]*name="vp-mode"[^>]*>/g)].map(([tag]) => ({ value: /value="(\w+)"/.exec(tag)?.[1], checked: tag.includes('checked') }));
 const checked = (html: string) => radios(html).find((r) => r.checked)?.value;
@@ -53,6 +55,21 @@ describe('workspace stage', () => {
   it('has Play, Previous / Next, the compare control and Copy link in one row', () => {
     const row = /<div class="controls">.*<\/div>/.exec(render({ change: PAIR }))![0];
     for (const want of ['data-play', 'aria-label="Previous change"', 'aria-label="Next change"', 'id="vp-modes"', 'Copy link']) expect(row).toContain(want);
+  });
+});
+
+describe('stage captions', () => {
+  it('says "Trivial edit" once in Single, on the picture tag; the caption keeps "Open capture"', () => {
+    const html = render({ change: '20160114164816-20170607181950', at: '20180716160704', view: 'single' }, git);
+    expect(text(html).match(/Trivial edit/g)).toHaveLength(1);
+    expect(text(/<figcaption class="vp-cap">(.*?)<\/figcaption>/.exec(html)![1]!)).toBe('Open capture (opens in a new tab)');
+  });
+
+  it('tags a partial capture on the picture, so nothing under the stage depends on the pair', () => {
+    const ts = git.snapshots.find((x) => x.shot?.status === 'partial')!.ts;
+    const html = render({ at: ts, view: 'single' }, git);
+    expect(/<div class="vp-mat">.*class="vp-badge" data-corner="before".*?Partial copy/.test(html)).toBe(true);
+    expect(text(/<figcaption class="vp-cap">(.*?)<\/figcaption>/.exec(html)![1]!)).toBe('Open capture (opens in a new tab)');
   });
 });
 

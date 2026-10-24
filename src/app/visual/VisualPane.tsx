@@ -121,27 +121,22 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
         <p className="mono">{p.broken ? 'The picture could not be loaded.' : p.reason}</p>
       </div>
     );
-  // The honest badges, and in Single the link out (the pair's links are in Change details).
-  const caption = (ps: Pic[], out = false) => {
-    const partial = ps.filter((p) => p.status === 'partial');
-    if (!out && !partial.length) return null;
-    return (
-      <figcaption className="vp-cap">
-        {out && shown === 'single' && trivial && <span>Trivial edit</span>}
-        {out &&
-          ps.map((p) => (
-            <a key={p.ts} className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
-              Open capture<span className="sr-only"> (opens in a new tab)</span>
-            </a>
-          ))}
-        {partial.map((p) => (
-          <span key={p.ts} className="vp-badge">
-            <span aria-hidden="true">◐ </span>Partial{ps.length > 1 && ` (${formatTimestampLong(p.ts)})`}: the archive's copy is missing some styles or images.
-          </span>
-        ))}
-      </figcaption>
+  // Single's link out, under the picture; always there in Single, so the controls never move with the capture.
+  const caption = (p: Pic) => (
+    <figcaption className="vp-cap">
+      <a className="cap-out" href={link(p.ts)} target="_blank" rel="noopener noreferrer">
+        Open capture<span className="sr-only"> (opens in a new tab)</span>
+      </a>
+    </figcaption>
+  );
+  // A capture recorded without some styles: a tag in the picture's bottom corner (its side's), over the picture so
+  // nothing under the stage moves when the pair changes.
+  const partial = (p: Pic, corner: Side) =>
+    p.status === 'partial' && (
+      <span key={`partial-${p.ts}`} className="vp-badge" data-corner={corner}>
+        <span aria-hidden="true">◐ </span>Partial copy<span className="sr-only">, {formatTimestampLong(p.ts)}: the archive's copy is missing some styles or images</span>
+      </span>
     );
-  };
   // Roving radio group: Left / Up and Right / Down wrap, Home / End go to the ends; selection follows focus.
   const sideKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     const radios = [...(e.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="radio"]') ?? [])];
@@ -204,8 +199,10 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
                     {`Open ${word} capture`}
                   </a>
                 </figcaption>
-                <div className="vp-mat">{shot(pair[s])}</div>
-                {caption([pair[s]])}
+                <div className="vp-mat">
+                  {shot(pair[s])}
+                  {partial(pair[s], 'before')}
+                </div>
               </figure>
             ))}
           </div>
@@ -214,8 +211,9 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
             <div className="vp-mat">
               {shown === 'slider' ? <CompareSlider entry={entry} before={shot(pair.before)} after={shot(pair.after)} /> : shot(pic(at))}
               {tags}
+              {shown === 'single' ? partial(pic(at), 'before') : SIDES.map(([s]) => partial(pair[s], s))}
             </div>
-            {caption(shown === 'single' ? [pic(at)] : [pair.before, pair.after], shown === 'single')}
+            {shown === 'single' && caption(pic(at))}
           </figure>
         )}
         {note}

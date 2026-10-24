@@ -1057,11 +1057,11 @@ export const flows: readonly Flow[] = [
       const ts = f.snapshots.find((s) => s.shot?.status === 'partial')!.ts;
       await openReady(page, baseUrl, `/?at=${ts}&view=single`);
       await expectShown(page, f, ts);
-      await page.locator('.vp-cap .vp-badge', { hasText: "The archive's copy is missing some styles or images" }).waitFor({ timeout: 2_000 });
+      await page.locator('.vpane .vp-mat .vp-badge', { hasText: "The archive's copy is missing some styles or images" }).waitFor({ timeout: 2_000 });
       const labelled = await page.locator('.frame-partial').count();
       if (labelled !== f.snapshots.filter((s) => s.shot?.status === 'partial').length) throw new Error(`${labelled} filmstrip frames labelled partial`);
       await page.waitForSelector('[data-visual-ready="true"]');
-      return { notes: [`${ts}: partial badge in the caption, ${labelled} frames labelled "◐ partial"`] };
+      return { notes: [`${ts}: partial tag on the picture, ${labelled} frames labelled "◐ partial"`] };
     },
   },
   {
