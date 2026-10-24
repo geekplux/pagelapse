@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="t d">
   <title id="t">Pagelapse: see how any web page changed over the years</title>
-  <desc id="d">The Pagelapse mark and name with the headline beside a before/after split of the git-scm.com home page: the capture of 6 November 2013 on the left, the capture of 18 December 2025 on the right, with a divider between them.</desc>
+  <desc id="d">The Pagelapse mark and name with the headline beside a before/after split of the Wikipedia article "Internet Archive": the capture of 25 April 2018 on the left, the capture of 10 February 2026 on the right, with a divider between them.</desc>
   <!-- Rendered to assets/social-preview.png by scripts/render-social.ts (fonts and pictures are inlined there).
        Colours are Radix sand, cyan and amber (src/design/palette.ts); type is Schibsted Grotesk and IBM Plex Mono. -->
   <style>
@@ -37,12 +37,12 @@
   </text>
   <text class="mono" x="72" y="568" font-size="20" fill="#63635E">github.com/geekplux/pagelapse</text>
 
-  <!-- The stage: Before (2013) under After (2025), After shown right of the divider -->
+  <!-- The stage: Before (2018) under After (2026), After shown right of the divider (the default sample's decade compare) -->
   <g clip-path="url(#stage)">
     <rect x="588" y="104" width="632" height="395" fill="#FFFFFF"/>
-    <image x="588" y="104" width="632" height="395" preserveAspectRatio="xMidYMin slice" href="../public/samples/git-scm/20131106090756-302c3cea.webp"/>
+    <image x="588" y="104" width="632" height="395" preserveAspectRatio="xMidYMin slice" href="../public/samples/wikipedia-internet-archive/20180425033645-88cba648.webp"/>
     <svg x="904" y="104" width="316" height="395" viewBox="480 0 480 600" preserveAspectRatio="xMinYMin slice">
-      <image width="960" height="600" href="../public/samples/git-scm/20251218145830-286cd682.webp"/>
+      <image width="960" height="600" href="../public/samples/wikipedia-internet-archive/20260210204802-8fe2b256.webp"/>
     </svg>
   </g>
   <rect x="588" y="104" width="632" height="395" rx="8" fill="none" stroke="#CFCECA" stroke-width="1"/>
@@ -52,14 +52,14 @@
   <path d="M900 293.5 892 301.5l8 8M908 293.5l8 8-8 8" fill="none" stroke="#21201C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   <!-- Tags: ring dot + Before in cyan-11, filled dot + After in amber-11, each with its date (never colour alone) -->
   <g class="ui" font-size="20">
-    <rect x="604" y="120" width="226" height="40" rx="6" fill="#FFFFFF" filter="url(#lift)"/>
+    <rect x="604" y="120" width="237" height="40" rx="6" fill="#FFFFFF" filter="url(#lift)"/>
     <circle cx="624" cy="140" r="5" fill="none" stroke="#107D98" stroke-width="2"/>
     <text x="638" y="147" font-weight="600" fill="#107D98">Before</text>
-    <text class="mono" x="712" y="147" font-size="18" fill="#21201C">6 Nov 2013</text>
+    <text class="mono" x="712" y="147" font-size="18" fill="#21201C">25 Apr 2018</text>
     <rect x="976" y="120" width="228" height="40" rx="6" fill="#FFFFFF" filter="url(#lift)"/>
     <circle cx="996" cy="140" r="6" fill="#AB6400"/>
     <text x="1010" y="147" font-weight="600" fill="#AB6400">After</text>
-    <text class="mono" x="1072" y="147" font-size="18" fill="#21201C">18 Dec 2025</text>
+    <text class="mono" x="1072" y="147" font-size="18" fill="#21201C">10 Feb 2026</text>
   </g>
-  <text class="ui" x="588" y="540" font-size="20" fill="#63635E">git-scm.com, first and latest capture</text>
+  <text class="ui" x="588" y="540" font-size="20" fill="#63635E">Wikipedia: Internet Archive, 2018 and 2026</text>
 </svg>
