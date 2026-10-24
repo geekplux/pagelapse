@@ -34,7 +34,7 @@ const MORE: [string, string][] = [
  * the right, and the folded details: what the shown sample's captures are (provenance, licence, picture notes) and
  * every keyboard shortcut.
  */
-export function AppFooter({ sample }: { sample?: SampleFixture | undefined }) {
+export function AppFooter({ sample, hero = false }: { sample?: SampleFixture | undefined; hero?: boolean }) {
   const archive = sample && ARCHIVES[sample.source.archive];
   const visual = sample?.visual;
   return (
@@ -49,16 +49,18 @@ export function AppFooter({ sample }: { sample?: SampleFixture | undefined }) {
             Captures come from the Internet Archive. No accounts, cookies or tracking.{' '}
             <a href="https://github.com/geekplux/pagelapse">Source on GitHub</a>
           </p>
-          <ul className="foot-keys" aria-label="Timeline keys">
-            {KEY_ROW.map(([keys, what]) => (
-              <li key={what}>
-                {keys.map((k) => (
-                  <kbd key={k}>{k}</kbd>
-                ))}{' '}
-                {what}
-              </li>
-            ))}
-          </ul>
+          {!hero && (
+            <ul className="foot-keys" aria-label="Timeline keys">
+              {KEY_ROW.map(([keys, what]) => (
+                <li key={what}>
+                  {keys.map((k) => (
+                    <kbd key={k}>{k}</kbd>
+                  ))}{' '}
+                  {what}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <nav className="foot-by" aria-labelledby="foot-by">
           <p id="foot-by">Made by GeekPlux</p>
@@ -97,17 +99,19 @@ export function AppFooter({ sample }: { sample?: SampleFixture | undefined }) {
           </p>
         )}
       </details>
-      <details className="fold">
-        <summary>All keyboard shortcuts</summary>
-        <dl className="keys">
-          {KEYS.map(([what, how]) => (
-            <div key={what}>
-              <dt>{what}</dt>
-              <dd>{how}</dd>
-            </div>
-          ))}
-        </dl>
-      </details>
+      {!hero && (
+        <details className="fold">
+          <summary>All keyboard shortcuts</summary>
+          <dl className="keys">
+            {KEYS.map(([what, how]) => (
+              <div key={what}>
+                <dt>{what}</dt>
+                <dd>{how}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
     </footer>
   );
 }

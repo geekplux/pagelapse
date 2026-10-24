@@ -1,0 +1,47 @@
+import type { SampleFixture } from '../../core/types.ts';
+import type { SampleEntry } from '../../samples/index.ts';
+import { PageIcon, UrlForm } from '../UrlForm.tsx';
+import { Deck } from './Deck.tsx';
+import { monthYear } from './deck.ts';
+
+interface Props {
+  samples: readonly SampleEntry[];
+  onSample: (entry: SampleEntry) => void;
+  onUrl: (url: string) => void;
+  /** The sample dealt as the deck (Wikipedia), once loaded. */
+  deck: SampleFixture | undefined;
+  /** Opens the deck's sample on capture `ts`. */
+  onCapture: (ts: string) => void;
+}
+
+/** The first view (no `?sample=` or `?url=`): the headline, the address field, the samples, and the deck of captures. */
+export function Hero({ samples, onSample, onUrl, deck, onCapture }: Props) {
+  const [first, latest] = [deck?.snapshots[0]?.ts, deck?.snapshots.at(-1)?.ts];
+
+  return (
+    <div className="intro">
+      <section className="intro-head" aria-labelledby="intro-title">
+        <h1 id="intro-title">See how any web page changed over the years</h1>
+        <p className="intro-lede">Paste an address. Pagelapse lays out its captures from the Internet Archive and marks what changed between them.</p>
+        <UrlForm value="" onSubmit={onUrl} hero />
+        <div className="intro-samples">
+          <span>Or open a sample</span>
+          {samples.map((s) => (
+            <button key={s.id} type="button" className="sample-opt" data-sample={s.id} onClick={() => onSample(s)}>
+              <PageIcon />
+              <span>{s.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+      {deck && first && latest && (
+        <figure className="intro-deck">
+          <Deck fixture={deck} onOpen={onCapture} />
+          <figcaption>
+            The Wikipedia article on the Internet Archive, {deck.snapshots.length} captures from {monthYear(first)} to {monthYear(latest)}.
+          </figcaption>
+        </figure>
+      )}
+    </div>
+  );
+}

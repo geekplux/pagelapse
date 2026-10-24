@@ -1,12 +1,13 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { SampleFixture } from '../core/types.ts';
-import { defaultSample, type SampleEntry, samples } from '../samples/index.ts';
+import { DECK_SAMPLE, defaultSample, displayAddress, type SampleEntry, samples } from '../samples/index.ts';
 import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
+import { Hero } from './hero/Hero.tsx';
 import { TimelineView } from './TimelineView.tsx';
 import { validateTargetUrl } from '../core/url.ts';
 import { throttleLatest } from './throttle.ts';
-import { parseUrlState, writeUrlState } from './urlState.ts';
+import { type UrlState, isHeroState, parseUrlState, pushUrlState, writeUrlState } from './urlState.ts';
 
 interface Current {
   id: string;
@@ -37,58 +38,128 @@ function initialLive(): Live | null {
   return check?.ok ? { url: check.url, run: 0, change, at, view } : null;
 }
 
+/** How a sample or live run changes the address: a new history entry (leaving the hero), in place, or not at all. */
+type Write = 'push' | 'replace' | false;
+const write = (how: Write, state: UrlState) => (how === 'push' ? pushUrlState(state) : how && writeUrlState(state));
+
 export function App() {
   const [live, setLive] = useState(initialLive);
+  // No `?sample=` and no `?url=`: the hero. Leaving it pushes a history entry, so Back returns to it.
+  const [hero, setHero] = useState(() => isHeroState(parseUrlState(location.search)));
   const [current, setCurrent] = useState<Current | null>(() => {
     const { sample, change, at, view } = parseUrlState(location.search);
+    if (hero) return null;
     // A deep link to a lazily loaded sample renders once it has loaded; unknown ids fall back to the default.
     const lazy = samples.some((s) => s.id === sample && s.id !== defaultSample.id);
     return lazy ? null : { id: defaultSample.id, fixture: defaultSample, change, at, view };
   });
-  // Polite announcement on sample switch; focus stays on the chip. Empty on first load.
+  // Polite announcement on sample switch; focus stays where it is. Empty on first load.
   const [announcement, setAnnouncement] = useState('');
   const wanted = useRef(current?.id);
   // Live-run progress reaches the polite region at most once every 2 s, across runs too (AC 22).
   const [progress] = useState(() => throttleLatest<string>(2000, setAnnouncement));
   useEffect(() => () => progress.cancel(), [progress]);
 
-  const load = (entry: SampleEntry, change?: string, at?: string, view?: string, announce = true) => {
+  // The control that opened the workspace goes away with the hero (or the live view): focus moves to the content,
+  // not to <body> (WCAG 2.4.3).
+  const focusContent = () =>
+    requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body) document.getElementById('content')?.focus();
+    });
+
+  const load = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}, how: Write = 'replace') => {
     setLive(null);
     progress.cancel();
     wanted.current = entry.id;
     return entry.load().then((fixture) => {
       // Last click wins if loads resolve out of order.
       if (wanted.current !== entry.id) return;
-      setCurrent({ id: entry.id, fixture, change, at, view });
-      if (!announce) return;
-      writeUrlState({ sample: entry.id });
+      setCurrent({ id: entry.id, fixture, ...q });
+      setHero(false);
+      if (!how) return;
+      write(how, { sample: entry.id, ...q });
       setAnnouncement(`Showing: ${fixture.label}, ${fixture.snapshots.length} captures`);
     });
   };
+  const fromHero = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}) => void load(entry, q, 'push');
+  // Leaving the hero removes the control that was used: the workspace opens at its top, with focus on its content.
+  const wasHero = useRef(hero);
+  useEffect(() => {
+    const active = document.activeElement;
+    if (wasHero.current && !hero) {
+      scrollTo({ top: 0, behavior: 'instant' });
+      if (!active || active === document.body) document.getElementById('content')?.focus({ preventScroll: true });
+    }
+    wasHero.current = hero;
+  }, [hero]);
+  // The hero's deck (and the footer's note on its captures) deals the Wikipedia sample, loaded on first need.
+  const deckEntry = samples.find((s) => s.id === DECK_SAMPLE);
+  const [deck, setDeck] = useState<SampleFixture>();
+  useEffect(() => {
+    if (hero && !deck) void deckEntry?.load().then(setDeck);
+  }, [hero, deck, deckEntry]);
 
-  const startLive = (url: string, focus = false) => {
+  const startLive = (url: string, focus = false, how: Write = 'replace') => {
+    wanted.current = undefined;
+    setHero(false);
     setLive((l) => ({ url, run: (l?.run ?? 0) + 1, focus }));
-    writeUrlState({ url });
+    write(how, { url });
   };
-  // "Open a sample" goes away with the live view: focus lands on the sample's chip, not on <body> (WCAG 2.4.3).
-  const openSample = () =>
-    void load(samples.find((s) => s.id === defaultSample.id)!).then(() =>
-      requestAnimationFrame(() => {
-        const active = document.activeElement;
-        if (!active || active === document.body) document.querySelector<HTMLElement>('.chip[aria-pressed="true"]')?.focus();
-      }),
-    );
+  const openSample = () => void load(samples.find((s) => s.id === defaultSample.id)!).then(focusContent);
+
+  // Back and Forward between the hero and the workspace: show what the address now names.
+  useEffect(() => {
+    const onPop = () => {
+      const s = parseUrlState(location.search);
+      const check = s.url ? validateTargetUrl(s.url) : null;
+      if (isHeroState(s)) {
+        wanted.current = undefined;
+        progress.cancel();
+        setLive(null);
+        setHero(true);
+      } else if (check?.ok) {
+        setHero(false);
+        setLive((l) => ({ url: check.url, run: (l?.run ?? 0) + 1, change: s.change, at: s.at, view: s.view }));
+      } else void load(samples.find((e) => e.id === s.sample) ?? samples[0]!, { change: s.change, at: s.at, view: s.view }, false);
+    };
+    addEventListener('popstate', onPop);
+    return () => removeEventListener('popstate', onPop);
+    // `load` only reads refs and setters.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (live) return;
+    if (live || hero) return;
     const { sample, change, at, view } = parseUrlState(location.search);
     const entry = samples.find((s) => s.id === sample);
-    if (!current && entry) void load(entry, change, at, view, false);
+    if (!current && entry) void load(entry, { change, at, view }, false);
     // An unknown `?sample=` shows the default sample: say so in the address bar (keeping any resolved change).
     if (sample && !entry) writeUrlState({ ...parseUrlState(location.search), sample: defaultSample.id });
     // Runs once on mount: only the initial deep link is restored from the URL.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (hero)
+    return (
+      <>
+        <AppHeader hero />
+        <main id="content" className="is-intro" tabIndex={-1}>
+          <Hero
+            samples={samples}
+            onSample={(entry) => fromHero(entry)}
+            onUrl={(url) => startLive(url, false, 'push')}
+            deck={deck}
+            onCapture={(at) => deckEntry && fromHero(deckEntry, { at })}
+          />
+        </main>
+        {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+        <p className="sr-only" role="status" aria-live="polite">
+          {announcement}
+        </p>
+        <AppFooter sample={deck} hero />
+      </>
+    );
 
   return (
     <>
@@ -97,7 +168,7 @@ export function App() {
         samples={samples}
         selectedId={live ? '' : (current?.id ?? '')}
         onSelect={(entry) => void load(entry)}
-        url={parseUrlState(location.search).url ?? ''}
+        url={live ? displayAddress(live.url) : (parseUrlState(location.search).url ?? (current ? displayAddress(current.fixture.url) : ''))}
         onUrl={(url) => startLive(url)}
       />
       <main id="content" tabIndex={-1}>
