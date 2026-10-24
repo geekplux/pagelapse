@@ -1,6 +1,7 @@
 // Flow registry for scripts/smoke.ts. Each flow runs once per viewport in a
 // fresh browser context; the runner takes the screenshot after `run` resolves.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { Page } from 'playwright-core';
 import { ARCHIVES } from '../src/archive/archives.ts';
 import { describeChange, shownSummary } from '../src/app/describe.ts';
@@ -14,6 +15,7 @@ import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
 import { changeForCapture, overviewPair, shotAlt, shotSrc, splitText } from '../src/app/visual/visualState.ts';
 import { PLAY_MS } from '../src/app/visual/usePlay.ts';
+import { isRecorded, readSampleConfig, recordedSamples } from './lib/sampleConfig.ts';
 
 export interface FlowContext {
   page: Page;
@@ -56,8 +58,9 @@ export interface Flow {
   run: (ctx: FlowContext) => Promise<FlowResult>;
 }
 
-/** The default sample (the first in samples.config.json): what a workspace flow opens unless it names another. */
-const DEFAULT_ID = (JSON.parse(readFileSync(new URL('../src/samples/samples.config.json', import.meta.url), 'utf8')) as { id: string }[])[0]!.id;
+const root = fileURLToPath(new URL('..', import.meta.url));
+/** The default sample (the first recorded entry of samples.config.json, Wikipedia): what a workspace flow opens unless it names another. */
+const DEFAULT_ID = recordedSamples(root)[0]!.id;
 
 /**
  * Opens the workspace at `path` and waits until the app reports ready; returns time-to-ready. A path that names no
@@ -81,8 +84,8 @@ export async function openHero(page: Page, baseUrl: string): Promise<void> {
 }
 
 const readJson = (rel: string) => JSON.parse(readFileSync(new URL(`../src/samples/${rel}`, import.meta.url), 'utf8'));
-/** Committed samples in registry order (samples.config.json); the first is the default. */
-const fixtures = (readJson('samples.config.json') as { id: string }[]).map((c) => parseSampleFixture(readJson(`${c.id}.json`)));
+/** Committed samples in registry order (samples.config.json, recorded entries only: the app offers no other); the first is the default. */
+const fixtures = recordedSamples(root).map((c) => parseSampleFixture(readJson(`${c.id}.json`)));
 const defaultFixture = fixtures[0]!;
 type Fixture = (typeof fixtures)[number];
 const timelineOf = (f: Fixture) => buildTimeline(f.url, fixtureToSnapshots(f));
@@ -312,6 +315,30 @@ export const flows: readonly Flow[] = [
       },
     }),
   ),
+  {
+    name: 'sample-unrecorded',
+    description: 'A config entry without a recorded fixture (NASA, Creative Commons) is never offered: not a hero option, not in the address menu, and its deep link opens the default sample',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const unrecorded = readSampleConfig(root).flatMap((c) => (isRecorded(root, c.id) ? [] : [c.id]));
+      if (!unrecorded.length) return { notes: ['every config entry is recorded: nothing to hide'] };
+      const ids = fixtures.map((f) => f.id).join();
+      await openHero(page, baseUrl);
+      const options = await page.locator('.sample-opt').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-sample')));
+      if (options.join() !== ids) throw new Error(`hero options ${options.join()}, expected ${ids}`);
+      const notes = [`hero options: ${options.join(', ')}`];
+      for (const id of unrecorded) {
+        await openReady(page, baseUrl, `/?sample=${id}`);
+        const label = (await page.locator('#sample-label').textContent())?.trim();
+        if (label !== defaultFixture.label) throw new Error(`?sample=${id} opened "${label}", expected the default "${defaultFixture.label}"`);
+        if (new URL(page.url()).search !== `?sample=${DEFAULT_ID}`) throw new Error(`?sample=${id} not replaced by the default: ${page.url()}`);
+        const menu = await page.locator('#addr-menu [data-sample]').evaluateAll((os) => os.map((o) => o.getAttribute('data-sample')));
+        if (menu.join() !== ids) throw new Error(`address menu ${menu.join()}, expected ${ids}`);
+        notes.push(`?sample=${id} -> ${page.url().split('/').at(-1)}; menu ${menu.join(', ')}`);
+      }
+      return { notes };
+    },
+  },
   {
     name: 'reduced-motion',
     description: 'Under prefers-reduced-motion: reduce, every transition and animation computes to 0s',

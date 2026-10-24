@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseSampleFixture } from '../../src/core/fixture.ts';
 import { webpSize } from './webpInfo.ts';
+import { recordedSamples } from './sampleConfig.ts';
 
 /** The sample the hero deals as its deck (src/samples/index.ts DECK_SAMPLE). */
 const DECK_SAMPLE = 'wikipedia-internet-archive';
@@ -21,9 +22,9 @@ export interface PictureReport {
   problems: string[];
 }
 
-/** Checks every sample's pictures: present, right size, within budget, no orphans. */
+/** Checks every recorded sample's pictures: present, right size, within budget, no orphans. */
 export function checkPictures(root: string): PictureReport {
-  const ids = (JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as { id: string }[]).map((c) => c.id);
+  const ids = recordedSamples(root).map((c) => c.id);
   const r: PictureReport = { count: 0, largestFull: 0, largestThumb: 0, total: 0, firstView: 0, pictured: 0, problems: [] };
   let captures = 0;
   for (const id of ids) {

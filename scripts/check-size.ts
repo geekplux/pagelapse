@@ -4,6 +4,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { PICTURE_BUDGET, checkPictures } from './lib/pictures.ts';
+import { recordedSamples } from './lib/sampleConfig.ts';
 
 const root = resolve(import.meta.dirname, '..');
 const dist = join(root, 'dist', 'client');
@@ -29,8 +30,8 @@ const initialJs = [
 const cssFiles = readdirSync(join(dist, 'assets')).filter((f) => f.endsWith('.css'));
 const fontDir = join(dist, 'fonts');
 const fonts = existsSync(fontDir) ? readdirSync(fontDir).filter((f) => f.endsWith('.woff2')) : [];
-// The default sample is the first in samples.config.json (registry order).
-const defaultId = (JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as { id: string }[])[0]!.id;
+// The default sample is the first recorded entry of samples.config.json (src/samples/index.ts, registry order).
+const defaultId = recordedSamples(root)[0]!.id;
 const sample = JSON.stringify(JSON.parse(readFileSync(join(root, `src/samples/${defaultId}.json`), 'utf8')));
 const pictures = checkPictures(root);
 

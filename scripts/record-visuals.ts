@@ -3,7 +3,8 @@
 // into the fixtures. Like record-samples.ts it is the only code here that touches the network
 // and is never imported by tests.
 //
-// Usage: pnpm record:visuals [--only <id>] [--max <captures to load this run>] [--offline] [--dry-run]
+// Usage: pnpm record:visuals [--only <id>[,<id>…]] [--max <captures to load this run>] [--offline] [--dry-run]
+// It pictures recorded samples only: run `pnpm record:samples` for a new entry first (an entry without its fixture is skipped).
 // The capture's `mp_` replay is loaded in an iframe of a local page: framed, pywb's top-frame
 // redirect into Arquivo.pt's own viewer does not fire. Only arquivo.pt hosts load (pages still
 // call live fonts and tag managers). Politeness: one browser, one capture at a time, >= 5 s
@@ -21,6 +22,7 @@ import type { SampleFixture, ShotRef } from '../src/core/types.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 import { writeFixture } from './lib/fixtureFile.ts';
 import { encodeWithin, greyPixels } from './lib/webp.ts';
+import { isRecorded, pickSamples, readSampleConfig } from './lib/sampleConfig.ts';
 
 interface VisualConfig {
   id: string;
@@ -44,10 +46,12 @@ const { values: args } = parseArgs({
   args: process.argv.slice(2).filter((a) => a !== '--'),
   options: { only: { type: 'string' }, max: { type: 'string', default: '99' }, offline: { type: 'boolean', default: false }, 'dry-run': { type: 'boolean', default: false } },
 });
-const configs = (JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as VisualConfig[]).filter(
-  (c) => !args.only || c.id === args.only,
-);
-if (!configs.length) throw new Error(`no sample with id "${args.only}"`);
+const configs = pickSamples(readSampleConfig<VisualConfig>(root), args.only).filter((c) => {
+  if (isRecorded(root, c.id)) return true;
+  console.error(`skipped ${c.id}: src/samples/${c.id}.json is not recorded yet (run pnpm record:samples -- --only ${c.id} first)`);
+  return false;
+});
+if (!configs.length) throw new Error('no recorded sample to picture');
 
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const hosts = new Map<string, number>();
