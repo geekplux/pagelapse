@@ -208,9 +208,10 @@ type Item = { name: string; sel: string; path?: string; via?: string };
 const SAMPLE_IDS = ['git-scm', 'wikipedia-internet-archive', 'rust-lang'];
 const wiki = '/?sample=wikipedia-internet-archive';
 const INVENTORY: Item[] = [
-  { name: 'URL input', sel: '#url-input' },
-  { name: 'Show changes', sel: '.btn-go' },
-  ...SAMPLE_IDS.map((id) => ({ name: `sample ${id}`, sel: `.chip[data-sample="${id}"]` })),
+  // The samples are options of the address field's menu (a combobox): reached through the field, not by Tab.
+  { name: 'Address field (samples menu)', sel: '#url-input[role="combobox"]' },
+  { name: 'Show its history', sel: '.btn-go' },
+  { name: 'GitHub link (header)', sel: '.gh-link' },
   { name: 'Compare picker', sel: '.vp-compare' },
   { name: 'compare modes (radio group)', sel: 'input[name="vp-mode"]', via: '.vp-compare' },
   { name: 'Play', sel: '.vp-play' },

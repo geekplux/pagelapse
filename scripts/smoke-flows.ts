@@ -55,14 +55,28 @@ export interface Flow {
   run: (ctx: FlowContext) => Promise<FlowResult>;
 }
 
-/** Opens `path` and waits until the app reports ready; returns time-to-ready. */
+/** The default sample (the first in samples.config.json): what a workspace flow opens unless it names another. */
+const DEFAULT_ID = (JSON.parse(readFileSync(new URL('../src/samples/samples.config.json', import.meta.url), 'utf8')) as { id: string }[])[0]!.id;
+
+/**
+ * Opens the workspace at `path` and waits until the app reports ready; returns time-to-ready. A path that names no
+ * sample and no page would show the hero, so it opens the default sample explicitly (`?sample=<id>` first).
+ */
 export async function openReady(page: Page, baseUrl: string, path = '/'): Promise<number> {
-  await page.goto(new URL(path, baseUrl).href, { waitUntil: 'domcontentloaded' });
+  const url = new URL(path, baseUrl);
+  if (!url.searchParams.has('sample') && !url.searchParams.has('url')) url.search = `?sample=${DEFAULT_ID}${url.search.replace(/^\?/, '&')}`.replace(/&$/, '');
+  await page.goto(url.href, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-ready="true"]', { timeout: 10_000 });
   return page.evaluate(() => {
     const mark = performance.getEntriesByName('wd:ready')[0];
     return Math.round(mark ? mark.startTime : performance.now());
   });
+}
+
+/** Opens the hero (`/`, no sample, no page) and waits for its deck to be dealt. */
+export async function openHero(page: Page, baseUrl: string): Promise<void> {
+  await page.goto(new URL('/', baseUrl).href, { waitUntil: 'domcontentloaded' });
+  await page.locator('.deck-card').first().waitFor({ timeout: 10_000 });
 }
 
 const readJson = (rel: string) => JSON.parse(readFileSync(new URL(`../src/samples/${rel}`, import.meta.url), 'utf8'));
@@ -148,14 +162,24 @@ async function expectSlider(page: Page, v: number): Promise<string> {
 /** Index of the capture the filmstrip marks as shown. */
 const shownIndex = (page: Page) => page.locator('.frame').evaluateAll((fs) => fs.findIndex((f) => f.getAttribute('aria-current') === 'true'));
 
-/** Presses a currently non-pressed chip and checks the pressed state, heading and capture links all follow. */
+/**
+ * Picks sample `f` (not the open one) in the address field's menu by keyboard: focus opens it, arrows reach `f`,
+ * Enter picks it; then the checked option, heading and capture links all follow.
+ */
 async function switchTo(page: Page, f: (typeof fixtures)[number]): Promise<string> {
-  const chip = page.locator(`.chip[data-sample="${f.id}"]`);
-  if ((await chip.getAttribute('aria-pressed')) !== 'false') throw new Error(`${f.id}: chip was already pressed`);
-  await chip.click();
+  const option = page.locator(`#addr-menu [data-sample="${f.id}"]`);
+  if ((await option.getAttribute('aria-selected')) !== 'false') throw new Error(`${f.id}: already the checked sample`);
+  // Focus arriving (not focus kept from the last pick) opens the menu.
+  await page.locator('#url-input').evaluate((el) => el.blur());
+  await page.locator('#url-input').focus();
+  if ((await page.locator('#url-input').getAttribute('aria-expanded')) !== 'true') throw new Error('focus did not open the samples menu');
+  const want = await option.getAttribute('id');
+  for (let i = 0; i < fixtures.length && (await page.locator('#url-input').getAttribute('aria-activedescendant')) !== want; i++) await page.keyboard.press('ArrowDown');
+  if ((await page.locator('#url-input').getAttribute('aria-activedescendant')) !== want) throw new Error(`arrows never reached ${f.id}`);
+  await page.keyboard.press('Enter');
   await page.locator('#sample-label', { hasText: f.label }).waitFor({ timeout: 2_000 });
   await page.waitForSelector('[data-ready="true"]');
-  if ((await chip.getAttribute('aria-pressed')) !== 'true') throw new Error(`${f.id}: chip not pressed after click`);
+  if ((await option.getAttribute('aria-selected')) !== 'true') throw new Error(`${f.id}: not checked after Enter`);
   // Let the sheet's entry fade finish so axe measures settled colours.
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   return checkSample(page, f);
@@ -163,7 +187,8 @@ async function switchTo(page: Page, f: (typeof fixtures)[number]): Promise<strin
 
 /** The shown sample's heading, capture count, archive links and provenance match its fixture. */
 async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<string> {
-  if ((await page.locator('.chip[aria-pressed="true"]').count()) !== 1) throw new Error('not exactly one pressed chip');
+  const checked = await page.locator('#addr-menu [aria-selected="true"]').evaluateAll((os) => os.map((o) => o.getAttribute('data-sample')));
+  if (checked.join() !== f.id) throw new Error(`checked samples in the menu: [${checked.join()}], expected ${f.id}`);
   const heading = (await page.locator('#sample-label').textContent())?.trim();
   if (heading !== f.label) throw new Error(`heading "${heading}", expected "${f.label}"`);
   const links = await page.locator('.cap-link').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
@@ -282,11 +307,11 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'samples-switch',
-    description: 'Each chip, pressed while not pressed, switches the pressed state, heading, capture links and footer',
+    description: 'Each sample, picked from the address menu by keyboard, switches the checked option, heading, capture links and footer',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
       const notes = [await checkSample(page, defaultFixture)];
-      // Visit every other sample, then come back to the default: every click is on a non-pressed chip.
+      // Visit every other sample, then come back to the default: every pick is of a sample not open yet.
       for (const f of [...fixtures.slice(1), defaultFixture]) notes.push(await switchTo(page, f));
       return { notes };
     },
@@ -296,8 +321,8 @@ export const flows: readonly Flow[] = [
       name: `sample-${f.id}`,
       description: `The ${f.id} sample renders from its bundled fixture`,
       async run({ page, baseUrl }) {
-        const timeToReadyMs = await openReady(page, baseUrl);
-        return { timeToReadyMs, notes: [f === defaultFixture ? await checkSample(page, f) : await switchTo(page, f)] };
+        const timeToReadyMs = await openReady(page, baseUrl, `/?sample=${f.id}`);
+        return { timeToReadyMs, notes: [await checkSample(page, f)] };
       },
     }),
   ),
@@ -328,45 +353,148 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'keyboard-tab-order',
-    description: 'Tab order header -> sample chips -> content -> footer, a visible ring on every stop, chips toggle by key',
+    description: 'Workspace Tab order header (address field, button) -> content -> footer, a visible ring on every stop',
     suffix: '-kbd',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
-      const regions = ['header', 'chips', 'main', 'footer'];
+      const regions = ['header', 'main', 'footer'];
       const stops: { region: string; name: string; ring: boolean }[] = [];
       for (let i = 0; i < 100; i++) {
         await page.keyboard.press('Tab');
         const stop = await page.evaluate(() => {
           const el = document.activeElement as HTMLElement | null;
           if (!el || el === document.body) return null;
-          const cs = getComputedStyle(el);
-          const region = el.classList.contains('chip') ? 'chips' : (el.closest('header, main, footer')?.tagName.toLowerCase() ?? 'other');
-          const ring = cs.outlineStyle === 'solid' && parseFloat(cs.outlineWidth) >= 2 && cs.boxShadow !== 'none';
-          return { region, name: (el.textContent ?? '').trim().slice(0, 40), ring };
+          // The address field draws its ring on the field around the input, the slider divider on its knob.
+          const ringed = el.id === 'url-input' ? el.closest('.addr-field')! : (el.querySelector(':scope.vp-split > .vp-knob') ?? el);
+          const cs = getComputedStyle(ringed);
+          const region = el.closest('header, main, footer')?.tagName.toLowerCase() ?? 'other';
+          const ring = cs.outlineStyle === 'solid' && parseFloat(cs.outlineWidth) >= 2;
+          return { region, name: (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40), ring };
         });
         if (!stop) break;
         stops.push(stop);
+        // The samples menu opened on focus closes when Tab leaves the field.
+        if (stop.name === 'Show its history' && (await page.locator('#url-input').getAttribute('aria-expanded')) !== 'false') throw new Error('the samples menu stayed open after Tab left the field');
       }
       const order = stops.map((s) => regions.indexOf(s.region));
       if (order.some((r, i) => r < 0 || (i > 0 && r < order[i - 1]!)) || new Set(order).size !== regions.length) {
         throw new Error(`tab order: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`);
       }
+      const head = stops.filter((s) => s.region === 'header').map((s) => s.name);
+      if (head.join('|') !== 'Skip to content|Skip to diff|Pagelapse|Page address|Show its history|Source on GitHub') throw new Error(`header stops: ${head.join(' | ')}`);
       const ringless = stops.filter((s) => !s.ring);
       if (ringless.length) throw new Error(`no focus ring on: ${ringless.map((s) => s.name).join(', ')}`);
-      // The chip toggles from the keyboard and stays the single pressed one.
-      const chip = page.locator('.chip').first();
-      await chip.focus();
-      for (const key of ['Space', 'Enter']) {
-        await page.keyboard.press(key);
-        await page.waitForSelector('[data-ready="true"]');
-        if ((await chip.getAttribute('aria-pressed')) !== 'true') throw new Error(`${key} did not press the chip`);
+      return { notes: [`${stops.length} stops: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`] };
+    },
+  },
+  {
+    name: 'address-menu',
+    description: 'The address field is a combobox: focus opens the samples (current one aria-selected), arrows move aria-activedescendant, Escape closes, Enter picks, Tab leaves',
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const input = page.locator('#url-input');
+      const state = () =>
+        page.evaluate(() => {
+          const i = document.querySelector('#url-input')!;
+          return {
+            role: i.getAttribute('role'),
+            expanded: i.getAttribute('aria-expanded'),
+            active: i.getAttribute('aria-activedescendant'),
+            hidden: document.querySelector<HTMLElement>('.addr-menu')!.hidden === true,
+            value: (i as HTMLInputElement).value,
+            checked: [...document.querySelectorAll('#addr-menu [aria-selected="true"]')].map((o) => o.getAttribute('data-sample')),
+          };
+        });
+      const want = (ok: boolean, what: string, got: unknown) => {
+        if (!ok) throw new Error(`${what}: ${JSON.stringify(got)}`);
+      };
+      await noPageOverflow(page);
+      const closed = await state();
+      want(closed.role === 'combobox' && closed.expanded === 'false' && closed.hidden && closed.value === defaultFixture.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), 'before focus', closed);
+      await input.focus();
+      const open = await state();
+      want(open.expanded === 'true' && !open.hidden && open.active === null && open.checked.join() === defaultFixture.id, 'focus opens the menu, current sample checked', open);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      const moved = await state();
+      want(moved.active === 'addr-opt-1', 'two ArrowDowns reach the second option', moved);
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('ArrowUp');
+      want((await state()).active === `addr-opt-${fixtures.length - 1}`, 'ArrowUp wraps to the last option', await state());
+      await page.keyboard.press('Escape');
+      const esc = await state();
+      want(esc.expanded === 'false' && esc.hidden && (await input.evaluate((el) => el === document.activeElement)), 'Escape closes, focus stays in the field', esc);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+      const f = fixtures[1]!;
+      await page.locator('#sample-label', { hasText: f.label }).waitFor({ timeout: 3_000 });
+      const picked = await state();
+      want(picked.expanded === 'false' && picked.checked.join() === f.id && page.url().includes(`sample=${f.id}`), 'Enter picks the option', { ...picked, url: page.url() });
+      await input.focus();
+      await page.keyboard.press('Tab');
+      const left = await state();
+      want(left.expanded === 'false' && left.hidden, 'Tab leaves and closes the menu', left);
+      return { notes: [`checked ${closed.checked.join()} -> picked ${f.id} by keyboard`, 'focus opens, arrows wrap, Escape closes, Enter picks, Tab leaves'] };
+    },
+  },
+  {
+    name: 'hero',
+    description: 'No sample or page in the address: the hero (headline, field, sample options, deck); options and deck cards open the workspace with a history entry, Back returns to the hero',
+    schemes: ['light', 'dark'],
+    firstView: true,
+    async run({ page, baseUrl, viewport }) {
+      await openHero(page, baseUrl);
+      const notes: string[] = [];
+      const h1 = (await page.locator('h1').textContent())?.trim();
+      if (h1 !== 'See how any web page changed over the years') throw new Error(`h1 "${h1}"`);
+      if ((await page.getByRole('textbox', { name: 'Page address' }).count()) !== 1) throw new Error('no "Page address" field');
+      if ((await page.getByRole('button', { name: 'Show its history' }).count()) !== 1) throw new Error('no "Show its history" button');
+      const options = await page.locator('.sample-opt').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-sample')));
+      if (options.join() !== fixtures.map((f) => f.id).join()) throw new Error(`sample options ${options.join()}`);
+      await noPageOverflow(page);
+      // The deck: one button per pictured Wikipedia capture, named by its date.
+      const deck = fixtures.find((f) => f.id === 'wikipedia-internet-archive')!;
+      const shots = deck.snapshots.filter((s) => s.shot?.file);
+      const cards = await page.locator('.deck-card').evaluateAll((bs) => bs.map((b) => [b.tagName, b.getAttribute('aria-label')]));
+      const names = shots.map((s, i) => `${i === shots.length - 1 ? 'Latest, ' : ''}${formatTimestampLong(s.ts)}, open this capture`);
+      if (JSON.stringify(cards) !== JSON.stringify(names.map((n) => ['BUTTON', n]))) throw new Error(`deck cards ${JSON.stringify(cards)}`);
+      notes.push(`${cards.length} deck cards, ${await page.locator('.deck-bar').count()} change bars`);
+      // Tab: field, button, the options, then every card in time order.
+      await page.locator('#url-input').focus();
+      const stops: string[] = [];
+      for (let i = 0; i < 2 + options.length + shots.length; i++) {
+        stops.push(await page.evaluate(() => (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent ?? '').trim()));
+        await page.keyboard.press('Tab');
       }
-      if ((await page.locator('.chip[aria-pressed="true"]').count()) !== 1) throw new Error('not exactly one pressed chip');
-      // The switch is announced politely while focus stays on the chip.
-      const status = (await page.locator('p[role="status"]').textContent())?.trim() ?? '';
-      if (!status.startsWith('Showing: ')) throw new Error(`no sample-switch announcement (status: "${status}")`);
-      if (!(await chip.evaluate((el) => el === document.activeElement))) throw new Error('focus left the chip after switching');
-      return { notes: [`${stops.length} stops: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`, `announced: ${status}`] };
+      const wantStops = ['Page address', 'Show its history', ...fixtures.map((f) => f.label.replace(/ home page$/, '')), ...names];
+      if (stops.join('|') !== wantStops.join('|')) throw new Error(`hero tab stops: ${stops.join(' | ')}`);
+      // A sample option opens the workspace in a new history entry; Back returns to the hero.
+      const before = await page.evaluate(() => history.length);
+      const other = fixtures[2]!;
+      await page.locator(`.sample-opt[data-sample="${other.id}"]`).click();
+      await page.locator('#sample-label', { hasText: other.label }).waitFor({ timeout: 3_000 });
+      const pushed = await page.evaluate(() => history.length);
+      if (!page.url().endsWith(`/?sample=${other.id}`) || pushed !== before + 1) throw new Error(`option: ${page.url()}, history ${before} -> ${pushed}`);
+      await page.goBack();
+      await page.locator('.intro-head').waitFor({ timeout: 3_000 });
+      notes.push(`option ${other.id} pushed ${page.url()} -> Back to the hero`);
+      // A deck card opens Wikipedia on that capture: the change that ends there.
+      const k = 3;
+      // By keyboard: the cards overlap, so a pointer reaches most of them only by their slivers.
+      await page.locator('.deck-card').nth(k).focus();
+      await page.keyboard.press('Enter');
+      await page.locator('#sample-label', { hasText: deck.label }).waitFor({ timeout: 3_000 });
+      await page.waitForSelector('[data-ready="true"]');
+      const e = timelineOf(deck).entries[changeForCapture(timelineOf(deck).entries, shots[k]!.ts)]!;
+      if (!page.url().includes(`sample=${deck.id}&change=${e.from}-${e.to}`)) throw new Error(`card ${k}: ${page.url()}, expected change ${e.from}-${e.to}`);
+      if ((await page.evaluate(() => document.activeElement?.id)) !== 'content') throw new Error('focus is not on the content after opening a card');
+      await page.goBack();
+      await page.locator('.intro-head').waitFor({ timeout: 3_000 });
+      notes.push(`card ${formatTimestampShort(shots[k]!.ts)} opened change ${e.from}-${e.to}, focus on #content, Back to the hero`);
+      await page.evaluate(() => scrollTo(0, 0));
+      if (viewport === 'mobile') await noPageOverflow(page);
+      return { notes };
     },
   },
   {

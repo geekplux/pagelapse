@@ -138,6 +138,7 @@ export function UrlForm({ value, onSubmit, hero = false, menu }: Props) {
                   <div
                     key={s.id}
                     id={optionId(i)}
+                    data-sample={s.id}
                     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
                     role="option"
                     tabIndex={-1}

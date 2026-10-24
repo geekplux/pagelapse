@@ -242,7 +242,7 @@ export const liveFlows: readonly Flow[] = [
           if (t !== undefined) w.tops.push(Math.round(t + scrollY));
         }, 50);
       });
-      const input = page.getByRole('textbox', { name: 'See how any page changed' });
+      const input = page.getByRole('combobox', { name: 'Page address' });
       await input.fill('rust-lang.org');
       await input.press('Enter');
       await page.waitForFunction(() => document.querySelector('[data-live="snapshots"]'));
@@ -390,7 +390,8 @@ export const liveFlows: readonly Flow[] = [
       await page.getByRole('button', { name: 'Open a sample' }).click();
       await page.waitForSelector('[data-ready="true"]');
       if (!page.url().endsWith('?sample=git-scm')) throw new Error(`Open a sample -> ${page.url()}`);
-      const sampled = await expectFocus(page, '.chip[aria-pressed="true"][data-sample="git-scm"]', 'empty state Open a sample');
+      // "Open a sample" goes away with the live view: focus lands on the content (WCAG 2.4.3).
+      const sampled = await expectFocus(page, '#content', 'empty state Open a sample');
       await openLive(page, baseUrl, 'example.org/about', 'error');
       if ((await focusAt(page)) !== 'body') throw new Error(`a ?url= load moved focus to ${await focusAt(page)}`);
       return { notes: [await expectText(page, '.state-card', /^No captures yet The Archive has no captures of example\.org\/about yet\./), `Save it now -> ${save}`, sampled] };
@@ -413,7 +414,7 @@ export const liveFlows: readonly Flow[] = [
       const text = await expectText(page, '.state-card', /^⚠ This site is not in the Archive The site asked/);
       await page.getByRole('button', { name: 'Open a sample' }).click();
       await page.waitForSelector('[data-ready="true"]');
-      const sampled = await expectFocus(page, '.chip[aria-pressed="true"]', 'error card Open a sample');
+      const sampled = await expectFocus(page, '#content', 'error card Open a sample');
       // Back to the card for the screenshot.
       await openLive(page, baseUrl, 'example.org', 'error');
       return { notes: [text, retried, sampled] };
@@ -487,7 +488,7 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       const api = await mockApi(page);
       await openReady(page, baseUrl);
-      const input = page.getByRole('textbox', { name: 'See how any page changed' });
+      const input = page.getByRole('combobox', { name: 'Page address' });
       await input.fill('ftp://example.org/file');
       await input.press('Enter');
       const m = await input.evaluate((el) => ({
@@ -560,7 +561,7 @@ export const liveFlows: readonly Flow[] = [
       await openReady(page, baseUrl);
       await sleep(500);
       if (api.frames.length) throw new Error(`${api.frames.length} Archive requests on the first view`);
-      const input = page.getByRole('textbox', { name: 'See how any page changed' });
+      const input = page.getByRole('combobox', { name: 'Page address' });
       await input.fill('git-scm.com');
       await input.press('Enter');
       // During the run, with no user input: the silhouette and its tag's note, never a frame.
