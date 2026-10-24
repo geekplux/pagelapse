@@ -132,8 +132,9 @@ main { flex: 1; min-height: 100vh; }
 .db[data-op="removed"]::before { content: "−" / ""; color: var(--cyan-11); }
 .db[data-op="modified"]::before { content: "~" / ""; color: var(--sand-12); }
 .db[data-op="moved"]::before { content: "↕" / ""; }
-.db[data-op="added"] { background: var(--amber-2); }
-.db[data-op="removed"] { background: var(--cyan-2); color: var(--sand-11); }
+/* A run of added or removed blocks is one band. */
+.db-run[data-op="added"] { background: var(--amber-2); }
+.db-run[data-op="removed"] { background: var(--cyan-2); color: var(--sand-11); }
 .db[data-op="moved"] { font-style: italic; }
 ins { background: var(--amber-4); text-decoration: underline 1px var(--amber-11); text-underline-offset: 3px; text-decoration-skip-ink: none; }
 del { background: var(--cyan-3); color: var(--sand-11); text-decoration: line-through 1px var(--cyan-11); }

@@ -52,9 +52,31 @@ function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
 
 const key = (op: BlockOp) => `${op.type}${'a' in op ? op.a : ''}:${'b' in op ? op.b : ''}`;
 
-/** Rows of the diff: blocks, and collapsed runs of unchanged blocks. */
+type Band = { op: 'added' | 'removed'; ops: BlockOp[] };
+const tinted = (op: BlockOp): op is Extract<BlockOp, { type: 'added' | 'removed' }> => op.type === 'added' || op.type === 'removed';
+
+/** Rows of the diff: blocks, collapsed runs of unchanged blocks, and runs of added or removed blocks as one tinted band. */
 function Rows({ rows, from, to }: { rows: readonly Row[]; from: SnapshotPage; to: SnapshotPage }) {
-  return rows.map((row) => ('gap' in row ? <Gap key={`g${row.gap[0]!.b}`} ops={row.gap} b={to.blocks} /> : <DiffBlock key={key(row.op)} op={row.op} a={from.blocks} b={to.blocks} />));
+  const items: (Row | Band)[] = [];
+  for (const row of rows) {
+    const last = items.at(-1);
+    if ('op' in row && tinted(row.op)) {
+      if (last && 'ops' in last && last.op === row.op.type) last.ops.push(row.op);
+      else items.push({ op: row.op.type, ops: [row.op] });
+    } else items.push(row);
+  }
+  const block = (op: BlockOp) => <DiffBlock key={key(op)} op={op} a={from.blocks} b={to.blocks} />;
+  return items.map((it) =>
+    'ops' in it ? (
+      <div key={`r${key(it.ops[0]!)}`} className="db-run" data-op={it.op}>
+        {it.ops.map(block)}
+      </div>
+    ) : 'gap' in it ? (
+      <Gap key={`g${it.gap[0]!.b}`} ops={it.gap} b={to.blocks} />
+    ) : (
+      block(it.op)
+    ),
+  );
 }
 
 /**
@@ -69,7 +91,7 @@ export function DiffView({ entry, from, to }: Props) {
   const { cut, more } = useMemo(() => firstChanges(rows, phone ? FIRST_CHANGES / 2 : FIRST_CHANGES), [rows, phone]);
   const [all, setAll] = useState(false);
   return (
-    <div className="cs-diff">
+    <div className="cs-diff" data-region="text">
       <h4 className="sr-only">Text changes</h4>
       <div className="diff-body">
         <Rows rows={rows.slice(0, cut)} from={from} to={to} />

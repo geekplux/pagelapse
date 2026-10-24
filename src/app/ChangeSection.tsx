@@ -62,7 +62,7 @@ function Facts({ entry }: { entry: TimelineEntry }) {
  */
 export function ChangeSection({ entry, from, to, archive, captureUrl, empty }: Props) {
   return (
-    <section className="change-section" id="diff" tabIndex={-1} aria-labelledby={entry ? 'change-heading' : undefined} aria-label={entry ? undefined : 'The change'} data-region="text">
+    <section className="change-section" id="diff" tabIndex={-1} aria-labelledby={entry ? 'change-heading' : undefined} aria-label={entry ? undefined : 'The change'}>
       {entry && from && to ? (
         <>
           <div className="cs-side">

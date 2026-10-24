@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { Block, BlockOp } from '../../core/types.ts';
+import type { Block, BlockOp, SnapshotPage, TimelineEntry } from '../../core/types.ts';
 import { CLAMP_CHARS, DiffBlock } from './DiffBlock.tsx';
+import { DiffView } from './DiffView.tsx';
 import { collapseUnchanged, firstChanges, unchangedLabel } from './rows.ts';
 
 const eq = (n: number): BlockOp => ({ type: 'equal', a: n, b: n });
@@ -56,5 +57,18 @@ describe('DiffBlock', () => {
     const long = (n: number) => html({ type: 'added', b: 0, block: { kind: 'code', text: 'x'.repeat(n) } });
     expect(long(CLAMP_CHARS + 1)).toMatch(/<pre class="db-t is-clamped">.*aria-expanded="false">Show full block</);
     expect(long(CLAMP_CHARS)).not.toContain('Show full block');
+  });
+});
+
+describe('DiffView', () => {
+  const page = (texts: string[]): SnapshotPage => ({ ts: '20200101000000', digest: 'd', title: 't', blocks: texts.map((text) => ({ kind: 'paragraph', text })) });
+  const [a, b] = [page(['Kept.', 'Old one.', 'Old two.']), page(['Kept.', 'New one.'])];
+  const ops: BlockOp[] = [{ type: 'equal', a: 0, b: 0 }, { type: 'removed', a: 1 }, { type: 'removed', a: 2 }, { type: 'added', b: 1, block: b.blocks[1]! }];
+  const html = renderToStaticMarkup(<DiffView entry={{ diff: { ops, titleChanged: false, cutoff: false } } as unknown as TimelineEntry} from={a} to={b} />);
+
+  it('draws a run of removed or added blocks as one band, each block keeping its own spoken prefix', () => {
+    expect(html.match(/class="db-run" data-op="\w+"/g)).toEqual(['class="db-run" data-op="removed"', 'class="db-run" data-op="added"']);
+    expect(html.match(/<span class="sr-only">(\w+): <\/span>/g)?.length).toBe(3);
+    expect(html).not.toContain('Show');
   });
 });

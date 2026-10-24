@@ -55,8 +55,10 @@ export function EveryChange({ entries, selected, onSelect, trivial, showTrivial,
                 </span>
                 <span className="change-mag" data-magnitude={e.significance.magnitude}>
                   <i style={{ width: magnitudeWidth(e.significance.score) }} aria-hidden="true" />
-                  {e.significance.magnitude}
-                  <span className="sr-only">,</span>
+                  <span>
+                    {e.significance.magnitude}
+                    <span className="sr-only">,</span>
+                  </span>
                 </span>
                 <span className="change-sum">
                   {shownSummary(e)}
