@@ -18,7 +18,7 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - Compare modes (Slider, Side by side, Single) and a pausable time-lapse Play. Onion skin was removed in the redesign; an old `view=onion` link opens Slider.
 - The visual pane: what each sample capture looked like, from committed screenshots.
 - The Pagelapse name, mark and wordmark.
-- A diff view with `+` / `−` symbols, underline and strike-through, plus heading changes.
+- A diff view with `+` / `−` / `~` symbols, underline and strike-through. In the redesign it sits beside the change (its two captures, summary and source, words, new, gone and renamed sections, and archive links), shows a long diff's first changes with "Show n more changes", and an "Every change" table lists every change, newest first.
 - A time ribbon: a thumbnail per capture joined by a hairline to its date on a year axis, a bar per change sized by how much changed, keyboard and drag scrubbing, and a list of all changes. It replaced the earlier filmstrip and timeline in the redesign.
 - Change detection: readable-text extraction, a word-level diff, significance scoring and a trivial-edit filter (whitespace, dates, counters, tracking parameters), tuned against an evaluation set.
 - Three built-in samples (git-scm.com, Wikipedia "Internet Archive" and rust-lang.org), recorded from Arquivo.pt and committed so the first view works offline.
