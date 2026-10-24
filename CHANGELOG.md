@@ -15,7 +15,7 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - Live pictures: the Internet Archive's own replay of the selected capture in a sandboxed frame, loaded only when you rest on a capture, with text-outline thumbnails.
 - Live mode: paste any URL to look it up in the Internet Archive, with progress, Cancel, and clear empty and error states.
 - A Cloudflare Worker API for captures, extracted pages and summaries, with caching, per-visitor rate limits and a global cooldown when the archive asks to slow down.
-- Compare modes (Slider, Side by side, Onion skin, Single) and a pausable time-lapse Play.
+- Compare modes (Slider, Side by side, Single) and a pausable time-lapse Play. Onion skin was removed in the redesign; an old `view=onion` link opens Slider.
 - The visual pane and filmstrip: what each sample capture looked like, from committed screenshots.
 - The Pagelapse name, mark and wordmark.
 - A diff view with `+` / `−` symbols, underline and strike-through, plus heading changes.
