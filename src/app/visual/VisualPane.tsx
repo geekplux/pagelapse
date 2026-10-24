@@ -70,7 +70,9 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
   };
   type Pic = ReturnType<typeof pic>;
   const pair = { before: pic(entry.from), after: pic(entry.to) };
-  const lacking = mode === 'single' ? undefined : SIDES.find(([s]) => pair[s].source === 'none');
+  // Slider needs both pictures, else it shows Single in the same 16:10 footprint. Side by side shows the "No picture"
+  // card in its own mat instead, so no fallback ever changes the space the stage takes.
+  const lacking = mode === 'slider' ? SIDES.find(([s]) => pair[s].source === 'none') : undefined;
   const shown: Mode = lacking ? 'single' : mode;
   const side = sideOf(entry, at);
   const want = (shown === 'single' ? [pic(at)] : [pair.before, pair.after]).filter((p) => p.source === 'frame').map((p) => p.ts);
@@ -151,7 +153,7 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
   };
   const tools = (
     <>
-      {shown === 'single' && (
+      {mode === 'single' && (
         // A radio group of two buttons, not native radios: each holds a dot, a word and a date.
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         <div className="vp-sides" role="radiogroup" aria-label="Show the change's capture">
@@ -177,12 +179,12 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
         <h3 id="vpane-heading" className="sr-only">
           How it looked
         </h3>
-        {/* Always mounted, so the note is announced when a compare mode falls back to Single. */}
+        {/* Always mounted (and zero height), so the reason is announced when Slider falls back to Single; the tag on the
+            picture says it visibly. */}
         {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-        <div role="status">
+        <div className="sr-only" role="status">
           {lacking && (
             <p className="vp-note">
-              <span aria-hidden="true">◑ </span>
               {MODES.find(([m]) => m === mode)![1]} needs a picture of both captures. The {WORD[lacking[0]]} capture, {formatTimestampLong(pair[lacking[0]].ts)}, has none,
               so this shows one capture at a time.
             </p>
@@ -212,8 +214,14 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
               {shown === 'slider' ? <CompareSlider entry={entry} before={shot(pair.before)} after={shot(pair.after)} /> : shot(pic(at))}
               {tags}
               {shown === 'single' ? partial(pic(at), 'before') : SIDES.map(([s]) => partial(pair[s], s))}
+              {lacking && (
+                <span className="vp-badge" data-corner="after" aria-hidden="true">
+                  ◑ No picture of the {WORD[lacking[0]]} capture
+                </span>
+              )}
             </div>
-            {shown === 'single' && caption(pic(at))}
+            {/* Single's own row: only when Single is the chosen mode, so a fallback adds nothing under the stage. */}
+            {mode === 'single' && caption(pic(at))}
           </figure>
         )}
         {note}

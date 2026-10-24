@@ -2,6 +2,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { parseSampleFixture } from '../../core/fixture.ts';
 import gitScm from '../../samples/git-scm.json';
+import rustLang from '../../samples/rust-lang.json';
+import { buildTimeline } from '../../core/timeline.ts';
+import { fixtureToSnapshots } from '../../core/fixture.ts';
 import wikipedia from '../../samples/wikipedia-internet-archive.json';
 import { TimelineView } from '../TimelineView.tsx';
 import { spanText } from '../SheetHead.tsx';
@@ -70,6 +73,28 @@ describe('stage captions', () => {
     const html = render({ at: ts, view: 'single' }, git);
     expect(/<div class="vp-mat">.*class="vp-badge" data-corner="before".*?Partial copy/.test(html)).toBe(true);
     expect(text(/<figcaption class="vp-cap">(.*?)<\/figcaption>/.exec(html)![1]!)).toBe('Open capture (opens in a new tab)');
+  });
+});
+
+describe('a pair with no picture', () => {
+  const rust = parseSampleFixture(rustLang);
+  const ts = rust.snapshots.find((x) => !x.shot?.file)!.ts;
+  const e = buildTimeline(rust.url, fixtureToSnapshots(rust)).entries.find((x) => x.to === ts || x.from === ts)!;
+
+  it('Slider falls back to Single in the same footprint: the reason is a tag on the picture, nothing is added around it', () => {
+    const html = render({ change: `${e.from}-${e.to}` }, rust);
+    expect(html).toContain('data-mode="single"');
+    expect(/<div class="vp-mat">.*◑ No picture of the (Before|After) capture/.test(html)).toBe(true);
+    expect(html).toMatch(/<div class="sr-only" role="status"><p class="vp-note">Slider needs a picture of both captures/);
+    expect(html).not.toContain('<figcaption class="vp-cap">');
+    expect(html).not.toContain('vp-sides');
+  });
+
+  it('Side by side keeps both mats, one with the "No picture" card', () => {
+    const html = render({ change: `${e.from}-${e.to}`, view: 'side' }, rust);
+    expect(html).toContain('data-mode="side"');
+    expect(html.match(/class="vp-fig"/g)).toHaveLength(2);
+    expect(html).toContain('No picture of this capture');
   });
 });
 
