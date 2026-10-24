@@ -57,7 +57,7 @@ function measure() {
   const paper = getComputedStyle(document.body).backgroundColor;
   const framed = els.filter((el) => {
     // Controls and pictures are not boxes around content: the segmented controls' sand-3 track included.
-    if (!seen(el) || el.closest('input, button, select, textarea, summary, .btn, .vp-mat, .film-strip, .vp-modes, .vp-sides')) return false;
+    if (!seen(el) || el.closest('input, button, select, textarea, summary, .btn, .vp-mat, .rb-strip, .vp-modes, .vp-sides')) return false;
     const cs = getComputedStyle(el);
     const r = el.getBoundingClientRect();
     if (cs.display === 'inline' || r.width < 48 || r.height < 24) return false;
@@ -78,7 +78,7 @@ function measure() {
   const order = [document.querySelector('.sheet h2'), mat, controls, document.querySelector('.change-panel')];
   const inOrder = order.every(Boolean) && order.every((el, i) => i === 0 || !!(order[i - 1]!.compareDocumentPosition(el!) & Node.DOCUMENT_POSITION_FOLLOWING));
   const status = document.querySelector('.live-status');
-  const frames = [...document.querySelectorAll('.film-strip .frame')].map((f) => f.getBoundingClientRect()).filter((r) => r.right > 0 && r.left < vw);
+  const frames = [...document.querySelectorAll('.rb-strip .rb-th')].map((f) => f.getBoundingClientRect()).filter((r) => r.right > 0 && r.left < vw);
   // The changes list's rows (when open): left edge and top, in DOM order.
   const rows = [...document.querySelectorAll('.changes .change')].filter((el) => el.checkVisibility()).map((el) => el.getBoundingClientRect()).map((r) => [Math.round(r.left), Math.round(r.top)] as const);
   return {
@@ -205,7 +205,8 @@ async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
 }
 
 /** Every feature reachable by Tab, Enter and Space only, opening at most one disclosure (AC 5). */
-type Item = { name: string; sel: string; path?: string; via?: string };
+/** `wide`: a feature phones do not have (the ribbon's thumbnails, target/V3WorkPhone.html). */
+type Item = { name: string; sel: string; path?: string; via?: string; wide?: boolean };
 const SAMPLE_IDS = ['git-scm', 'wikipedia-internet-archive', 'rust-lang'];
 const wiki = '/?sample=wikipedia-internet-archive';
 const INVENTORY: Item[] = [
@@ -223,10 +224,9 @@ const INVENTORY: Item[] = [
   { name: 'View capture (Before)', sel: '.change-details a.cap-out:first-of-type', via: '.change-details > summary' },
   { name: 'View capture (After)', sel: '.change-details a.cap-out:nth-of-type(2)', via: '.change-details > summary' },
   { name: 'Open capture', sel: '.vpane .cap-out', path: '/?view=single' },
-  { name: 'filmstrip', sel: '.frame' },
-  { name: 'timeline slider', sel: '.tl-slider' },
-  { name: 'Show trivial edits', sel: '.tl-key input[type="checkbox"]', via: '.tl-key > summary' },
-  { name: 'timeline key items', sel: '#timeline-legend', via: '.tl-key > summary' },
+  { name: 'ribbon thumbnails', sel: '.rb-th', wide: true },
+  { name: 'ribbon slider', sel: '.rb-slider' },
+  { name: 'Show them (trivial edits)', sel: '.rb-trivial button', path: '/?sample=git-scm' },
   { name: 'changes list items', sel: '.change', via: '.changes-pane > summary' },
   { name: 'Structure', sel: '.diff-panel details:first-of-type > summary' },
   { name: 'Diff key', sel: '.diff-panel details:last-of-type > summary' },
@@ -237,10 +237,9 @@ const INVENTORY: Item[] = [
   { name: 'GitHub link', sel: '.site-footer a[href*="github.com"]' },
 ];
 
-/** Tabs from the top until `item` has focus (or, for text, is shown), pressing Enter on its one disclosure on the way. */
+/** Tabs from the top until `item` has focus, pressing Enter on its one disclosure on the way. */
 async function reach(page: Page, baseUrl: string, item: Item): Promise<string> {
   await openReady(page, baseUrl, item.path ?? '/');
-  const text = item.sel === '#timeline-legend';
   let opened = '';
   for (let k = 1; k <= 160; k++) {
     await page.keyboard.press('Tab');
@@ -252,7 +251,6 @@ async function reach(page: Page, baseUrl: string, item: Item): Promise<string> {
       // Enter for a <summary>, Space for a button: both native activations.
       opened = item.via!.includes('summary') ? 'Enter' : 'Space';
       await page.keyboard.press(opened);
-      if (text) break;
       continue;
     }
     if (at.hit) {
@@ -262,17 +260,13 @@ async function reach(page: Page, baseUrl: string, item: Item): Promise<string> {
       return `${item.name}: Tab x${k}${opened ? ` after ${opened} on its disclosure` : ''}; ${tree.split('\n')[0]!.trim().slice(0, 60)}`;
     }
   }
-  if (text) {
-    const shown = await page.locator(item.sel).evaluate((el) => el.checkVisibility() && !!el.textContent?.trim());
-    const tree = await page.locator(item.sel).ariaSnapshot();
-    if (shown && tree.trim()) return `${item.name}: shown after ${opened} on its disclosure; ${tree.split('\n')[0]!.trim().slice(0, 60)}`;
-  }
   throw new Error(`${item.name} (${item.sel}) not reached by keyboard`);
 }
 
 async function inventory({ page, baseUrl }: FlowContext) {
   const notes: string[] = [];
-  for (const item of INVENTORY) notes.push(await reach(page, baseUrl, item));
+  const phone = page.viewportSize()!.width < 640;
+  for (const item of INVENTORY) if (!(phone && item.wide)) notes.push(await reach(page, baseUrl, item));
   // The modes are named radios in the segmented control (phones offer Slider and Single).
   await openReady(page, baseUrl);
   const modes = await page.locator('#vp-modes').getByRole('radio').evaluateAll((rs) => rs.map((r) => r.closest('label')?.textContent?.trim()));
@@ -485,7 +479,7 @@ export const calmFlows: readonly Flow[] = [
   ...(Object.keys(SOURCES) as (keyof typeof SOURCES)[]).map(
     (v): Flow => ({
       name: `calm-source:${v}`,
-      description: `The changes list says once where its summaries come from (${v}); the timeline tooltip says it per change`,
+      description: `The changes list says once where its summaries come from (${v}); the ribbon tooltip says it per change`,
       viewports: ['desktop'],
       async run({ page, baseUrl }) {
         await mockApi(page, v === 'rule' ? {} : { summaries: v });
@@ -493,9 +487,9 @@ export const calmFlows: readonly Flow[] = [
         await page.waitForFunction((want) => document.querySelector('.changes-note')?.textContent === want, SOURCES[v], { timeout: 10_000 });
         const marks = await page.locator('.changes .change-sum .source-label').count();
         if ((v === 'some') !== marks > 0) throw new Error(`${marks} items marked AI in a "${v}" list`);
-        await page.locator('.tl-slider').focus();
+        await page.locator('.rb-slider').focus();
         await page.keyboard.press('Home');
-        const tip = (await page.locator('.tl-tip').textContent()) ?? '';
+        const tip = (await page.locator('.rb-tip').textContent()) ?? '';
         if (!/AI summary|auto summary/.test(tip)) throw new Error(`tooltip "${tip}"`);
         return { notes: [SOURCES[v], `${marks} items marked AI`, `tooltip: ${tip.slice(0, 80)}`] };
       },

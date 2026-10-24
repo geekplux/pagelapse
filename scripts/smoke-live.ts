@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { API_ERRORS, GIT_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
-import { type Flow, openReady, openTimelineKey } from './smoke-flows.ts';
+import { type Flow, openReady } from './smoke-flows.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 
 const git = mockFromSample('git-scm');
@@ -205,21 +205,22 @@ async function expectActions(page: Page, names: string[]): Promise<void> {
 }
 
 /** Shared by live-loading and its reduced-motion variant: 6 captures answer, then the run waits on the Archive. */
-async function loading(page: Page, baseUrl: string): Promise<string[]> {
+async function loading(page: Page, baseUrl: string, phone: boolean): Promise<string[]> {
   const api = await mockApi(page, { snapshot: (i) => (i < 6 ? {} : { delay: null }) });
   await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
   await page.waitForFunction(() => document.querySelector('.live-status p')?.textContent?.includes('capture 7 of 14'), null, { timeout: 10_000 });
-  const pending = await page.locator('.tl-pending').count();
-  if (pending !== 8) throw new Error(`${pending} pending hairlines, expected 8`);
+  // Phones show the ribbon's axis only (target/V3WorkPhone.html): no thumbnails, so no pending slots.
+  const pending = await page.locator('.rb-pending').count();
+  if (pending !== (phone ? 0 : 8)) throw new Error(`${pending} pending slots, expected ${phone ? 0 : 8}`);
   if (!(await page.getByRole('button', { name: 'Cancel' }).isVisible())) throw new Error('no Cancel while loading');
   if (api.snaps().length !== 8) throw new Error(`${api.snaps().length} snapshot requests, expected 6 answered + 2 in flight`);
-  return [await statusLine(page), `${pending} pending hairlines, ${await page.locator('.tl-marker').count()} markers so far`];
+  return [await statusLine(page), `${pending} pending slots, ${await page.locator('.rb-bar').count()} bars so far`];
 }
 
 export const liveFlows: readonly Flow[] = [
   {
     name: 'live-success',
-    description: 'Paste a URL: a first run is replaced by a second (no stale markers), 2 snapshots in flight at most, throttled announcements, Copy link deep link',
+    description: 'Paste a URL: a first run is replaced by a second (no stale bars), 2 snapshots in flight at most, throttled announcements, Copy link deep link',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { data: (t) => (t.includes('rust') ? rust : git), snapshot: () => ({ delay: 150 }) });
@@ -238,7 +239,7 @@ export const liveFlows: readonly Flow[] = [
         w.tops = [];
         setInterval(() => {
           // During the runs: the sample's own layout before them does not count.
-          const t = document.querySelector('[data-live] .tl-area')?.getBoundingClientRect().top;
+          const t = document.querySelector('[data-live] .rb')?.getBoundingClientRect().top;
           if (t !== undefined) w.tops.push(Math.round(t + scrollY));
         }, 50);
       });
@@ -253,8 +254,8 @@ export const liveFlows: readonly Flow[] = [
       await page.locator('#live-label', { hasText: 'git-scm.com' }).waitFor();
       await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
       await sleep(600); // any answer still due for the first run lands now
-      const markers = await page.locator('.tl-marker').count();
-      if (markers !== gitEntries) throw new Error(`${markers} markers, expected ${gitEntries} (stale markers from the first run?)`);
+      const markers = await page.locator('.rb-bar').count();
+      if (markers !== gitEntries) throw new Error(`${markers} bars, expected ${gitEntries} (stale bars from the first run?)`);
       if (!api.snaps(rust.url).length) throw new Error('no first-run requests logged: the host matcher is wrong');
       const late = api.snaps(rust.url).filter((l) => l.start > switchedAt);
       if (late.length) throw new Error(`${late.length} requests for the first run after the second started`);
@@ -270,17 +271,17 @@ export const liveFlows: readonly Flow[] = [
       const gaps = said.slice(1).map(([t], i) => t - said[i]![0]);
       if (said.length < 2 || gaps.some((g) => g < 1900)) throw new Error(`announcements ${said.map(([t, s]) => `${Math.round(t)} ${s}`).join(' | ')}`);
       // Copy link: select the first change; the address bar is the shareable link and restores it.
-      await page.locator('.tl-slider').focus();
+      await page.locator('.rb-slider').focus();
       await page.keyboard.press('Home');
       const link = page.url();
       if (!link.includes('change=')) throw new Error(`no change in ${link}`);
       await page.goto(link, { waitUntil: 'domcontentloaded' });
       await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
-      const now = await page.locator('.tl-slider').getAttribute('aria-valuenow');
+      const now = await page.locator('.rb-slider').getAttribute('aria-valuenow');
       if (now !== '1') throw new Error(`deep link selected change ${now}, expected 1`);
       return {
         notes: [
-          `${markers} markers, max ${max} snapshot requests in flight, ${api.snaps(rust.url).length} first-run requests all before the switch`,
+          `${markers} bars, max ${max} snapshot requests in flight, ${api.snaps(rust.url).length} first-run requests all before the switch`,
           `request log (ms from start): ${api.snaps(git.url).slice(0, 6).map((l) => `${l.ts?.slice(0, 8)} ${l.start - api.log[0]!.start}-${(l.end ?? 0) - api.log[0]!.start}`).join(', ')} …`,
           `announced: ${said.map(([t, s]) => `${Math.round(t)} ms "${s}"`).join(' | ')}`,
           `deep link ${link} restored change 1`,
@@ -291,10 +292,10 @@ export const liveFlows: readonly Flow[] = [
   },
   {
     name: 'live-loading',
-    description: 'Mid-run: status line with progress and Cancel, markers so far, grey hairlines for the captures still coming',
+    description: 'Mid-run: status line with progress and Cancel, bars so far, empty slots for the captures still coming',
     cvd: true,
-    async run({ page, baseUrl }) {
-      return { notes: await loading(page, baseUrl) };
+    async run({ page, baseUrl, viewport }) {
+      return { notes: await loading(page, baseUrl, viewport === 'mobile') };
     },
   },
   {
@@ -305,7 +306,7 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      const notes = await loading(page, baseUrl);
+      const notes = await loading(page, baseUrl, false);
       const d = await page.locator('.live-dot').evaluate((el) => getComputedStyle(el).animationDuration);
       if (d !== '0s') throw new Error(`live dot animates for ${d} under reduce`);
       return { notes: [...notes, 'live dot animation 0s'] };
@@ -318,7 +319,7 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { snapshot: () => ({ delay: 800 }) });
       await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
-      await page.waitForFunction(() => document.querySelectorAll('.tl-cap').length >= 2, null, { timeout: 10_000 });
+      await page.waitForFunction(() => document.querySelectorAll('.rb-th .sil').length >= 2, null, { timeout: 10_000 });
       await page.getByRole('button', { name: 'Cancel' }).click();
       const cancelledAt = Date.now();
       const at = api.snaps().length;
@@ -352,7 +353,7 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       await mockApi(page, { snapshot: (i) => (i < 4 ? {} : i < 11 ? { delay: 500 } : { delay: null }) });
       await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
-      const slider = page.locator('.tl-slider');
+      const slider = page.locator('.rb-slider');
       await slider.waitFor({ timeout: 10_000 });
       await slider.focus();
       const values = () => slider.evaluate((el) => `${el.getAttribute('aria-valuenow')}/${el.getAttribute('aria-valuemax')}`);
@@ -367,7 +368,7 @@ export const liveFlows: readonly Flow[] = [
       const [end, now] = [await values(), await listed()];
       if (end !== `${now}/${now}` || now <= max) throw new Error(`End went to ${end}, expected the newest of ${now} changes`);
       const said = await page
-        .waitForFunction(() => /\d+ more changes? arrived\./.exec(document.querySelector('.tl-area [role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
+        .waitForFunction(() => /\d+ more changes? arrived\./.exec(document.querySelector('.rb-live [role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
         .then((h) => h.jsonValue());
       // More changes arrive: the slider stays put again until the next key.
       await page.waitForFunction((n) => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]) > n, now, { timeout: 10_000 });
@@ -451,19 +452,18 @@ export const liveFlows: readonly Flow[] = [
   {
     name: 'live-partial-failure',
     apiErrors: true,
-    description: 'Two captures fail: dashed marks, an inline note, and the run completes',
+    description: 'Two captures fail: "not fetched" thumbnails, an inline note, and the run completes',
     shot: 'live-partial',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await mockApi(page, { snapshot: (i) => (i === 3 || i === 9 ? { error: 'archive_unavailable' } : {}) });
       await openLive(page, baseUrl, 'git-scm.com', 'done');
       if ((await focusAt(page)) !== 'body') throw new Error(`a ?url= load moved focus to ${await focusAt(page)}`);
-      const dashed = await page.locator('.tl-failed').count();
-      if (dashed !== 2) throw new Error(`${dashed} dashed marks, expected 2`);
+      const failed = await page.locator('.rb-th .rb-none', { hasText: 'not fetched' }).count();
+      if (failed !== 2) throw new Error(`${failed} "not fetched" thumbnails, expected 2`);
       const text = await statusLine(page);
-      if (!text.endsWith('2 captures could not be fetched (dashed).')) throw new Error(`status "${text}"`);
-      await openTimelineKey(page);
-      return { notes: [text, await expectText(page, '#timeline-legend', /2 could not be fetched/)] };
+      if (!text.endsWith('2 captures could not be fetched.')) throw new Error(`status "${text}"`);
+      return { notes: [text, await expectText(page, '#rb-hint', /2 could not be fetched\./)] };
     },
   },
   {
@@ -475,9 +475,8 @@ export const liveFlows: readonly Flow[] = [
       await mockApi(page, { data: () => mockFromSample('git-scm', { same: true }) });
       await openLive(page, baseUrl, 'git-scm.com', 'done');
       const text = await expectText(page, '.state-card', /14 captures, 2013–2025: nothing meaningful changed\. 13 trivial edits hidden \(dates, counters, whitespace\)\./);
-      if (await page.locator('.tl-slider').count()) throw new Error('a slider with no changes');
-      await openTimelineKey(page);
-      if (!(await page.getByRole('checkbox', { name: 'Show trivial edits' }).count())) throw new Error('no "Show trivial edits" toggle');
+      if (await page.locator('.rb-slider').count()) throw new Error('a slider with no changes');
+      if (!(await page.locator('.rb-trivial').getByRole('button', { name: 'Show them' }).count())) throw new Error('no "Show them" toggle for the trivial edits');
       return { notes: [text] };
     },
   },
@@ -577,7 +576,7 @@ export const liveFlows: readonly Flow[] = [
       if (after > 1) throw new Error(`${after} replay requests after the run, expected <= 1: ${api.frames.map((f) => f.ts).join(', ')}`);
       // Home: the first change, never the neighbour preloaded beside the latest one.
       const t0 = Date.now();
-      await page.locator('.tl-slider').focus();
+      await page.locator('.rb-slider').focus();
       await page.keyboard.press('Home');
       await page.locator('.lf iframe[data-loaded]:not([data-hidden])').first().waitFor({ timeout: 5000 });
       await sleep(300);
@@ -616,7 +615,7 @@ export const liveFlows: readonly Flow[] = [
       const api = await mockApi(page);
       const entries = buildTimeline(git.url, git.pages).entries;
       await openLive(page, baseUrl, 'git-scm.com', 'done');
-      await page.locator('.tl-slider').focus();
+      await page.locator('.rb-slider').focus();
       await page.keyboard.press('Home');
       await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });
       await sleep(300);
@@ -693,7 +692,7 @@ export const liveFlows: readonly Flow[] = [
       if (href !== `https://web.archive.org/web/${latest}/https://git-scm.com/`) throw new Error(`link out ${href}`);
       if (!(await page.locator('.lf .sil').isVisible())) throw new Error('the silhouette went away while still loading');
       // A slow frame (2.5 s): its silhouette shows until it loads, and no note.
-      await page.locator('.tl-slider').focus();
+      await page.locator('.rb-slider').focus();
       await page.keyboard.press('ArrowLeft');
       await sleep(1800);
       const waiting = (await page.locator('.lf .sil').isVisible()) && !(await page.locator('.lf iframe[data-loaded]:not([data-hidden])').count());
@@ -767,9 +766,9 @@ export const liveFlows: readonly Flow[] = [
     },
   },
   {
-    name: 'live-filmstrip-silhouettes',
-    shot: 'live-filmstrip',
-    description: 'The live filmstrip draws text silhouettes: no image requests; arrows + Enter show a capture',
+    name: 'live-ribbon-outlines',
+    shot: 'live-ribbon',
+    description: 'The live ribbon\'s thumbnails are text outlines: no image requests; arrows + Enter show a capture',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const images: string[] = [];
@@ -778,15 +777,15 @@ export const liveFlows: readonly Flow[] = [
       await openLive(page, baseUrl, 'git-scm.com');
       page.on('request', (r) => r.resourceType() === 'image' && images.push(r.url()));
       await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
-      if (await page.locator('.film-strip img').count()) throw new Error('<img> thumbnails in the live filmstrip');
-      const n = await page.locator('.film-strip .sil').count();
+      if (await page.locator('.rb-strip img').count()) throw new Error('<img> thumbnails in the live ribbon');
+      const n = await page.locator('.rb-strip .sil').count();
       if (n !== 14) throw new Error(`${n} silhouettes, expected 14`);
-      const hint = await expectText(page, '#film-hint', /Thumbnails are text outlines of each capture, not pictures\./);
-      await page.locator('.film-strip [aria-current="true"]').focus();
+      const hint = await expectText(page, '#rb-strip-hint', /Thumbnails are text outlines of each capture, not pictures\./);
+      await page.locator('.rb-strip [aria-current="true"]').focus();
       await page.keyboard.press('Home');
       await page.keyboard.press('Enter');
-      const current = (await page.locator('.film-strip [aria-current="true"] .frame-cap').innerText()).replace(/\s+/g, ' ');
-      if (!current.startsWith('Frame #01')) throw new Error(`after Home + Enter: ${current}`);
+      const current = (await page.locator('.rb-strip [aria-current="true"]').getAttribute('aria-label')) ?? '';
+      if (!current.startsWith('Capture 1 of 14,')) throw new Error(`after Home + Enter: ${current}`);
       if (images.length) throw new Error(`${images.length} image requests: ${images.join(', ')}`);
       return { notes: [`${n} silhouettes, 0 image requests`, hint, `Home + Enter -> ${current.replace(/\s+/g, ' ')}`] };
     },
