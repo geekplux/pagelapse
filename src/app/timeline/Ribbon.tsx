@@ -90,7 +90,6 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
   const sliderEl = useRef<HTMLDivElement>(null);
   const compact = useMedia(COMPACT);
   const [cw, setCw] = useState(0);
-  const [scrollX, setScrollX] = useState(0);
   useLayoutEffect(() => {
     const el = outer.current;
     if (!el) return;
@@ -140,6 +139,14 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
     thumbs()[next]?.focus();
   };
   const [thumbTip, setThumbTip] = useState<number | null>(null);
+  // Escape dismisses a thumbnail's date tip too, wherever focus is (WCAG 1.4.13).
+  const thumbTipOn = thumbTip !== null;
+  useEffect(() => {
+    if (!thumbTipOn) return;
+    const onKey = (e: globalThis.KeyboardEvent) => e.key === 'Escape' && setThumbTip(null);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [thumbTipOn]);
 
   /** Scroll the ribbon (never the page) so the pair's thumbnails and dates are in view; nothing moves when they are. */
   const reveal = () => {
@@ -197,6 +204,8 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
 
   const outlines = items.some((v) => v.page);
   const tip = hover ?? (focusTip ? selected : null);
+  // Read only when a tip shows: tracking every scroll event in state would re-render each thumbnail.
+  const scrollX = tip !== null || thumbTip !== null ? (box.current?.scrollLeft ?? 0) : 0;
   const tipEntry = tip === null ? undefined : entries[tip];
   const tipBar = tip === null ? undefined : g.bars[tip];
   const thumbItem = thumbTip === null || tipEntry ? undefined : items[thumbTip];
@@ -204,14 +213,15 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
   return (
     <div className="rb" ref={outer}>
       <p id="rb-hint" hidden>
-        {entries.length} {entries.length === 1 ? 'change' : 'changes'} across {n} captures. Bar height shows how much the text changed; a hollow dot is a capture
-        that only changed dates or counters.{note && ` ${note}`}
+        {entries.length} {entries.length === 1 ? 'change' : 'changes'} across {n} captures. Bar height shows how much the text changed
+        {trivial.size > 0 ? '; a hollow dot is a capture that only changed dates or counters.' : '.'}
+        {note && ` ${note}`}
       </p>
       <p id="rb-strip-hint" hidden>
         {n} captures, oldest first.{outlines && ' Thumbnails are text outlines of each capture, not pictures.'} Arrow keys move along the thumbnails; Enter
         shows a capture.
       </p>
-      <div className="rb-scroll" ref={box} onScroll={(e) => setScrollX(e.currentTarget.scrollLeft)}>
+      <div className="rb-scroll" ref={box}>
         <div className="rb-in" style={{ width }}>
           {!compact && (
             // Safari drops list semantics when list-style is none, so the role is not redundant here.
@@ -289,6 +299,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
           )}
         </div>
       </div>
+      {entry && <div className="rb-ring" aria-hidden="true" style={{ top: stripH, height: H - top }} />}
       {tipEntry && tipBar && (
         <div
           className="rb-tip"

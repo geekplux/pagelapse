@@ -150,6 +150,11 @@
 .rb-pending { background: var(--sand-2); box-shadow: inset 0 0 0 var(--line) var(--sand-6); }
 .rb-in svg { display: block; overflow: visible; }
 .rb-slider { cursor: pointer; touch-action: pan-y; user-select: none; }
+/* The slider's focus ring is drawn on the visible part of the axis band (the band may scroll wider than the column), just
+   inside it, so all four sides show and it never runs under the thumbnails above it. */
+.rb-slider:focus-visible { outline: none; }
+.rb-ring { position: absolute; left: 0; right: 0; pointer-events: none; }
+.rb:has(.rb-slider:focus-visible) > .rb-ring { outline: 2px solid var(--sand-12); outline-offset: -2px; }
 .rb-cv { fill: none; stroke: var(--sand-8); stroke-width: var(--line); transition: stroke var(--dur) var(--ease), stroke-width var(--dur) var(--ease); }
 .rb-cv[data-side="before"] { stroke: var(--cyan-11); stroke-width: 1; }
 .rb-cv[data-side="after"] { stroke: var(--amber-11); stroke-width: 1; }
@@ -181,6 +186,7 @@
   .rb-dot.is-sel { stroke: Highlight; }
   .rb-span { fill: Canvas; }
   .rb-yr { fill: CanvasText; }
+  .rb:has(.rb-slider:focus-visible) > .rb-ring { outline-color: Highlight; }
   :is(.vp-side[aria-checked="true"], .vp-mode:has(:checked)) { outline: 2px solid Highlight; }
   .vp-split::before { forced-color-adjust: none; background: CanvasText; box-shadow: 0 0 0 2px Canvas; }
   .vp-split:focus-visible .vp-knob { background: Highlight; color: HighlightText; }
