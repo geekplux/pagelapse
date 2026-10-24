@@ -488,51 +488,137 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'open-transition',
-    description: 'Open: a sample option and a deck card grow into the stage as a 350 ms view transition (the field settles into the header); focus lands on the content; none under reduced motion',
+    description:
+      'Open: a sample option and a deck card (by pointer and by keyboard) grow into the stage as a 350 ms view transition (the field settles into the header); focus lands on the content; none under reduced motion or without the API; a press mid-transition lands where it was aimed',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
+      type Vt = { groups: string[]; ms: number[]; focus?: string };
+      type W = { vts: Vt[]; running: boolean; downs: boolean[] };
       const notes: string[] = [];
-      for (const [how, reduce] of [['option', false], ['card', false], ['option', true]] as const) {
-        await page.emulateMedia({ reducedMotion: reduce ? 'reduce' : 'no-preference' });
+      const cases = [
+        ['option', 'pointer'],
+        ['option', 'keyboard'],
+        ['card', 'pointer'],
+        ['card', 'keyboard'],
+        ['option', 'reduce'],
+        ['option', 'no API'],
+        ['option', 'press the field'],
+        ['option', 'press Play'],
+      ] as const;
+      for (const [what, how] of cases) {
+        const name = `${what} (${how})`;
+        await page.emulateMedia({ reducedMotion: how === 'reduce' ? 'reduce' : 'no-preference' });
+        // Play sits below an 800 px viewport's fold; a press can only aim at what is on screen.
+        await page.setViewportSize({ width: 1280, height: how === 'press Play' ? 1300 : 800 });
         await openHero(page, baseUrl);
-        // Record each view transition: its named groups, their duration, and where focus is once it has finished.
-        await page.evaluate(() => {
-          const w = window as unknown as { vts: { groups: string[]; ms: number[]; focus?: string }[] };
+        // Record each view transition: its named groups, their duration, and where focus is once it has finished; and
+        // whether each press came while one ran.
+        await page.evaluate((none) => {
+          const w = window as unknown as W;
           w.vts = [];
+          w.running = false;
+          w.downs = [];
+          addEventListener('pointerdown', () => w.downs.push(w.running), true);
+          if (none) return void delete (Document.prototype as Partial<Document>).startViewTransition;
           const start = document.startViewTransition.bind(document);
           document.startViewTransition = ((cb: ViewTransitionUpdateCallback) => {
             const t = start(cb);
-            const rec: (typeof w.vts)[number] = { groups: [], ms: [] };
+            const rec: Vt = { groups: [], ms: [] };
             w.vts.push(rec);
+            // Running once its overlay is up (the update has rendered the workspace under it).
             void t.ready.then(() => {
+              w.running = true;
               const anims = document.getAnimations().map((a) => a.effect as KeyframeEffect).filter((e) => e.pseudoElement?.startsWith('::view-transition-group'));
               rec.groups = anims.map((e) => /\((.*)\)/.exec(e.pseudoElement!)![1]!).sort();
               rec.ms = [...new Set(anims.map((e) => Number(e.getTiming().duration)))];
+            }, () => undefined);
+            void t.finished.then(() => {
+              w.running = false;
+              rec.focus = document.activeElement?.id;
             });
-            void t.finished.then(() => (rec.focus = document.activeElement?.id));
             return t;
           }) as typeof document.startViewTransition;
-        });
-        if (how === 'option') await page.locator('.sample-opt').first().click();
-        else {
-          // By keyboard: the cards overlap, so a pointer reaches most of them only by their slivers.
+        }, how === 'no API');
+        const press = how.startsWith('press');
+        // A press mid-transition: the animations run at a tenth of their speed, so the press surely lands inside one.
+        const cdp = press ? await page.context().newCDPSession(page) : undefined;
+        await cdp?.send('Animation.enable');
+        await cdp?.send('Animation.setPlaybackRate', { playbackRate: 0.1 });
+        let plays = 0;
+        if (what === 'option' && how === 'keyboard') {
+          await page.locator('.sample-opt').first().focus();
+          await page.keyboard.press('Enter');
+        } else if (what === 'option') await page.locator('.sample-opt').first().click();
+        else if (how === 'keyboard') {
           await page.locator('.deck-card').nth(3).focus();
           await page.keyboard.press('Enter');
+        } else {
+          // The cards overlap: press the first point on screen where a card (the top one first) is the one hit.
+          const at = await page.locator('.deck-card').evaluateAll((cards) => {
+            for (const c of cards.reverse()) {
+              const r = c.getBoundingClientRect();
+              for (let y = r.top + 8; y < Math.min(r.bottom, innerHeight); y += 16) {
+                for (let x = r.left + 8; x < Math.min(r.right, innerWidth); x += 16) {
+                  if (c.contains(document.elementFromPoint(x, y))) return { x, y };
+                }
+              }
+            }
+            return null;
+          });
+          if (!at) throw new Error('no deck card is on top anywhere on screen');
+          await page.mouse.click(at.x, at.y);
+        }
+        if (press) {
+          await page.waitForFunction(() => (window as unknown as W).running, null, { timeout: 10_000 });
+          if (how === 'press the field') {
+            const box = (await page.locator('#url-input').boundingBox())!;
+            await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+            await page.keyboard.type('example.org');
+          } else {
+            await page.evaluate(() => {
+              const w = window as unknown as { plays: number };
+              w.plays = 0;
+              document.querySelector('.vp-play')!.addEventListener('click', () => w.plays++);
+            });
+            const box = (await page.locator('.vp-play').boundingBox())!;
+            await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+            await page.waitForTimeout(300);
+            plays = await page.evaluate(() => (window as unknown as { plays: number }).plays);
+          }
+          await cdp!.send('Animation.setPlaybackRate', { playbackRate: 1 });
+          await cdp!.detach();
         }
         await page.waitForSelector('[data-ready="true"]');
         await page.waitForTimeout(600);
-        const vts = await page.evaluate(() => (window as unknown as { vts: { groups: string[]; ms: number[]; focus?: string }[] }).vts);
-        const focus = await page.evaluate(() => document.activeElement?.id);
-        if (focus !== 'content') throw new Error(`${how}${reduce ? ' (reduce)' : ''}: focus on ${focus}, expected #content`);
-        if (reduce) {
-          if (vts.length) throw new Error(`a view transition ran under reduced motion: ${JSON.stringify(vts)}`);
-          notes.push(`${how} under reduce: no view transition, focus on #content`);
+        const w = await page.evaluate(() => {
+          const { vts, downs } = window as unknown as W;
+          const input = document.querySelector<HTMLInputElement>('#url-input')!;
+          return { vts, downs, focus: document.activeElement?.id, value: input.value, playing: document.querySelector('.vp-play')?.hasAttribute('data-playing') };
+        });
+        const v = w.vts[0];
+        if (how === 'press the field') {
+          if (!w.downs.at(-1)) throw new Error(`${name}: the press came after the transition (${JSON.stringify(w)})`);
+          if (w.focus !== 'url-input' || !w.value.endsWith('example.org')) throw new Error(`${name}: focus on #${w.focus}, field "${w.value}"`);
+          notes.push(`${name} mid-transition: focus on #url-input, typing reached it ("${w.value}")`);
           continue;
         }
-        const v = vts[0];
-        if (vts.length !== 1 || v!.groups.join() !== 'pl-field,pl-stage,root' || v!.ms.join() !== '350' || v!.focus !== 'content') throw new Error(`${how}: ${JSON.stringify(vts)}`);
-        notes.push(`${how}: groups ${v!.groups.join(', ')}, ${v!.ms.join()} ms, focus on #${v!.focus}`);
+        if (how === 'press Play') {
+          if (!w.downs.at(-1)) throw new Error(`${name}: the press came after the transition (${JSON.stringify(w)})`);
+          if (plays !== 1 || !w.playing) throw new Error(`${name}: ${plays} activations, playing ${w.playing}`);
+          await page.keyboard.press('Escape'); // any key stops the time-lapse
+          notes.push(`${name} mid-transition: exactly 1 activation, playing`);
+          continue;
+        }
+        if (w.focus !== 'content') throw new Error(`${name}: focus on ${w.focus}, expected #content`);
+        if (how === 'reduce' || how === 'no API') {
+          if (w.vts.length) throw new Error(`${name}: a view transition ran: ${JSON.stringify(w.vts)}`);
+          notes.push(`${name}: no view transition, the workspace at once, focus on #content`);
+          continue;
+        }
+        if (w.vts.length !== 1 || v!.groups.join() !== 'pl-field,pl-stage,root' || v!.ms.join() !== '350' || v!.focus !== 'content') throw new Error(`${name}: ${JSON.stringify(w.vts)}`);
+        notes.push(`${name}: groups ${v!.groups.join(', ')}, ${v!.ms.join()} ms, focus on #${v!.focus}`);
       }
+      await page.setViewportSize({ width: 1280, height: 800 });
       return { notes };
     },
   },

@@ -126,7 +126,8 @@ main.is-intro { padding-top: 0; }
 @media (min-width: 40rem) { main.is-intro ~ .site-footer { margin-top: calc(4 * var(--space-4)); } }
 
 /* Open (openTransition.ts): the card or sample option pressed becomes the stage, the address field settles into the
-   header, the rest crossfades; 350 ms ease-out. Pointer input passes through the overlay, so nothing waits on it. */
+   header, the rest crossfades; 350 ms ease-out. The overlay still takes every press (as <html>), so a press ends the
+   transition at once and openTransition.ts passes it on to the element aimed at: input never waits on it. */
 .addr-field { view-transition-name: pl-field; }
 ::view-transition { pointer-events: none; }
 ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: var(--dur-open); animation-timing-function: var(--ease); }
