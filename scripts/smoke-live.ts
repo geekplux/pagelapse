@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { API_ERRORS, GIT_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
-import { type Flow, openDisclosure, openReady, openTimelineKey } from './smoke-flows.ts';
+import { type Flow, openReady, openTimelineKey } from './smoke-flows.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 
 const git = mockFromSample('git-scm');
@@ -185,7 +185,7 @@ async function expectFramesNotTabbable(page: Page): Promise<string> {
       const a = document.activeElement;
       if (!a || a === document.body) return ['body', false];
       if (a.tagName === 'IFRAME') return ['IFRAME', false];
-      // The pane's controls: in the picture, and (since phase 17) in the controls row beside it.
+      // The pane's controls: in the picture, and in the controls row under it.
       return [`${a.tagName}#${a.id}.${a.className}|${(a.textContent ?? '').slice(0, 60)}|${[...document.querySelectorAll('*')].indexOf(a)}`, !!a.closest('.vpane, .controls')];
     });
     if (at === 'IFRAME') throw new Error(`Tab stop ${stops + 1} is inside an archived page`);
@@ -664,7 +664,6 @@ export const liveFlows: readonly Flow[] = [
       const hidden = await page.locator('.lf iframe[data-hidden]').evaluate((el: HTMLIFrameElement) => ({ inert: el.inert, ariaHidden: el.getAttribute('aria-hidden'), visibility: getComputedStyle(el).visibility }));
       if (!hidden.inert || hidden.ariaHidden !== 'true' || hidden.visibility !== 'hidden') throw new Error(`preloaded frame ${JSON.stringify(hidden)}`);
       const t1 = Date.now();
-      await openDisclosure(page, 'Compare');
       await page.getByRole('radio', { name: 'Slider' }).check();
       await page.locator('.vp-cmp iframe[data-loaded]').nth(1).waitFor({ timeout: 5000 });
       await sleep(3000);
@@ -727,7 +726,7 @@ export const liveFlows: readonly Flow[] = [
         const hit = (x: number, y: number) => p.contains(document.elementFromPoint(x, y));
         return {
           note: n,
-          mat: box(p.closest('.vp-mat')!),
+          mat: box(p.closest('.vpane')!),
           shot: box(document.querySelector('.lf')!),
           chips: [...document.querySelectorAll('.vp-label')].map(box),
           clipped: p.scrollWidth > p.clientWidth || p.scrollHeight > p.clientHeight,
@@ -752,7 +751,6 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       await mockApi(page);
       await openLive(page, baseUrl, 'git-scm.com', 'done');
-      await openDisclosure(page, 'Compare');
       await page.getByRole('radio', { name: 'Slider' }).check();
       await page.locator('.vp-cmp iframe[data-loaded]').nth(1).waitFor({ timeout: 5000 });
       const frames = await page.locator('iframe').evaluateAll((els) => els.map((el) => (el as HTMLIFrameElement).inert));

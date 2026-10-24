@@ -132,10 +132,12 @@ const picOf = (ts: string) => shotSrc(defaultFixture.id, defaultFixture.snapshot
 const checkedMode = (page: Page) => page.locator('input[name="vp-mode"]:checked').getAttribute('value');
 
 /**
- * Slider mode on the default sample's first view (the decade compare): Before under After, both labelled by symbol, word and date in
+ * Slider mode on the default sample's first view (the decade compare): Before under After, both tagged by dot, word and date in
  * their own corner, After clipped at `v`%, and the divider's value and valuetext say so.
  */
 async function expectSlider(page: Page, v: number): Promise<string> {
+  // Keys and clicks glide the divider for 250 ms; measure where it lands.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   const m = await page.evaluate(() => ({
     srcs: [...document.querySelectorAll('.vp-cmp .vp-shot')].map((i) => [i.getAttribute('src'), i.getAttribute('alt')]),
     labels: [...document.querySelectorAll('.vp-label')].map((l) => [l.getAttribute('data-side'), l.textContent, Math.round(l.getBoundingClientRect().left)]),
@@ -148,12 +150,13 @@ async function expectSlider(page: Page, v: number): Promise<string> {
   const problems = [
     (await checkedMode(page)) !== 'slider' && 'Slider is not the checked mode',
     JSON.stringify(m.srcs) !== JSON.stringify(want) && `pictures ${JSON.stringify(m.srcs)}`,
-    (m.labels[0]?.[0] !== 'before' || !String(m.labels[0][1]).startsWith(`− Before ${formatTimestampShort(from)}`)) && `before label ${m.labels[0]}`,
-    (m.labels[1]?.[0] !== 'after' || !String(m.labels[1][1]).startsWith(`+ After ${formatTimestampShort(to)}`)) && `after label ${m.labels[1]}`,
+    (m.labels[0]?.[0] !== 'before' || m.labels[0][1] !== `Before ${formatTimestampShort(from)}`) && `before tag ${m.labels[0]}`,
+    (m.labels[1]?.[0] !== 'after' || m.labels[1][1] !== `After ${formatTimestampShort(to)}`) && `after tag ${m.labels[1]}`,
     Number(m.labels[0]?.[2]) >= Number(m.labels[1]?.[2]) && 'Before is not left of After',
     m.now !== String(v) && `divider at ${m.now}, expected ${v}`,
     m.text !== splitText(v, hero) && `valuetext "${m.text}"`,
-    !m.clip.endsWith(` ${v}%)`) && `After clipped by "${m.clip}", expected ${v}%`,
+    // The divider follows a pointer 1:1, so a drag may land a fraction of a percent off.
+    !(Math.abs(Number(/ ([\d.]+)%\)$/.exec(m.clip)?.[1]) - v) <= 0.5) && `After clipped by "${m.clip}", expected ${v}%`,
   ].filter(Boolean);
   if (problems.length) throw new Error(problems.join('; '));
   return `${m.text}; clip ${m.clip}`;
@@ -672,7 +675,7 @@ export const flows: readonly Flow[] = [
       await tabTo('db-gap');
       await page.keyboard.press('Enter');
       if ((await page.locator('.db-gap').count()) !== gaps - 1 || !(await active()).startsWith('db-open')) throw new Error(`expanding: ${await active()}`);
-      // Previous / Next sit beside the picture, before the diff in the tab order.
+      // Previous / Next sit under the picture, before the diff in the tab order.
       await page.locator('.diff-nav .btn').first().focus();
       await page.keyboard.press('Enter');
       await expectSelected(page, f, n - 2);
@@ -708,11 +711,13 @@ export const flows: readonly Flow[] = [
       const f = fixtures.find((x) => x.id === 'git-scm')!;
       const t = timelineOf(f);
       await openReady(page, baseUrl, `/?sample=git-scm`);
+      // From the decade compare, Previous first narrows to the latest change, then steps back.
+      await page.locator('.diff-nav .btn').first().click();
+      await expectSelected(page, f, t.entries.length - 1);
       await page.locator('.diff-nav .btn').first().click();
       await expectSelected(page, f, t.entries.length - 2);
-      await openDisclosure(page, 'Change details');
-      await page.locator('.change-panel button', { hasText: 'Copy link' }).click();
-      await page.locator('.change-panel [role="status"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
+      await page.locator('.controls .vp-copy').click();
+      await page.locator('.controls [role="status"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       if (copied !== page.url() || !copied.includes('change=')) throw new Error(`copied "${copied}", page at ${page.url()}`);
       await openReady(page, baseUrl, new URL(copied).pathname + new URL(copied).search);
@@ -789,7 +794,7 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-default',
-    description: 'The hero: the decade compare (first ↔ latest capture) in Slider, named as such, with its summary and the filmstrip thumbnails above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
+    description: 'The first view: the decade compare (first ↔ latest capture) in Slider, named "First and latest", the title block and stage above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
     shot: 'hero',
     schemes: ['light', 'dark'],
     cvd: true,
@@ -798,16 +803,18 @@ export const flows: readonly Flow[] = [
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       const { from, to } = hero;
       const said = await expectSlider(page, 50);
-      // Honest about the pair: the caption and the change line say first and latest capture, not one change.
-      const named = await page.evaluate(() => [document.querySelector('.vpane .vp-cap')?.textContent ?? '', document.querySelector('#change-heading')?.textContent ?? ''] as const);
-      if (!named[0].includes('first and latest capture') || !/^first → capture to latest,/.test(named[1].trim())) throw new Error(`pair not named: caption "${named[0]}", heading "${named[1]}"`);
+      // Honest about the pair: the step label and the change line say first and latest capture, not one change.
+      const named = await page.evaluate(() => [document.querySelector('.step-label [aria-hidden]')?.textContent ?? '', document.querySelector('#change-heading')?.textContent ?? ''] as const);
+      if (named[0] !== 'First and latest' || !/^first → capture to latest,/.test(named[1].trim())) throw new Error(`pair not named: step "${named[0]}", heading "${named[1]}"`);
       if ((await page.locator('.frame').count()) !== defaultFixture.snapshots.length) throw new Error('not one frame per capture');
-      if (!page.url().endsWith('/') || new URL(page.url()).search) throw new Error(`first view rewrote the URL: ${page.url()}`);
+      if (new URL(page.url()).search !== `?sample=${DEFAULT_ID}`) throw new Error(`first view rewrote the URL: ${page.url()}`);
       await page.waitForTimeout(500);
       const m = await page.evaluate(async () => {
-        const cls = await new Promise<number>((done) =>
-          new PerformanceObserver((l) => done(l.getEntries().reduce((n, e) => n + ((e as unknown as { hadRecentInput: boolean }).hadRecentInput ? 0 : (e as unknown as { value: number }).value), 0))).observe({ type: 'layout-shift', buffered: true }),
-        ).then((v) => v, () => 0);
+        // No layout shift at all means no entry and no callback: 0 after a short wait.
+        const cls = await new Promise<number>((done) => {
+          setTimeout(() => done(0), 500);
+          new PerformanceObserver((l) => done(l.getEntries().reduce((n, e) => n + ((e as unknown as { hadRecentInput: boolean }).hadRecentInput ? 0 : (e as unknown as { value: number }).value), 0))).observe({ type: 'layout-shift', buffered: true });
+        }).then((v) => v, () => 0);
         const pics = performance.getEntriesByType('resource').filter((r) => r.name.includes('/samples/')) as PerformanceResourceTiming[];
         const box = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
         return {
@@ -815,7 +822,8 @@ export const flows: readonly Flow[] = [
           cls,
           bytes: pics.reduce((n, r) => n + r.encodedBodySize, 0),
           count: pics.length,
-          fold: [box('.vp-mat').bottom, box('.panel-summary').bottom, box('.frame :is(img, .frame-none)').bottom],
+          // The stage is 1200 x 750 at full width (target/V3Work.html): its top and the title block are on first view.
+          fold: [box('.sheet-head').bottom, box('.vp-mat').top + box('.vp-mat').height / 2],
           paneWidth: box('.vp-mat').width,
         };
       });
@@ -824,12 +832,12 @@ export const flows: readonly Flow[] = [
         m.visual > 1500 && `visual-ready ${m.visual} ms > 1,500`,
         m.cls >= 0.02 && `CLS ${m.cls.toFixed(3)}`,
         m.bytes > 160_000 && `first-view pictures ${m.bytes} B > 160 KB`,
-        viewport === 'desktop' && m.fold.some((y) => y > 800) && `stage below the fold: ${m.fold.map(Math.round).join(', ')}`,
+        viewport === 'desktop' && m.fold.some((y) => y > 800) && `title or the stage's upper half below the fold: ${m.fold.map(Math.round).join(', ')}`,
         viewport === 'mobile' && m.paneWidth < 300 && `pane only ${m.paneWidth}px wide on mobile`,
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { timeToReadyMs, notes: [`decade ${from}-${to} in Slider mode: ${said}`, `heading "${named[1].trim()}"`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, filmstrip thumbnails): ${m.fold.map(Math.round).join(', ')}`] };
+      return { timeToReadyMs, notes: [`decade ${from}-${to} in Slider mode: ${said}`, `heading "${named[1].trim()}"`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (title block, stage middle): ${m.fold.map(Math.round).join(', ')}`] };
     },
   },
   {
@@ -948,11 +956,11 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-tab-order',
-    description: 'Desktop: the stage tabs in visual order: pane controls, the change card, filmstrip, timeline, changes list, diff',
+    description: 'Desktop: the workspace tabs in visual order: the stage, its controls row, filmstrip, timeline, the change card, changes list, diff',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
-      const parts = ['vpane', 'side', 'film', 'tl-area', 'changes-pane', 'diff-panel'];
+      const parts = ['vpane', 'controls', 'film', 'tl-area', 'change-panel', 'changes-pane', 'diff-panel'];
       const seen: string[] = [];
       for (let k = 0; k < 120; k++) {
         await page.keyboard.press('Tab');
@@ -965,24 +973,21 @@ export const flows: readonly Flow[] = [
         if (part && seen.at(-1) !== part) seen.push(part);
       }
       // The diff has stops only when it has collapsed runs or long blocks; the rest always do.
-      if (seen.length < 5 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
-      // The first stop after the pane's controls is in the change card, beside the picture; the card holds no list.
-      // The pane's last stop: "Open capture" in Single, the divider in Slider (its links are in Change details).
-      await page.locator('.vpane :is(.cap-out, .vp-split)').last().focus();
+      if (seen.length < 6 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
+      // The stage's last stop (the divider in Slider) leads to Play, the first control under it.
+      await page.locator('.vpane .vp-split').focus();
       await page.keyboard.press('Tab');
-      const next = await page.evaluate(() => `${document.activeElement?.closest('.side') ? 'side' : 'elsewhere'}: ${document.activeElement?.textContent?.trim().slice(0, 30)}`);
-      if (!next.startsWith('side')) throw new Error(`after "Open capture": ${next}`);
-      if (await page.locator('.side .changes').count()) throw new Error('the changes list is inside the side column');
-      // The visual order matches: each part starts below the one before it (the side card beside the pane).
+      const next = await page.evaluate(() => `${document.activeElement?.closest('.controls') ? 'controls' : 'elsewhere'}: ${document.activeElement?.textContent?.trim().slice(0, 30)}`);
+      if (next !== 'controls: Play time-lapse') throw new Error(`after the divider: ${next}`);
+      // The visual order matches: each part starts below the one before it.
       const tops = await page.evaluate((ps) => ps.map((p) => Math.round(document.querySelector(`.stage .${p}`)!.getBoundingClientRect().top)), parts);
-      const rows = [tops[0]!, ...tops.slice(2)];
-      if (rows.some((t, i) => i > 0 && t <= rows[i - 1]!)) throw new Error(`parts out of visual order: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`);
-      return { notes: [`stage: ${seen.join(' -> ')}`, `after "Open capture": ${next}`, `tops: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`] };
+      if (tops.some((t, i) => i > 0 && t <= tops[i - 1]!)) throw new Error(`parts out of visual order: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`);
+      return { notes: [`stage: ${seen.join(' -> ')}`, `after the divider: ${next}`, `tops: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`] };
     },
   },
   {
     name: 'visual-zoom-spacing',
-    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the change card is never clipped or scrolled inside the side column, and never spills onto the filmstrip',
+    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the controls row wraps instead of clipping, stays between the stage and the filmstrip, and the page never scrolls sideways',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await page.setViewportSize({ width: 1024, height: 768 });
@@ -996,66 +1001,46 @@ export const flows: readonly Flow[] = [
       await settle(page);
       const m = await page.evaluate(() => {
         const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
-        const side = document.querySelector<HTMLElement>('.stage .side')!;
-        const box = side.getBoundingClientRect();
-        return {
-          twoColumn: box.left > r('.vpane').right,
-          sideBottom: box.bottom,
-          navBottom: r('.side .diff-nav').bottom,
-          paneBottom: r('.vpane').bottom,
-          film: r('.film').top,
-          clipped: side.scrollHeight - side.clientHeight,
-        };
+        const row = r('.controls');
+        const kids = [...document.querySelectorAll('.controls button, .controls .vp-modes')].map((k) => k.getBoundingClientRect());
+        return { stage: r('.vpane').bottom, top: row.top, bottom: row.bottom, film: r('.film').top, out: kids.filter((k) => k.left < row.left - 8.5 || k.right > row.right + 8.5).length };
       });
       const problems = [
-        !m.twoColumn && 'the stage is not two columns at 1024 px',
-        m.clipped > 1 && `the side column hides ${m.clipped}px of the card`,
-        m.navBottom > m.sideBottom + 0.5 && `Previous / Next ends at ${Math.round(m.navBottom)}, below the side column (${Math.round(m.sideBottom)})`,
-        m.sideBottom > m.film + 0.5 && `side column ends at ${Math.round(m.sideBottom)}, filmstrip starts at ${Math.round(m.film)}`,
-        m.paneBottom > m.film + 0.5 && `pane ends at ${Math.round(m.paneBottom)}, filmstrip starts at ${Math.round(m.film)}`,
+        m.top < m.stage - 0.5 && `controls start at ${Math.round(m.top)}, inside the stage (ends ${Math.round(m.stage)})`,
+        m.bottom > m.film + 0.5 && `controls end at ${Math.round(m.bottom)}, filmstrip starts at ${Math.round(m.film)}`,
+        m.out > 0 && `${m.out} controls outside the row`,
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { notes: [`side ends ${Math.round(m.sideBottom)} (pane ${Math.round(m.paneBottom)}) <= filmstrip ${Math.round(m.film)}; nothing clipped`] };
+      return { notes: [`stage ends ${Math.round(m.stage)}, controls ${Math.round(m.top)}-${Math.round(m.bottom)}, filmstrip ${Math.round(m.film)}`] };
     },
   },
   {
     name: 'stage-fit',
-    description: 'Desktop 1024×768 and 1280×800, every sample: the change card beside the picture is fully visible with no inner scrolling; at 1280×800 the filmstrip shows above the fold',
+    description: 'Desktop 1024×768, 1280×800 and 1440×900, every sample: the stage fills the column at 16:10 (1200 × 750 at 1440), the controls row sits 16 px under it, and nothing scrolls sideways',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const notes: string[] = [];
-      for (const [width, height] of [[1024, 768], [1280, 800]] as const) {
+      for (const [width, height] of [[1024, 768], [1280, 800], [1440, 900]] as const) {
         await page.setViewportSize({ width, height });
         for (const f of fixtures) {
           await openReady(page, baseUrl, `/?sample=${f.id}`);
           await settle(page);
           const m = await page.evaluate(() => {
-            const side = document.querySelector<HTMLElement>('.stage .side')!;
-            const b = side.getBoundingClientRect();
-            const last = side.lastElementChild!.getBoundingClientRect();
-            const thumbs = [...document.querySelectorAll('.frame :is(img, .frame-none)')].map((t) => t.getBoundingClientRect());
-            return {
-              scroll: side.scrollHeight - side.clientHeight,
-              top: b.top,
-              bottom: Math.max(b.bottom, last.bottom),
-              beside: b.left > document.querySelector('.vpane')!.getBoundingClientRect().right,
-              thumbTop: Math.max(...thumbs.slice(0, 6).map((t) => t.top)),
-              thumbBottom: Math.max(...thumbs.slice(0, 6).map((t) => t.bottom)),
-              scrollY,
-            };
+            const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+            return { mat: r('.vpane .vp-mat'), main: r('main'), controls: r('.controls'), scrollY };
           });
           const label = `${width}x${height} ${f.id}`;
           const problems = [
-            !m.beside && 'the card is not beside the picture',
-            m.scroll > 1 && `the side column scrolls by ${m.scroll}px`,
-            (m.top < 0 || m.bottom > height) && `the card spans ${Math.round(m.top)}-${Math.round(m.bottom)}, outside the ${height}px viewport`,
+            Math.abs(m.mat.width - m.main.width) > 1 && `stage ${Math.round(m.mat.width)} wide in a ${Math.round(m.main.width)} column`,
+            Math.abs(m.mat.width / m.mat.height - 1.6) > 0.01 && `stage ${Math.round(m.mat.width)} x ${Math.round(m.mat.height)} is not 16:10`,
+            width === 1440 && Math.round(m.mat.width) !== 1200 && `stage ${Math.round(m.mat.width)} wide at 1440, expected 1200`,
+            Math.round(m.controls.top - m.mat.bottom) !== 16 && `controls ${Math.round(m.controls.top - m.mat.bottom)} px under the stage`,
             m.scrollY !== 0 && `the page scrolled to ${m.scrollY}`,
-            // The strip is seen on first view: its thumbnails start above the fold (all of them end above it for the default, see visual-default).
-            width === 1280 && m.thumbTop > height - 16 && `filmstrip thumbnails start at ${Math.round(m.thumbTop)}, below the fold`,
           ].filter(Boolean);
           if (problems.length) throw new Error(`${label}: ${problems.join('; ')}`);
-          notes.push(`${label}: card ${Math.round(m.top)}-${Math.round(m.bottom)}, no inner scroll${width === 1280 ? `; thumbnails ${Math.round(m.thumbTop)}-${Math.round(m.thumbBottom)}` : ''}`);
+          notes.push(`${label}: stage ${Math.round(m.mat.width)} x ${Math.round(m.mat.height)}`);
+          await noPageOverflow(page);
         }
       }
       await page.setViewportSize({ width: 1280, height: 800 });
@@ -1159,22 +1144,20 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'compare-side',
-    description: 'Side by side: two labelled mats with their own captions and links, side by side on desktop and stacked on phones; ?view=side',
+    description: 'Side by side: two stages, each under its own tag (dot, word, date) and link, side by side on desktop and stacked on phones; ?view=side',
     async run({ page, baseUrl, viewport }) {
-      await openReady(page, baseUrl);
-      await openDisclosure(page, 'Compare');
-      await page.getByRole('radio', { name: 'Side by side' }).check();
-      const mats = await page.locator('.vp-pair .vp-mat').evaluateAll((ms) =>
-        ms.map((m) => ({ ...JSON.parse(JSON.stringify(m.getBoundingClientRect())), label: m.querySelector('.vp-label')?.textContent, links: m.querySelectorAll('.cap-out').length })),
+      await openReady(page, baseUrl, '/?view=side');
+      const figs = await page.locator('.vp-pair .vp-fig').evaluateAll((fs) =>
+        fs.map((f) => ({ ...JSON.parse(JSON.stringify(f.querySelector('.vp-mat')!.getBoundingClientRect())), label: f.querySelector('.vp-tag')?.textContent, links: f.querySelectorAll('.cap-out').length })),
       );
-      const [a, b] = mats;
+      const [a, b] = figs;
       const problems = [
-        mats.length !== 2 && `${mats.length} mats`,
-        !a?.label?.startsWith('− Before') || !b?.label?.startsWith('+ After') ? `labels ${a?.label} / ${b?.label}` : '',
-        mats.some((m) => m.links !== 1) && 'not one capture link per mat',
-        viewport === 'desktop' && a && b && (a.top !== b.top || a.right > b.left) && 'mats are not side by side',
-        viewport === 'mobile' && a && b && a.bottom > b.top && 'mats are not stacked',
-        new URL(page.url()).searchParams.get('view') !== 'side' && `URL ${page.url()}`,
+        figs.length !== 2 && `${figs.length} stages`,
+        a?.label !== `Before ${formatTimestampShort(hero.from)}` || b?.label !== `After ${formatTimestampShort(hero.to)}` ? `tags ${a?.label} / ${b?.label}` : '',
+        figs.some((m) => m.links !== 1) && 'not one capture link per stage',
+        viewport === 'desktop' && a && b && (a.top !== b.top || a.right > b.left) && 'stages are not side by side',
+        viewport === 'mobile' && a && b && a.bottom > b.top && 'stages are not stacked',
+        (await checkedMode(page)) !== 'side' && `mode ${await checkedMode(page)}`,
       ].filter(Boolean);
       // The two links' accessible names, as a screen reader gets them: word, "capture" and the date.
       const tree = await page.locator('.vp-pair').ariaSnapshot();
@@ -1186,46 +1169,46 @@ export const flows: readonly Flow[] = [
       if (shown.join() !== 'Open Before capture ↗,Open After capture ↗') problems.push(`visible link text ${shown.join(' | ')}`);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { notes: [`${a.label} | ${b.label}`, `URL ${new URL(page.url()).search}`, `links: ${tree.split('\n').filter((l) => l.includes('link')).map((l) => l.trim()).join(' | ')}`] };
+      return { notes: [`${a.label} | ${b.label}`, `links: ${tree.split('\n').filter((l) => l.includes('link')).map((l) => l.trim()).join(' | ')}`] };
     },
   },
   {
-    name: 'compare-onion',
-    description: 'Onion skin: "After opacity" range by keys (step 5) sets the top picture\'s opacity; Swap puts Before on top',
-    viewports: ['desktop'],
-    async run({ page, baseUrl }) {
+    name: 'compare-segmented',
+    description: 'The compare control is one segmented radio group (one tab stop): Right from Slider checks Side by side, then Single, and the URL follows; phones offer Slider and Single',
+    async run({ page, baseUrl, viewport }) {
       await openReady(page, baseUrl);
-      await openDisclosure(page, 'Compare');
+      const labels = await page.locator('#vp-modes .vp-mode').evaluateAll((ls) => ls.filter((l) => getComputedStyle(l).display !== 'none').map((l) => l.textContent?.trim()));
+      const want = viewport === 'mobile' ? 'Slider,Single' : 'Slider,Side by side,Single';
+      if (labels.join() !== want) throw new Error(`modes shown: ${labels.join()}`);
       await page.getByRole('radio', { name: 'Slider' }).focus();
-      await page.keyboard.press('ArrowRight');
-      if ((await checkedMode(page)) !== 'onion') throw new Error(`Right from Slider checked ${await checkedMode(page)}`);
-      const range = page.getByRole('slider', { name: 'After opacity' });
-      await range.focus();
-      for (const k of ['ArrowLeft', 'ArrowLeft', 'ArrowLeft']) await page.keyboard.press(k);
-      const top = () => page.evaluate(() => [getComputedStyle(document.querySelector('.vp-top')!).opacity, document.querySelector('.vp-top img')?.getAttribute('alt')]);
-      const [op, alt] = await top();
-      if (op !== '0.35' || !alt?.includes('(After)')) throw new Error(`top picture ${alt} at opacity ${op}, expected After at 0.35`);
-      await page.getByRole('button', { name: 'Swap' }).click();
-      const [op2, alt2] = await top();
-      if (op2 !== '0.35' || !alt2?.includes('(Before)') || !(await page.getByRole('slider', { name: 'Before opacity' }).count())) throw new Error(`after Swap: ${alt2} at ${op2}`);
-      return { notes: [`After at ${op}`, `Swap: Before on top at ${op2}`] };
+      const steps: string[] = [];
+      for (const _ of viewport === 'mobile' ? [1] : [1, 2]) {
+        await page.keyboard.press('ArrowRight');
+        steps.push(`${await checkedMode(page)} (view=${new URL(page.url()).searchParams.get('view')})`);
+      }
+      if ((await checkedMode(page)) !== 'single' || new URL(page.url()).searchParams.get('view') !== 'single') throw new Error(`after Right: ${steps.join(' -> ')}`);
+      await page.keyboard.press('Tab');
+      if (await page.evaluate(() => document.activeElement?.matches('input[name="vp-mode"]'))) throw new Error('the compare control has more than one tab stop');
+      return { notes: [`shown: ${labels.join(', ')}`, `Right: ${steps.join(' -> ')}`] };
     },
   },
   {
     name: 'compare-deeplink',
-    description: '?view=onion opens Onion skin and the mode persists across selection changes; an unknown view falls back to Slider and leaves the URL',
+    description: '?view=side opens Side by side and the mode persists across selection changes; a retired ?view=onion and an unknown view fall back to Slider and leave the URL',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      await openReady(page, baseUrl, '/?view=onion');
-      if ((await checkedMode(page)) !== 'onion' || !(await page.locator('.vp-onion input[type="range"]').count())) throw new Error('?view=onion did not open Onion skin');
+      await openReady(page, baseUrl, '/?view=side');
+      if ((await checkedMode(page)) !== 'side' || !(await page.locator('.vp-pair').count())) throw new Error('?view=side did not open Side by side');
       await slider(page).focus();
       await page.keyboard.press('Home');
       await expectSelected(page, defaultFixture, 0);
       const q = new URL(page.url()).searchParams;
-      if ((await checkedMode(page)) !== 'onion' || q.get('view') !== 'onion') throw new Error(`after Home: mode ${await checkedMode(page)}, URL ${page.url()}`);
-      await openReady(page, baseUrl, '/?view=zoom');
-      if ((await checkedMode(page)) !== 'slider' || new URL(page.url()).searchParams.has('view')) throw new Error(`?view=zoom: mode ${await checkedMode(page)}, URL ${page.url()}`);
-      return { notes: [`onion kept on Home (${q.toString()})`, '?view=zoom -> Slider, view dropped'] };
+      if ((await checkedMode(page)) !== 'side' || q.get('view') !== 'side') throw new Error(`after Home: mode ${await checkedMode(page)}, URL ${page.url()}`);
+      for (const view of ['onion', 'zoom']) {
+        await openReady(page, baseUrl, `/?view=${view}`);
+        if ((await checkedMode(page)) !== 'slider' || new URL(page.url()).searchParams.has('view')) throw new Error(`?view=${view}: mode ${await checkedMode(page)}, URL ${page.url()}`);
+      }
+      return { notes: [`side kept on Home (${q.toString()})`, '?view=onion and ?view=zoom -> Slider, view dropped'] };
     },
   },
   {
@@ -1323,8 +1306,8 @@ export const flows: readonly Flow[] = [
     firstView: true,
     async run({ page, baseUrl }) {
       const md = readFileSync(new URL('../examples/README.md', import.meta.url), 'utf8');
-      const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Onion skin|Single)\]\(https:\/\/pagelapse\.geekplux\.com(\/\?sample=[^)]+)\)/g)];
-      const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', 'Onion skin': 'onion', Single: 'single' };
+      const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Single)\]\(https:\/\/pagelapse\.geekplux\.com(\/\?sample=[^)]+)\)/g)];
+      const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', Single: 'single' };
       const all = md.match(/\]\(https:\/\/pagelapse\.geekplux\.com\/\?sample=/g)?.length ?? 0;
       if (all !== 7 || links.length !== all) throw new Error(`examples/README.md: ${links.length} of ${all} sample links parsed, expected 7`);
       const notes: string[] = [];
