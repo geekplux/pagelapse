@@ -203,7 +203,7 @@ export function Timeline({ timeline, selected, onSelect, labelledBy, describedBy
         >
           {thumbOf?.(tipEntry.to) && <img src={thumbOf(tipEntry.to)} width={320} height={200} alt="" />}
           <span className="mono">
-            {formatTimestampShort(tipEntry.from)} → {formatTimestampShort(tipEntry.to)} · <b>{tipEntry.significance.magnitude}</b> ·{' '}
+            {formatTimestampShort(tipEntry.from)} → {formatTimestampShort(tipEntry.to)}, <b>{tipEntry.significance.magnitude}</b>,{' '}
             {tipEntry.aiSummary ? 'AI summary' : 'auto summary'}
           </span>
           <span>{tipEntry.aiSummary ?? tipEntry.ruleSummary}</span>

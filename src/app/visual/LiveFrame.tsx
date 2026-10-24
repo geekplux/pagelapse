@@ -49,7 +49,7 @@ export function LiveFrame({ ts, page, frames, loaded, onLoad, frame, slow, onSlo
       {!done && page && <Silhouette page={page} />}
       {!done && (
         <span className="lf-tag mono">
-          text outline ·{' '}
+          text outline,{' '}
           {mounted ? 'loading the capture…' : hold ? <span className="vp-hold">the page itself loads when you pick a change or the run finishes</span> : 'waiting'}
         </span>
       )}

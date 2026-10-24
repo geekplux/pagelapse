@@ -135,7 +135,7 @@ describe('timestamps', () => {
 
   it('formats for display and for <time datetime>', () => {
     expect(timestampToIso('20140317091200')).toBe('2014-03-17T09:12:00Z');
-    expect(formatTimestampShort('20140317091200')).toBe('2014·03·17');
+    expect(formatTimestampShort('20140317091200')).toBe('17 Mar 2014');
     expect(formatTimestampLong('20140317091200')).toBe('17 March 2014');
   });
 });

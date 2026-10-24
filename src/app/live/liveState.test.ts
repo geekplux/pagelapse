@@ -20,7 +20,7 @@ describe('liveReducer', () => {
     s = liveReducer(s, { type: 'snapshot', index: 0, page: page(caps[0]!.ts, 'Old text.') });
     expect(s.next).toBe(2);
     expect(s.timeline.entries.map((e) => e.to)).toEqual([caps[1]!.ts]);
-    expect(progressText(s)).toMatch(/^Fetching capture 3 of 3 \(2016·01·01\) · we fetch slowly/);
+    expect(progressText(s)).toMatch(/^Fetching capture 3 of 3 \(1 Jan 2016\)\. We fetch slowly/);
     s = liveReducer(s, { type: 'snapshot', index: 2, page: null });
     expect(s).toMatchObject({ status: 'done', next: 3, failed: [caps[2]!.ts] });
     expect(progressText(s)).toBe('Done: 3 captures, 1 meaningful change. 1 capture could not be fetched (dashed).');

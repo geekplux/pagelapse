@@ -43,7 +43,7 @@ const SIDES = [
   ['after', '+', 'After', 'added'],
 ] as const;
 
-/** `− Before 2025·04·04` / `+ After 2025·12·18`: the sides are told apart by symbol, word, date and corner. */
+/** `− Before 4 Apr 2025` / `+ After 18 Dec 2025`: the sides are told apart by symbol, word, date and corner. */
 const Label = ({ side, ts }: { side: Side; ts: string }) => {
   const [, sym, word, op] = SIDES.find(([s]) => s === side)!;
   return (

@@ -206,7 +206,7 @@ export function DiffView({ entry, from, to }: Pick<Props, 'entry' | 'from' | 'to
       </h3>
       {structure.length > 0 && (
         <details className="fold">
-          <summary>Structure · {structureCounts(entry)}</summary>
+          <summary>Structure: {structureCounts(entry)}</summary>
           <ul className="diff-structure">
             {structure.map(([op, text]) => (
               <li key={text} data-op={op}>

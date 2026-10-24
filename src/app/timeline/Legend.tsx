@@ -10,14 +10,14 @@ interface Props {
 }
 
 /**
- * The timeline's key, folded behind "Key · N trivial hidden" ("Timeline key" with no trivial edits): the legend (`#timeline-legend`, also the slider's
+ * The timeline's key, folded behind "Key, N trivial hidden" ("Timeline key" with no trivial edits): the legend (`#timeline-legend`, also the slider's
  * description, which works while folded) and the "Show trivial edits" toggle.
  */
 export function Legend({ changes, trivial, showTrivial, onTrivial, children }: Props) {
   return (
     <details className="fold tl-key">
       <summary>
-        {trivial > 0 ? `Key · ${trivial} trivial ${showTrivial ? 'shown' : 'hidden'}` : 'Timeline key'}
+        {trivial > 0 ? `Key, ${trivial} trivial ${showTrivial ? 'shown' : 'hidden'}` : 'Timeline key'}
       </summary>
       <p className="captures-source tl-legend" id="timeline-legend">
         <span>

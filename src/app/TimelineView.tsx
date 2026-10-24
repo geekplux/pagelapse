@@ -143,8 +143,11 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
         <div className="hero" data-region="hero">
           <div className="sheet-head">
             <h2 id="sample-label">{fixture.label}</h2>
-            <p className="sheet-meta mono">
-              {snapshots.length} captures · {years}
+            <p className="sheet-meta">
+              <span>
+                <span className="num">{snapshots.length}</span> captures
+              </span>
+              <span className="num">{years}</span>
             </p>
           </div>
           {entry && shownEntry && (

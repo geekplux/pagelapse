@@ -62,18 +62,19 @@ export function liveReducer(s: LiveState, a: LiveAction): LiveState {
   }
 }
 
-const KIND = 'we fetch slowly to be kind to the Internet Archive';
+/** Shown after the progress while a run fetches; the live region announces only the part before it. */
+export const KIND = 'We fetch slowly to be kind to the Internet Archive.';
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-/** The status line; the part before ` · ` is what the live region announces. */
+/** The status line; the part before `KIND` is what the live region announces (`announced`). */
 export function progressText(s: LiveState): string {
   const n = s.captures.length;
   const host = s.url.replace(/^https?:\/\//, '').replace(/\/$/, '');
   switch (s.status) {
     case 'captures':
-      return `Looking up captures of ${host} · ${KIND}`;
+      return `Looking up captures of ${host}. ${KIND}`;
     case 'snapshots':
-      return `Fetching capture ${s.next + 1} of ${n} (${formatTimestampShort(s.captures[s.next]!.ts)}) · ${KIND}`;
+      return `Fetching capture ${s.next + 1} of ${n} (${formatTimestampShort(s.captures[s.next]!.ts)}). ${KIND}`;
     case 'cancelled':
       return n ? `Stopped after ${s.next} of ${plural(n, 'capture')}.` : 'Stopped before the capture list arrived.';
     case 'error':
@@ -82,3 +83,6 @@ export function progressText(s: LiveState): string {
       return `Done: ${plural(n, 'capture')}, ${plural(s.timeline.entries.length, 'meaningful change')}.${s.failed.length ? ` ${plural(s.failed.length, 'capture')} could not be fetched (dashed).` : ''}`;
   }
 }
+
+/** The part of a status line the live region announces: the progress without the note on fetching slowly. */
+export const announced = (text: string) => text.replace(` ${KIND}`, '');

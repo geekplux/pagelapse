@@ -15,7 +15,7 @@ import { type UrlState, changeIndex } from '../urlState.ts';
 import { Filmstrip } from '../visual/Filmstrip.tsx';
 import { VisualPane } from '../visual/VisualPane.tsx';
 import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pairOf, parseMode, showingText, sideOf, viewQuery } from '../visual/visualState.ts';
-import { progressText } from './liveState.ts';
+import { announced, progressText } from './liveState.ts';
 import { useLiveTimeline } from './useLiveTimeline.ts';
 import { useSummaries } from './useSummaries.ts';
 
@@ -94,8 +94,8 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const hold = running && !asked;
   const text = progressText(state);
 
-  // Progress for screen readers: the part before " · " (AC 22).
-  useEffect(() => announce(text.split(' · ')[0]!), [announce, text]);
+  // Progress for screen readers, without the note on fetching slowly (AC 22).
+  useEffect(() => announce(announced(text)), [announce, text]);
 
   // Focus (WCAG 2.4.3). `target` is the status text, or the empty / error card's heading, whichever is showing.
   const target = useRef<HTMLElement | null>(null);
@@ -215,9 +215,14 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
         <div className="hero" data-region="hero">
           <div className="sheet-head">
             <h2 id="live-label">{url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</h2>
-            <p className="sheet-meta mono">
-              Live{captures.length > 0 && ` · ${captures.length} captures`}
-              {span && ` · ${span}`}
+            <p className="sheet-meta">
+              <span>Live</span>
+              {captures.length > 0 && (
+                <span>
+                  <span className="num">{captures.length}</span> captures
+                </span>
+              )}
+              {span && <span className="num">{span}</span>}
             </p>
           </div>
           {error?.code === 'no_captures' ? (

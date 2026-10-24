@@ -50,7 +50,7 @@ export function LoadingStatus({ text, running, progress, onCancel, onRetry, text
       <p className="mono" tabIndex={-1} ref={textRef}>
         {running && <span className="live-dot" aria-hidden="true" />}
         {text}
-        {slow && ' · still waiting for the Internet Archive, which can take up to a minute when it is busy'}
+        {slow && ' Still waiting for the Internet Archive, which can take up to a minute when it is busy.'}
       </p>
       {/* The text says the same count, so the bar is not announced twice. */}
       {running && progress && <progress className="live-bar" max={progress[1]} value={progress[0]} aria-hidden="true" />}

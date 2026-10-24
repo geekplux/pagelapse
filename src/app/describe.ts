@@ -8,11 +8,11 @@ export function describeChange(e: TimelineEntry, i: number, n: number): string {
   return `Change ${i + 1} of ${n}: ${formatTimestampLong(e.from)} to ${formatTimestampLong(e.to)}, ${e.significance.magnitude}: ${e.ruleSummary}`;
 }
 
-/** Compact stats line, e.g. "+142 / −37 words · 2 passages added · 1 reworded". */
+/** Compact stats line, e.g. "+142 / −37 words, 2 added, 1 reworded". */
 export function statsLine({ stats: s }: TimelineEntry['record']): string {
   const parts = [`+${s.wordsAdded} / −${s.wordsRemoved} words`];
   if (s.blocksAdded) parts.push(`${s.blocksAdded} added`);
   if (s.blocksRemoved) parts.push(`${s.blocksRemoved} removed`);
   if (s.blocksModified) parts.push(`${s.blocksModified} reworded`);
-  return parts.join(' · ');
+  return parts.join(', ');
 }
