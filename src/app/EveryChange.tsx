@@ -34,46 +34,46 @@ export function TrivialToggle({ count, on, onToggle }: { count: number; on: bool
 
 /**
  * Every change, newest first: one row each (when, how much, what), the selected one marked `aria-current`; each row
- * is a button that selects its change on the ribbon and the stage. The last row offers the trivial captures.
+ * is a button that selects its change on the ribbon and the stage. The last row offers the trivial captures (alone
+ * when nothing meaningful changed).
  */
 export function EveryChange({ entries, selected, onSelect, trivial, showTrivial, onTrivial }: Props) {
-  if (!entries.length && !trivial) return null;
+  // No change to list: only the trivial line, in the flow where the change would be.
+  if (!entries.length) return <TrivialToggle count={trivial} on={showTrivial} onToggle={onTrivial} />;
   const mixed = mixedSources(entries);
   const rows = entries.map((e, i) => [e, i] as const).reverse();
   return (
     <section className="every" aria-labelledby="changes-heading" data-region="changes">
       <h3 id="changes-heading">Every change</h3>
-      {entries.length > 0 && (
-        // Safari drops list semantics when list-style is none, so the role is not redundant here.
-        // oxlint-disable-next-line jsx-a11y/no-redundant-roles
-        <ol className="changes" role="list" aria-labelledby="changes-heading">
-          {rows.map(([e, i]) => (
-            <li key={`${e.from}-${e.to}`}>
-              <button type="button" className="change" aria-current={i === selected ? 'true' : undefined} onClick={() => onSelect(i)}>
-                <span className="change-when mono">
-                  <Ts ts={e.from} month /> to <Ts ts={e.to} month />
+      {/* Safari drops list semantics when list-style is none, so the role is not redundant here. */}
+      {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles */}
+      <ol className="changes" role="list" aria-labelledby="changes-heading">
+        {rows.map(([e, i]) => (
+          <li key={`${e.from}-${e.to}`}>
+            <button type="button" className="change" aria-current={i === selected ? 'true' : undefined} onClick={() => onSelect(i)}>
+              <span className="change-when mono">
+                <Ts ts={e.from} month /> to <Ts ts={e.to} month />
+              </span>
+              <span className="change-mag" data-magnitude={e.significance.magnitude}>
+                <i style={{ width: magnitudeWidth(e.significance.score) }} aria-hidden="true" />
+                <span>
+                  {e.significance.magnitude}
+                  <span className="sr-only">,</span>
                 </span>
-                <span className="change-mag" data-magnitude={e.significance.magnitude}>
-                  <i style={{ width: magnitudeWidth(e.significance.score) }} aria-hidden="true" />
-                  <span>
-                    {e.significance.magnitude}
-                    <span className="sr-only">,</span>
-                  </span>
-                </span>
-                <span className="change-sum">
-                  {shownSummary(e)}
-                  {mixed && e.aiSummary && (
-                    <>
-                      {' '}
-                      <span className="tag">AI summary</span>
-                    </>
-                  )}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
+              </span>
+              <span className="change-sum">
+                {shownSummary(e)}
+                {mixed && e.aiSummary && (
+                  <>
+                    {' '}
+                    <span className="tag">AI summary</span>
+                  </>
+                )}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ol>
       <TrivialToggle count={trivial} on={showTrivial} onToggle={onTrivial} />
     </section>
   );

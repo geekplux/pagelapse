@@ -27,9 +27,10 @@ describe('EveryChange (one row per change, newest first)', () => {
     expect(html([entry('20200301000000', 'An AI line')])).not.toContain('class="tag"');
   });
 
-  it('ends with the trivial captures and Show them, and is gone when there is nothing to list', () => {
+  it('ends with the trivial captures and Show them (alone, without the table, when nothing changed), and is gone when there is nothing to list', () => {
     expect(html([entry('20200301000000')], 0, 3)).toMatch(/3 captures only changed dates or counters\. <button[^>]*>Show them<\/button>/);
     expect(html([], 0, 1)).toContain('1 capture only changed dates or counters.');
+    expect(html([], 0, 1)).not.toContain('Every change');
     expect(html([], 0, 0)).toBe('');
   });
 });
