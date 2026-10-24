@@ -15,6 +15,7 @@ import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
 import { changeForCapture, overviewPair, shotAlt, shotSrc, splitText } from '../src/app/visual/visualState.ts';
 import { PLAY_MS } from '../src/app/visual/usePlay.ts';
+import { PICTURE_BUDGET } from './lib/pictures.ts';
 import { isRecorded, readSampleConfig, recordedSamples } from './lib/sampleConfig.ts';
 
 export interface FlowContext {
@@ -462,6 +463,12 @@ export const flows: readonly Flow[] = [
     async run({ page, baseUrl, viewport }) {
       await openHero(page, baseUrl);
       const notes: string[] = [];
+      // The first view's pictures (the deck's thumbnails and its latest capture) stay within their budget (AC 40).
+      await page.evaluate(() => Promise.all([...document.images].map((img) => img.decode().catch(() => undefined))));
+      const pics = await page.evaluate(() => (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).filter((r) => r.name.includes('/samples/')).map((r) => r.encodedBodySize));
+      const bytes = pics.reduce((n, b) => n + b, 0);
+      if (bytes > PICTURE_BUDGET.firstView) throw new Error(`first-view pictures ${bytes} B > ${PICTURE_BUDGET.firstView} B`);
+      notes.push(`first-view pictures: ${pics.length} files, ${bytes} B`);
       const h1 = (await page.locator('h1').textContent())?.trim();
       if (h1 !== 'See how any web page changed over the years') throw new Error(`h1 "${h1}"`);
       if ((await page.getByRole('textbox', { name: 'Page address' }).count()) !== 1) throw new Error('no "Page address" field');
@@ -918,8 +925,7 @@ export const flows: readonly Flow[] = [
       const f = fixtures.find((x) => x.id === 'git-scm')!;
       const t = timelineOf(f);
       await openReady(page, baseUrl, `/?sample=git-scm`);
-      // From the decade compare, Previous first narrows to the latest change, then steps back.
-      await page.locator('.diff-nav .btn').first().click();
+      // git-scm opens on its featured change, the latest (only the default sample opens on the decade compare); Previous steps back.
       await expectSelected(page, f, t.entries.length - 1);
       await page.locator('.diff-nav .btn').first().click();
       await expectSelected(page, f, t.entries.length - 2);
@@ -1002,18 +1008,21 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-default',
-    description: 'The first view: the decade compare (first ↔ latest capture) in Slider, named "First and latest", the title block and stage above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
+    description: 'The default sample\'s workspace: the decade compare (first ↔ latest capture) in Slider, named "First and latest", the title block and stage above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, pictures within their budgets',
     shot: 'hero',
     schemes: ['light', 'dark'],
     cvd: true,
     async run({ page, baseUrl, viewport }) {
+      const workspacePictures = 2 * PICTURE_BUDGET.full + defaultFixture.snapshots.length * PICTURE_BUDGET.thumb;
       const timeToReadyMs = await openReady(page, baseUrl);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       const { from, to } = hero;
       const said = await expectSlider(page, 50);
       // Honest about the pair: the step label and the change line say first and latest capture, not one change.
-      const named = await page.evaluate(() => [document.querySelector('.step-label [aria-hidden]')?.textContent ?? '', document.querySelector('#change-heading')?.textContent ?? ''] as const);
-      if (named[0] !== 'First and latest' || !/^first → capture to latest,/.test(named[1].trim())) throw new Error(`pair not named: step "${named[0]}", heading "${named[1]}"`);
+      // (The change section's heading is the summary since phase 5; its Before and After dates name the pair.)
+      const named = await page.evaluate(() => [document.querySelector('.step-label [aria-hidden]')?.textContent ?? '', [...document.querySelectorAll('.cs-when time [aria-hidden="true"]')].map((t) => t.textContent?.trim()).join(' to ')] as const);
+      const pair = [from, to].map((ts) => formatTimestampShort(ts)).join(' to ');
+      if (named[0] !== 'First and latest' || named[1] !== pair) throw new Error(`pair not named: step "${named[0]}", dates "${named[1]}", expected "${pair}"`);
       if (viewport !== 'mobile' && (await page.locator('.rb-th').count()) !== defaultFixture.snapshots.length) throw new Error('not one thumbnail per capture');
       if (new URL(page.url()).search !== `?sample=${DEFAULT_ID}`) throw new Error(`first view rewrote the URL: ${page.url()}`);
       await page.waitForTimeout(500);
@@ -1039,13 +1048,15 @@ export const flows: readonly Flow[] = [
         timeToReadyMs > 1000 && `ready ${timeToReadyMs} ms > 1,000`,
         m.visual > 1500 && `visual-ready ${m.visual} ms > 1,500`,
         m.cls >= 0.02 && `CLS ${m.cls.toFixed(3)}`,
-        m.bytes > 160_000 && `first-view pictures ${m.bytes} B > 160 KB`,
+        // Since the redesign the first view is the hero (its pictures are measured by the hero flow and pnpm size): the
+        // default sample's workspace loads the stage's two pictures and a thumbnail per capture, each within its budget.
+        m.bytes > workspacePictures && `workspace pictures ${m.bytes} B > ${workspacePictures} B`,
         viewport === 'desktop' && m.fold.some((y) => y > 800) && `title or the stage's upper half below the fold: ${m.fold.map(Math.round).join(', ')}`,
         viewport === 'mobile' && m.paneWidth < 300 && `pane only ${m.paneWidth}px wide on mobile`,
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { timeToReadyMs, notes: [`decade ${from}-${to} in Slider mode: ${said}`, `heading "${named[1].trim()}"`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (title block, stage middle): ${m.fold.map(Math.round).join(', ')}`] };
+      return { timeToReadyMs, notes: [`decade ${from}-${to} in Slider mode: ${said}`, `dates ${named[1]}`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `workspace pictures: ${m.count} files, ${m.bytes} B (limit ${workspacePictures} B)`, `fold (title block, stage middle): ${m.fold.map(Math.round).join(', ')}`] };
     },
   },
   {
