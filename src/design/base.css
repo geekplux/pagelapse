@@ -156,7 +156,7 @@ ins::after, del::after { content: "] "; }
 
 /* Every change: one row per change, newest first (when, how much, what); the selected row and a hovered one sit on
    sand-2. The rows' padding hangs 12 px outside the column, so their text lines up with the heading. */
-.every { margin-top: var(--space-4); }
+.every { margin-top: calc(8 * var(--space-1)); }
 @media (min-width: 40rem) { .every { margin-top: calc(2 * var(--space-4)); } }
 .changes { list-style: none; padding: 0; margin: var(--space-3) calc(-3 * var(--space-1)) 0; }
 .change {

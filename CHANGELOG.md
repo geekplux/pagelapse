@@ -19,10 +19,14 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - The visual pane: what each sample capture looked like, from committed screenshots.
 - The Pagelapse name, mark and wordmark.
 - A diff view with `+` / `−` / `~` symbols, underline and strike-through. In the redesign it sits beside the change (its two captures, summary and source, words, new, gone and renamed sections, and archive links), shows a long diff's first changes with "Show n more changes", and an "Every change" table lists every change, newest first.
-- A time ribbon: a thumbnail per capture joined by a hairline to its date on a year axis, a bar per change sized by how much changed, keyboard and drag scrubbing, and a list of all changes. It replaced the earlier filmstrip and timeline in the redesign.
+- A time ribbon: a thumbnail per capture joined by a hairline to its date on a year axis, a bar per change sized by how much changed, and keyboard and drag scrubbing. It replaced the earlier filmstrip and timeline in the redesign; the list of changes is now the "Every change" table under the diff.
 - Change detection: readable-text extraction, a word-level diff, significance scoring and a trivial-edit filter (whitespace, dates, counters, tracking parameters), tuned against an evaluation set.
 - Three built-in samples (git-scm.com, Wikipedia "Internet Archive" and rust-lang.org), recorded from Arquivo.pt and committed so the first view works offline.
 - The design system: the "archivist's proof sheet" palette and type, checked for contrast and colour-vision deficiencies.
 - The toolchain: React, Vite, TypeScript, Vitest, oxlint, headless-browser smoke tests, and size budgets.
+
+### Fixed
+
+- The automatic summary no longer reports a section rename when one side is a number, a date or a count (on the Wikipedia sample, comparing the first capture with the latest read `Renamed section "40" to "2024 cyberattacks"`).
 
 [Unreleased]: https://github.com/geekplux/pagelapse/commits/main
