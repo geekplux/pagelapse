@@ -1084,19 +1084,30 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-failed',
-    description: 'A capture with no picture shows the hatched card, its reason and "Open capture"; its thumbnail says "no picture"',
+    description: 'A capture with no picture: in Slider the stage keeps its place with the reason as a tag on the picture and no caption; in Single the hatched card, its reason and "Open capture"; its thumbnail says "no picture"',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const f = fixtures.find((x) => x.id === 'rust-lang')!;
       const shot = f.snapshots.find((s) => s.shot?.status === 'failed')!;
       const card = page.locator('.vp-none', { hasText: 'No picture of this capture' });
-      // Single: Slider's no-picture fallback keeps the stage in place and has no caption (phase 3).
+      const place = () => page.evaluate(() => {
+        const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+        return [r('.vpane .vp-mat').top, r('.vpane .vp-mat').height, r('.controls').top].map(Math.round).join(',');
+      });
+      // Slider on a pair with pictures, then on the pair lacking one: the fallback keeps the stage and the controls where they were.
+      await openReady(page, baseUrl, `/?sample=${f.id}`);
+      const before = await place();
+      await openReady(page, baseUrl, `/?sample=${f.id}&at=${shot.ts}`);
+      const tag = await page.locator('.vpane .vp-mat', { hasText: /◑ No picture of the (Before|After) capture/ }).count();
+      const after = await place();
+      const caption = await page.locator('.vpane .vp-cap').count();
+      if (tag !== 1 || after !== before || caption) throw new Error(`Slider fallback: tag ${tag}, stage and controls ${before} -> ${after}, ${caption} captions`);
       await openReady(page, baseUrl, `/?sample=${f.id}&at=${shot.ts}&view=single`);
       await card.waitFor({ timeout: 2_000 });
       const href = await page.locator('.vp-cap a').getAttribute('href');
       if (href !== viewCaptureUrl(f.source.archive, shot.ts, f.url)) throw new Error(`open capture link ${href}`);
       if ((await page.locator('.rb-none', { hasText: 'no picture' }).count()) !== f.snapshots.filter((s) => !s.shot?.file).length) throw new Error('"no picture" thumbnails');
-      return { notes: [`${shot.ts}: hatched card (${shot.shot!.reason}), link ${href}`] };
+      return { notes: [`Slider fallback: tag on the picture, stage and controls at ${before}`, `${shot.ts}: hatched card (${shot.shot!.reason}), link ${href}`] };
     },
   },
   {
