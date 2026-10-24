@@ -25,7 +25,7 @@ export interface LiveState {
   /** How many captures, in time order, have joined the timeline (or failed). */
   next: number;
   timeline: Timeline;
-  /** Captures that could not be fetched (dashed on the timeline). */
+  /** Captures that could not be fetched ("not fetched" thumbnails on the ribbon). */
   failed: string[];
   error?: ApiError;
 }
@@ -80,7 +80,7 @@ export function progressText(s: LiveState): string {
     case 'error':
       return s.error?.message ?? '';
     case 'done':
-      return `Done: ${plural(n, 'capture')}, ${plural(s.timeline.entries.length, 'meaningful change')}.${s.failed.length ? ` ${plural(s.failed.length, 'capture')} could not be fetched (dashed).` : ''}`;
+      return `Done: ${plural(n, 'capture')}, ${plural(s.timeline.entries.length, 'meaningful change')}.${s.failed.length ? ` ${plural(s.failed.length, 'capture')} could not be fetched.` : ''}`;
   }
 }
 

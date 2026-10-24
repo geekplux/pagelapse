@@ -87,6 +87,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
   const outer = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLOListElement>(null);
+  const sliderEl = useRef<HTMLDivElement>(null);
   const compact = useMedia(COMPACT);
   const [cw, setCw] = useState(0);
   const [scrollX, setScrollX] = useState(0);
@@ -127,7 +128,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
 
   // The thumbnails' roving tab stop; it snaps back to the shown capture whenever that changes.
   const sel = items.findIndex((v) => v.ts === at);
-  const [roving, setRoving] = useState({ sel, i: sel });
+  const [roving, setRoving] = useState({ sel, i: Math.max(0, sel) });
   const focus = roving.sel === sel ? roving.i : Math.max(0, sel);
   const thumbs = () => strip.current?.querySelectorAll('button') ?? [];
   const onStripKey = (e: KeyboardEvent) => {
@@ -224,7 +225,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
                   side && SIDE[side],
                   trivial.has(v.ts) && 'trivial edit',
                   v.status === 'partial' && 'partial copy',
-                  none && (failed.has(v.ts) ? 'could not be fetched' : 'no picture'),
+                  none && (failed.has(v.ts) ? 'not fetched' : 'no picture'),
                 ].filter(Boolean).join(', ');
                 return (
                   <li key={v.ts}>
@@ -267,6 +268,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
           {entry ? (
             <div
               className="rb-slider"
+              ref={sliderEl}
               // A native range input cannot hold the SVG axis; this div implements the APG slider pattern.
               // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
               role="slider"
@@ -291,7 +293,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
         <div
           className="rb-tip"
           aria-hidden="true"
-          {...tipHandlers(tip!)}
+          {...tipHandlers(tip!, () => sliderEl.current)}
           style={{ left: clamp(tipBar.x - scrollX, half, cw - half), top: stripH + AXIS - top - (tipBar.trivial ? 6 : tipBar.h) - GAP }}
         >
           <span className="mono">

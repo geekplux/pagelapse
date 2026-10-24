@@ -63,12 +63,20 @@ export function useScrubber(
     // `dismiss` only calls state setters and clears the timer ref.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [hovering]);
-  const nearest = (e: PointerEvent<HTMLElement>) => {
-    const x = e.clientX - e.currentTarget.getBoundingClientRect().left;
+  const nearest = (e: PointerEvent<HTMLElement>, el: HTMLElement = e.currentTarget) => {
+    const x = e.clientX - el.getBoundingClientRect().left;
     const index = nearestX(xs, x);
     return { index, dist: index < 0 ? Infinity : Math.abs(xs[index]! - x) };
   };
   const pick = (i: number) => i >= 0 && i !== selected && onSelect(i);
+  /** A press on the slider `el` (or on the tooltip over it): capture the pointer there and select the nearest change. */
+  const press = (e: PointerEvent<HTMLElement>, el: HTMLElement) => {
+    if (e.button !== 0) return;
+    el.setPointerCapture(e.pointerId);
+    dragging.current = true;
+    moved.current = false;
+    pick(nearest(e, el).index);
+  };
   return {
     hover,
     focusTip,
@@ -86,13 +94,7 @@ export function useScrubber(
         clearNow();
         pick(i);
       },
-      onPointerDown(e: PointerEvent<HTMLElement>) {
-        if (e.button !== 0) return;
-        e.currentTarget.setPointerCapture(e.pointerId);
-        dragging.current = true;
-        moved.current = false;
-        pick(nearest(e).index);
-      },
+      onPointerDown: (e: PointerEvent<HTMLElement>) => press(e, e.currentTarget),
       onPointerMove(e: PointerEvent<HTMLElement>) {
         const n = nearest(e);
         const near = n.dist <= HOVER_PX;
@@ -118,9 +120,19 @@ export function useScrubber(
       onFocus: (e: { currentTarget: HTMLElement }) => setFocusTip(e.currentTarget.matches(':focus-visible')),
       onBlur: () => setFocusTip(false),
     },
-    /** For the tooltip: entering it keeps (or pins) its change as hovered; leaving it clears unless back on the strip. */
-    tipHandlers: (index: number) => ({
+    /**
+     * For the tooltip: entering it keeps (or pins) its change as hovered; leaving it clears unless back on the slider.
+     * It sits over the slider, so a press on it is a press on the slider (`slider`), which then takes focus.
+     */
+    tipHandlers: (index: number, slider: () => HTMLElement | null) => ({
       onPointerEnter: () => hoverAt(index),
+      onPointerDown(e: PointerEvent<HTMLElement>) {
+        const el = slider();
+        if (!el || e.button !== 0) return;
+        e.preventDefault();
+        el.focus();
+        press(e, el);
+      },
       onPointerLeave: (e: PointerEvent<HTMLElement>) => leftFor(e, '.rb-slider') || clearSoon(),
     }),
   };
