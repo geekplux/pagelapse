@@ -377,11 +377,11 @@ export const liveFlows: readonly Flow[] = [
       const values = () => slider.evaluate((el) => `${el.getAttribute('aria-valuenow')}/${el.getAttribute('aria-valuemax')}`);
       const before = await values();
       const max = Number(before.split('/')[1]);
-      // Wait until more changes have arrived than the slider shows (the changes list keeps growing).
-      await page.waitForFunction((n) => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]) > n, max, { timeout: 10_000 });
+      // Wait until more changes have arrived than the slider shows (Every change keeps growing, a row each).
+      await page.waitForFunction((n) => document.querySelectorAll('.changes .change').length > n, max, { timeout: 10_000 });
       const during = await values();
       if (during !== before) throw new Error(`slider changed from ${before} to ${during} without input`);
-      const listed = () => page.evaluate(() => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]));
+      const listed = () => page.evaluate(() => document.querySelectorAll('.changes .change').length);
       await page.keyboard.press('End');
       const [end, now] = [await values(), await listed()];
       if (end !== `${now}/${now}` || now <= max) throw new Error(`End went to ${end}, expected the newest of ${now} changes`);
@@ -389,7 +389,7 @@ export const liveFlows: readonly Flow[] = [
         .waitForFunction(() => /\d+ more changes? arrived\./.exec(document.querySelector('.rb-live [role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
         .then((h) => h.jsonValue());
       // More changes arrive: the slider stays put again until the next key.
-      await page.waitForFunction((n) => Number(/\((\d+)\)/.exec(document.querySelector('#changes-heading')?.textContent ?? '')?.[1]) > n, now, { timeout: 10_000 });
+      await page.waitForFunction((n) => document.querySelectorAll('.changes .change').length > n, now, { timeout: 10_000 });
       const still = await values();
       if (still !== end) throw new Error(`slider changed from ${end} to ${still} without input`);
       return { notes: [`slider ${before} on focus, ${during} while changes arrived, ${end} after End (newest), ${still} while more arrived`, `announced "${said}"`] };
