@@ -23,7 +23,7 @@ const KEY_ROW: [string[], string][] = [
 /** More by the author, in this order. */
 const MORE: [string, string][] = [
   ['geekplux.com', 'https://geekplux.com'],
-  ['Vert', 'https://vert.geekplux.org'],
+  ['Vert', 'https://vert.geekplux.com'],
   ['Explorable', 'https://explorable.geekplux.com'],
   ['Reasontrail', 'https://reasontrail.geekplux.com'],
   ['markvis', 'https://github.com/geekplux/markvis'],
