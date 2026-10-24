@@ -67,7 +67,6 @@ How it stays CVD-safe and never colour-alone:
 - **Single:** one picture (After by default). A two-button toggle `− Before | + After` (`aria-pressed`) flips sides without moving focus.
 - **Side by side:** two mats with their own caption strips. At equal width on desktop; stacked on mobile.
 - **Slider:** After is drawn over Before and clipped at the divider (`clip-path: inset(0 0 0 var(--split))`, set via CSSOM, which the deploy CSP allows). The divider is a 2 px `--ink` line with a 2 px `--card` halo. The handle is a 32 px `--card` circle with a `--ink` border and `‹ ›` chevrons. "− Before 2013·11·06" and "+ After 2025·12·18" labels are pinned to the top corners on `--card` chips. The handle starts at 50%.
-- **Onion skin:** After is stacked on Before with the "After opacity" range (default 50%) and a "Swap" button. Labels as above.
 - **Live frames** use the same modes. A 1280×800 frame is scaled into the mat with a CSS transform, so the archived page renders at desktop layout. In compare modes, frames are `inert` with `pointer-events: none`, and a note says "Comparing the top of each page". Single mode lets the user scroll the archived page.
 - **Filmstrip:**
   - The selected frame has a 3 px `--ink` outline, a caret above it and `aria-current`.
@@ -133,7 +132,7 @@ The planner drafted these rules; phase 17 confirmed them against its 1440/390 au
 |---|---|---|---|
 | **Sample hero, desktop** (first load, ≥ 960 px) | The picture in Slider mode on the featured change. It is the largest element on screen, at least 58% of the viewport width at 1440, with its top no more than 220 px from the top of the page | The site title and one mono meta line (`14 captures · 2013–2025`). The change line: dates, magnitude word, summary and its source label. One controls group: Play, `‹ Prev · 9 / 9 · Next ›`, Compare, Change details; Compare and Change details wrap below Prev/Next. A one-line caption under the picture. The scrub strip (filmstrip on top of the timeline) starts in the first viewport | See the disclosure list below |
 | **Sample hero, mobile** (< 640 px) | The same picture at full width (16 px gutters), with its top no more than 280 px from the top | A one-line caption (`#14 · 2025·12·18 · Open capture ↗`), the change line and the controls row. The sample switch is a single row of short text toggles ("git-scm · Wikipedia · Rust"; each accessible name contains its visible label) | The same list |
-| **Other compare modes** (Single, Side by side, Onion skin) | The picture or pictures | As for the hero; the Before/After toggle only in Single, and the opacity range and Swap only in Onion | As for the hero |
+| **Other compare modes** (Single, Side by side) | The picture or pictures | As for the hero; the Before/After toggle only in Single | As for the hero |
 | **Text diff** (scrolled to "What the text says") | The diff body (72ch) | The section heading with both dates, and Prev/Next | The Structure list (its summary gives counts, e.g. "Headings: 4 added, 3 removed, 1 renamed"), the "Diff key", and unchanged runs (already collapsed) |
 | **Live, running** | The scrub strip filling in, with the progress line (counter, determinate bar, Cancel) at the top of the side column (directly under the pane on phones); at 1440×900 the thumbnails stay fully in view | The pane shows the selected capture's silhouette at reduced emphasis. No frame loads until the user picks a change (existing rule). Cancel is a quiet button | As for the hero |
 | **Live, done** | The replay pane (Single mode) | As for the hero (no Play in live mode) | As for the hero |
@@ -163,7 +162,7 @@ All of these use native `<details>`/`<summary>` and are **closed by default at e
   - Copy link.
 - **Filmstrip:**
   - The visible explanation ("14 captures, oldest first… Arrow keys…") becomes a hidden `#film-hint` paragraph, shipped as the **focused frame's** `aria-describedby="film-hint"` (the strip's one tab stop), so it is read when the strip gets focus.
-  - A footer disclosure, **"Keyboard shortcuts"**, lists every key for the timeline, filmstrip, slider, onion skin, Play, the Before / After toggle (Single) and the Compare picker.
+  - A footer disclosure, **"Keyboard shortcuts"**, lists every key for the timeline, filmstrip, slider, Play, the Before / After toggle (Single) and the Compare picker.
 - **Timeline:**
   - The legend (minor / moderate / major marks, trivial ticks) and "Show trivial edits" go behind **"Key · 4 trivial hidden"** (**"Timeline key"** when there are no trivial edits).
   - The trivial count stays visible in the summary text.
@@ -252,7 +251,7 @@ The same region cap applies to every audited state view.
 
 - **Measures** (`scripts/smoke-calm.ts`): an element counts when it is visible and intersects the first viewport. Framed boxes are non-inline elements of at least 48×24 px with a border on 3 or more sides, a box-shadow, or a background other than `--paper`, outside form controls, `<summary>`, `.btn`, the picture mat and the filmstrip's frames. Eyebrows are the topmost uppercase mono elements with text. `calm-shots` is folded into `calm-audit`: every audit flow saves its first-view shot.
 - **Tab stops** exclude the wordmark's home link, like the skip links (site chrome on every view; the drafted budget did not list it).
-- **The compare pair's links:** in Slider and Onion skin the caption carries no links; "View capture" for Before and After are in Change details (AC 12, one step away). Single has "Open capture" in the caption; Side by side has one per print.
+- **The compare pair's links:** in Slider the caption carries no links; "View capture" for Before and After are in Change details (AC 12, one step away). Single has "Open capture" in the caption; Side by side has one per print.
 - **Before / After** is one roving tab stop (Left / Right move between the two radios (a radio group)), like the filmstrip, so a live run's first view stays within the budget with Cancel.
 - **The sticky bar** is the in-flow Previous / Next itself, fixed to the bottom on phones once its row has scrolled away above; there is never a second copy of the buttons.
 - **Header:** a visible quiet "Try" (above); the URL field keeps a visible sentence-case label.
