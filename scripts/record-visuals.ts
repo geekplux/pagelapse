@@ -4,6 +4,7 @@
 // and is never imported by tests.
 //
 // Usage: pnpm record:visuals [--only <id>[,<id>…]] [--max <captures to load this run>] [--offline] [--dry-run]
+// Chrome: /usr/bin/google-chrome, or set CHROME_PATH (macOS: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome").
 // It pictures recorded samples only: run `pnpm record:samples` for a new entry first (an entry without its fixture is skipped).
 // The capture's `mp_` replay is loaded in an iframe of a local page: framed, pywb's top-frame
 // redirect into Arquivo.pt's own viewer does not fire. Only arquivo.pt hosts load (pages still
@@ -142,7 +143,7 @@ const deltas = [['id', 'change', 'visual delta', 'shots']];
 
 try {
   if (!args['dry-run']) {
-    browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--disable-dev-shm-usage', '--no-sandbox'] });
+    browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? '/usr/bin/google-chrome', headless: true, args: ['--disable-dev-shm-usage', '--no-sandbox'] });
   }
   const context = await browser?.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, reducedMotion: 'reduce', timezoneId: 'UTC', userAgent: USER_AGENT });
   await context?.route('**/*', (route) => {

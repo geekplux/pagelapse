@@ -6,17 +6,46 @@ The main extension points, with the files to touch and the checks that keep them
 
 A sample is a committed fixture (`src/samples/<id>.json`) plus its pictures (`public/samples/<id>/`). It must be openly licensed, have at least 8 distinct captures, tell a visible story (a redesign, a rewritten pitch), and stay away from finance topics.
 
-1. Add an entry to `src/samples/samples.config.json`: `id`, `label`, `url`, `description`, `maxChars`, `license` (SPDX id) and `attribution`. Optional fields:
-   - `dropBlocks`: a regular expression for text blocks to trim (the Wikipedia sample uses it to drop monetary figures);
+The options come from `src/samples/samples.config.json`, in its order; the first recorded entry is the default (Wikipedia: Internet Archive). The app offers only entries whose fixture file exists (`import.meta.glob` in `src/samples/index.ts`), so an entry can wait in the config until it is recorded: it is not a hero option or a menu item, and its `?sample=` link opens the default.
+
+1. Add an entry to the config: `id`, `label` (the option shows it without " home page"), `url`, `description`, `maxChars`, `license` (an SPDX id, or a `LicenseRef-` id explained in the attribution) and `attribution`. Optional fields:
+   - `dropBlocks`: a regular expression for text blocks to trim (the samples use it to drop monetary figures and donation appeals);
    - `visualRedact`: elements to hide before screenshotting, and the note that says so;
    - `visualDrop`: captures whose picture misrepresents the page (for example, unstyled), marked as no picture with a reason;
-   - `featured`: the first view's change, `"<fromTs>-<toTs>"`.
-2. Record the text: `pnpm record:samples --only <id> --dry-run`, then without `--dry-run`. It reads from the Internet Archive by default. `--archive arquivo-pt` uses Arquivo.pt, which is what the current samples were recorded from.
-3. Record the pictures: `pnpm record:visuals --only <id>`. It currently replays captures from Arquivo.pt only, one at a time, and prints each picture's status plus a visual-delta table. Pick `featured` from that table (a meaningful change whose two pictures differ visibly, both `ok`), set it in the config, and re-run with `--offline` to write it into the fixture without any network.
-4. Register it in `src/samples/index.ts` with a `chip` label, a `short` label for phones, and a lazy `import()` (only the default sample is bundled into the first load).
-5. Run `pnpm test` (`samples.test.ts` validates the fixture, the pictures, their sizes and orphans) and `pnpm build && pnpm size` (the image budget is in [CONTRIBUTING.md](../CONTRIBUTING.md#samples-pictures-and-the-image-budget)).
+   - `featured`: the change a sample other than the default opens on, `"<fromTs>-<toTs>"` (the default opens on its decade compare).
+2. Record the text: `pnpm record:samples --only <id> --dry-run`, then without `--dry-run`. `--only` takes a comma-separated list. It reads from the Internet Archive by default; `--archive arquivo-pt` uses Arquivo.pt, which is what the current samples were recorded from.
+3. Record the pictures: `pnpm record:visuals --only <id>`. It replays the fixture's captures from Arquivo.pt only, one at a time, and prints each picture's status plus a visual-delta table. Pick `featured` from that table (a meaningful change whose two pictures differ visibly, both `ok`), set it in the config, and re-run with `--offline` to write it into the fixture without any network.
+4. Run `pnpm test` (`samples.test.ts` validates the fixture and its money filter; `scripts/lib/pictures.test.ts` the pictures, their sizes and orphans) and `pnpm build && pnpm size` (the image budget is in [CONTRIBUTING.md](../CONTRIBUTING.md#samples-pictures-and-the-image-budget)).
 
 Both recorders cache everything under `.cache/record/`, so a re-run never refetches a capture.
+
+### Recording NASA and Creative Commons
+
+`nasa` (www.nasa.gov, a US government work) and `creative-commons` (creativecommons.org, CC BY 4.0) are in the config with their licences, attributions and money filters, but not recorded: the archives could not be reached from the machine that built them. On a machine with network access and Chrome:
+
+```sh
+pnpm i
+# Text: the same captures the pictures replay (Arquivo.pt), checked first with a dry run
+pnpm record:samples --only nasa,creative-commons --archive arquivo-pt --dry-run
+pnpm record:samples --only nasa,creative-commons --archive arquivo-pt
+# Pictures (one capture every 5 s or more); on macOS point at Chrome first:
+# export CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+pnpm record:visuals --only nasa,creative-commons
+# Set "featured" for each from the delta table in samples.config.json, then write it in without the network
+pnpm record:visuals --only nasa,creative-commons --offline
+pnpm check && pnpm size && pnpm check:docs
+```
+
+Then review both samples in `pnpm dev` (hidden money figures, `partial` or `failed` pictures) and commit:
+
+- `src/samples/nasa.json` and `src/samples/creative-commons.json`;
+- `public/samples/nasa/` and `public/samples/creative-commons/`;
+- `src/samples/samples.config.json` (the `featured` pairs, and any `visualDrop`).
+
+They appear right after Wikipedia in the hero and the address menu. Two things to settle at the same time:
+
+- **The image budget.** All sample pictures together may take 2.2 MB, and the three current samples use about 1.7 MB, so five samples will not fit. Removing git-scm and rust-lang (their config entries, fixtures and `public/samples/` folders) makes room; several unit tests and smoke flows also use `git-scm.json` as a fixture, so move those to another sample in the same change.
+- **The credits.** Add the two pages to the README's Credits and to `public/samples/README.md`.
 
 ## The summariser interface
 
@@ -50,9 +79,9 @@ The recorders accept the new archive right away. The Worker (`worker/routes/capt
 
 ## Theme tokens
 
-- Colours live in `src/design/palette.ts` (light and dark) and are mirrored in `src/design/tokens.css`. `palette.test.ts` keeps the two equal and checks text contrast (4.5:1), graphic contrast (3:1), and the separation of added and removed under protanopia, deuteranopia and tritanopia.
+- Colours are Radix sand (neutral), cyan (Before, removed) and amber (After, added, the selected change) in `src/design/palette.ts` (light and dark), mirrored in `src/design/tokens.css`. `palette.test.ts` keeps the two equal and checks text contrast (4.5:1), graphic contrast (3:1), and the separation of Before and After under protanopia, deuteranopia and tritanopia.
+- `accent.test.ts` keeps cyan and amber to the places that pair them with a word, a symbol, a ring or a text style. `design.test.ts` keeps the four type sizes (12, 14, 20, 40), the two families and the 0.5px hairlines.
 - Spacing uses `--space-1` to `--space-6` (4, 8, 16, 24, 40, 64 px). `spacing.test.ts` fails on any other margin, padding, gap or offset.
-- There is one accent (`--accent`, which is `--ink`). `accent.test.ts` guards it. Hues are only for data (added and removed, the magnitude ramp), each paired with a symbol or a word.
 - The dark theme follows `prefers-color-scheme`.
 
 ## Optional screenshot provider (designed, not built)
