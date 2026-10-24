@@ -26,6 +26,8 @@ export const samples: readonly SampleEntry[] = [
 
 /** The sample the hero deals as its deck of captures (DESIGN.md: Wikipedia, whatever the default sample is). */
 export const DECK_SAMPLE = 'wikipedia-internet-archive';
+/** Its pictured captures: the deck keeps their height while the sample loads (samples.test.ts keeps it true). */
+export const DECK_CAPTURES = 14;
 
 /** A page address as the field shows it: no scheme, no trailing slash (`en.wikipedia.org/wiki/Internet_Archive`). */
 export const displayAddress = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
@@ -57,5 +59,7 @@ export function changePictures(f: SampleFixture, pair?: string): string[] {
 const hero = overviewPair(defaultSample.snapshots);
 const heroPair = hero ? `${hero.from}-${hero.to}` : defaultSample.featured;
 
-// The hero pictures start loading before React's first render (D23).
-if (typeof Image === 'function') for (const src of changePictures(defaultSample, heroPair)) void decodePicture(src);
+// A deep link to the default sample starts its decade pictures before React's first render (D23); the hero (no
+// `?sample=`) does not need them.
+if (typeof Image === 'function' && new URLSearchParams(location.search).get('sample') === defaultSample.id)
+  for (const src of changePictures(defaultSample, heroPair)) void decodePicture(src);

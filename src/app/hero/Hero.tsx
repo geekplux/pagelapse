@@ -1,5 +1,5 @@
 import type { SampleFixture } from '../../core/types.ts';
-import type { SampleEntry } from '../../samples/index.ts';
+import { DECK_CAPTURES, type SampleEntry } from '../../samples/index.ts';
 import { PageIcon, UrlForm } from '../UrlForm.tsx';
 import { Deck } from './Deck.tsx';
 import { monthYear } from './deck.ts';
@@ -34,14 +34,13 @@ export function Hero({ samples, onSample, onUrl, deck, onCapture }: Props) {
           ))}
         </div>
       </section>
-      {deck && first && latest && (
-        <figure className="intro-deck">
-          <Deck fixture={deck} onOpen={onCapture} />
-          <figcaption>
-            The Wikipedia article on the Internet Archive, {deck.snapshots.length} captures from {monthYear(first)} to {monthYear(latest)}.
-          </figcaption>
-        </figure>
-      )}
+      {/* Laid out before the Wikipedia sample arrives, at its height, so nothing below it moves. */}
+      <figure className="intro-deck" aria-busy={!deck}>
+        <Deck fixture={deck} count={DECK_CAPTURES} onOpen={onCapture} />
+        <figcaption>
+          {deck && first && latest && `The Wikipedia article on the Internet Archive, ${deck.snapshots.length} captures from ${monthYear(first)} to ${monthYear(latest)}.`}
+        </figcaption>
+      </figure>
     </div>
   );
 }

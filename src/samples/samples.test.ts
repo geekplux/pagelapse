@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseSampleFixture } from '../core/fixture.ts';
-import { defaultSample, samples } from './index.ts';
+import { DECK_CAPTURES, DECK_SAMPLE, defaultSample, samples } from './index.ts';
 import config from './samples.config.json';
 
 const RAW = import.meta.glob<string>(['./*.json', '!./samples.config.json'], { query: '?raw', import: 'default', eager: true });
@@ -42,6 +42,11 @@ describe('committed samples', () => {
 
   it('default sample is <= 40 KB gzip (AC 30)', async () => {
     expect(await gzipBytes(RAW[`./${defaultSample.id}.json`]!)).toBeLessThanOrEqual(40 * KB);
+  });
+
+  it('the hero deck reserves the height of its sample\'s pictured captures', () => {
+    const f = parseSampleFixture(JSON.parse(RAW[`./${DECK_SAMPLE}.json`]!));
+    expect(f.snapshots.filter((s) => s.shot?.file)).toHaveLength(DECK_CAPTURES);
   });
 
   it('loads every registered sample', async () => {

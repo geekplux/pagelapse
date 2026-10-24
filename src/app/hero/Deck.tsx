@@ -4,7 +4,7 @@ import { buildTimeline } from '../../core/timeline.ts';
 import { formatTimestampLong, formatTimestampShort } from '../../core/timestamp.ts';
 import type { SampleFixture } from '../../core/types.ts';
 import { shotSrc } from '../visual/visualState.ts';
-import { AXIS_Y, deckLayout } from './deck.ts';
+import { AXIS_Y, deckHeight, deckLayout } from './deck.ts';
 
 /** The deal plays once per page load, not again when Back returns to the hero. */
 let dealt = false;
@@ -27,30 +27,38 @@ function useWidth() {
   return [ref, width] as const;
 }
 
+interface Props {
+  /** The deck's sample, once loaded; until then the deck keeps the height of `count` cards. */
+  fixture: SampleFixture | undefined;
+  count: number;
+  onOpen: (ts: string) => void;
+}
+
 /**
  * Every pictured capture of `fixture` as a card at its date, the latest whole on the right. Hover or focus lifts a
  * card, shows its date and turns its change bar amber; each card is a button that opens that capture.
  */
-export function Deck({ fixture, onOpen }: { fixture: SampleFixture; onOpen: (ts: string) => void }) {
+export function Deck({ fixture, count, onOpen }: Props) {
   const [ref, width] = useWidth();
   const [hot, setHot] = useState(-1);
   const [deal] = useState(() => !dealt);
   useEffect(() => {
     dealt = true;
   }, []);
-  const shots = useMemo(() => fixture.snapshots.flatMap((s) => (s.shot?.file ? [{ ts: s.ts, file: s.shot.file }] : [])), [fixture]);
+  const shots = useMemo(() => (fixture?.snapshots ?? []).flatMap((s) => (s.shot?.file ? [{ ts: s.ts, file: s.shot.file }] : [])), [fixture]);
   const changes = useMemo(
-    () => buildTimeline(fixture.url, fixtureToSnapshots(fixture)).entries.map((e) => ({ to: e.to, score: e.significance.score })),
+    () => (fixture ? buildTimeline(fixture.url, fixtureToSnapshots(fixture)).entries.map((e) => ({ to: e.to, score: e.significance.score })) : []),
     [fixture],
   );
-  const d = width ? deckLayout(shots.map((s) => s.ts), changes, width) : undefined;
+  const d = fixture && width ? deckLayout(shots.map((s) => s.ts), changes, width) : undefined;
   const last = shots.length - 1;
   const front = d?.cards[last];
-  const hotTs = shots[hot]?.ts;
+  // The latest card is whole already: it neither lifts nor marks its bar.
+  const hotTs = hot < last ? shots[hot]?.ts : undefined;
 
   return (
-    <div ref={ref} className={`deck${deal ? ' is-dealing' : ''}`} style={{ height: d?.height }}>
-      {d && front && (
+    <div ref={ref} className={`deck${deal ? ' is-dealing' : ''}`} style={{ height: d?.height ?? (width ? deckHeight(count, width) : undefined) }}>
+      {fixture && d && front && (
         <>
           {d.cards.map((c, i) => {
             const latest = i === last;

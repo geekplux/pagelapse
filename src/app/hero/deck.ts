@@ -13,6 +13,19 @@ export const AXIS_Y = 40;
 const AXIS_BAND = 64;
 const AXIS_GAP = 8;
 
+/** Height of a deck of `count` cards `width` px wide (the same whether or not the captures have loaded yet). */
+export function deckHeight(count: number, width: number) {
+  const g = deckSize(width);
+  return Math.max(0, count - 1) * g.step + g.cardH + AXIS_GAP + AXIS_BAND;
+}
+
+/** Wide decks use half-width cards stepping 8 px; phones two-thirds-width cards stepping 5 px. */
+function deckSize(width: number) {
+  const wide = width >= 720;
+  const cardW = Math.round(wide ? width / 2 : width * 0.67);
+  return { cardW, cardH: Math.round((cardW * 10) / 16), step: wide ? 8 : 5 };
+}
+
 export interface DeckLayout {
   cardW: number;
   cardH: number;
@@ -30,14 +43,10 @@ export interface DeckLayout {
 
 /**
  * Lays out `captures` (time order) and the meaningful `changes` (by their newer capture) in a deck `width` px wide.
- * Wide decks use half-width cards stepping 8 px; phones two-thirds-width cards stepping 5 px. Year ticks thin out to
- * every 2nd or 5th year when years sit closer than 40 px.
+ * Year ticks thin out to every 2nd or 5th year when years sit closer than 40 px.
  */
 export function deckLayout(captures: readonly string[], changes: readonly { to: string; score: number }[], width: number): DeckLayout {
-  const wide = width >= 720;
-  const cardW = Math.round(wide ? width / 2 : width * 0.67);
-  const cardH = Math.round((cardW * 10) / 16);
-  const step = wide ? 8 : 5;
+  const { cardW, cardH, step } = deckSize(width);
   const span = width - cardW;
   const [t0, t1] = [ts2ms(captures[0] ?? ''), ts2ms(captures.at(-1) ?? '')];
   const x = (ts: string) => (t1 > t0 ? ((ts2ms(ts) - t0) / (t1 - t0)) * span : span);
@@ -55,7 +64,7 @@ export function deckLayout(captures: readonly string[], changes: readonly { to: 
     step,
     span,
     axisTop,
-    height: axisTop + AXIS_BAND,
+    height: deckHeight(captures.length, width),
     cards,
     bars: changes.map((c) => ({ ts: c.to, x: x(c.to), h: barHeight(c.score) })),
     ticks,
