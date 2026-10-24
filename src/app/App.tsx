@@ -6,7 +6,8 @@ import { AppHeader } from './AppHeader.tsx';
 import { Hero } from './hero/Hero.tsx';
 import { validateTargetUrl } from '../core/url.ts';
 import { throttleLatest } from './throttle.ts';
-import { type UrlState, isHeroState, parseUrlState, pushUrlState, writeUrlState } from './urlState.ts';
+import { workspace } from './workspace.ts';
+import { type UrlState, formatUrlState, isHeroState, parseUrlState, pushUrlState, writeUrlState } from './urlState.ts';
 
 interface Current {
   id: string;
@@ -16,13 +17,21 @@ interface Current {
   view?: string | undefined;
 }
 
-/**
- * The sample workspace loads on first use: the hero is the first view. Loading resolves together with the sample, so
- * the swap from the hero is one step (no loading line in between).
- */
-let workspace: Promise<typeof import('./TimelineView.tsx')> | undefined;
-const loadWorkspace = () => (workspace ??= import('./TimelineView.tsx'));
 type Workspace = (typeof import('./TimelineView.tsx'))['TimelineView'];
+
+/** The workspace chunk (or a sample's) did not arrive: say so plainly, with a way to ask again. */
+function LoadFailed({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="state-card load-failed" role="alert">
+      <p>This part of Pagelapse did not load. Check your connection and try again.</p>
+      <div className="state-actions">
+        <button type="button" className="btn" onClick={onRetry}>
+          Try again
+        </button>
+      </div>
+    </div>
+  );
+}
 
 /** Live mode loads on first use, so the sample first view does not carry it. */
 const LiveView = lazy(() => import('./live/LiveView.tsx').then((m) => ({ default: m.LiveView })));
@@ -75,17 +84,25 @@ export function App() {
       if (!active || active === document.body) document.getElementById('content')?.focus();
     });
 
-  const [Timeline, setTimeline] = useState<Workspace>();
+  // The workspace loads with the sample (so the swap from the hero is one step) and, on a deep link, before the first
+  // render (main.tsx). A failed load shows LoadFailed. The browser keeps a failed module import for the life of the
+  // page, so Try again loads the page afresh at the address that was wanted.
+  const [Timeline, setTimeline] = useState<Workspace | undefined>(() => workspace.loaded()?.TimelineView);
+  const [failed, setFailed] = useState<(() => void) | null>(null);
   useEffect(() => {
-    // A deep link to the bundled default sample renders as soon as the workspace has loaded.
-    if (!hero && !Timeline) void loadWorkspace().then((m) => setTimeline(() => m.TimelineView));
-  }, [hero, Timeline]);
+    if (hero || Timeline || failed) return;
+    workspace.load().then(
+      (m) => setTimeline(() => m.TimelineView),
+      () => setFailed(() => () => location.reload()),
+    );
+  }, [hero, Timeline, failed]);
 
   const load = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}, how: Write = 'replace') => {
     setLive(null);
     progress.cancel();
     wanted.current = entry.id;
-    return Promise.all([entry.load(), loadWorkspace()]).then(([fixture, m]) => {
+    setFailed(null);
+    return Promise.all([entry.load(), workspace.load()]).then(([fixture, m]) => {
       // Last click wins if loads resolve out of order.
       if (wanted.current !== entry.id) return;
       setTimeline(() => m.TimelineView);
@@ -94,6 +111,8 @@ export function App() {
       if (!how) return;
       write(how, { sample: entry.id, ...q });
       setAnnouncement(`Showing: ${fixture.label}, ${fixture.snapshots.length} captures`);
+    }, () => {
+      if (wanted.current === entry.id) setFailed(() => () => location.assign(`${location.pathname}${formatUrlState({ sample: entry.id, ...q })}`));
     });
   };
   const fromHero = (entry: SampleEntry, q: Omit<UrlState, 'sample' | 'url'> = {}) => void load(entry, q, 'push');
@@ -116,7 +135,8 @@ export function App() {
   // While the hero is up, fetch the workspace in the background so a sample or a card opens at once.
   useEffect(() => {
     if (!hero) return;
-    const t = setTimeout(loadWorkspace, 1500);
+    // A failure here is quiet: the click that needs the workspace asks again and reports it.
+    const t = setTimeout(() => workspace.load().catch(() => undefined), 1500);
     return () => clearTimeout(t);
   }, [hero]);
 
@@ -176,6 +196,7 @@ export function App() {
             onSample={(entry) => fromHero(entry)}
             onUrl={(url) => startLive(url, false, 'push')}
             deck={deck}
+            failed={failed && <LoadFailed onRetry={failed} />}
             onCapture={(at) => deckEntry && fromHero(deckEntry, { at })}
           />
         </main>
@@ -213,6 +234,8 @@ export function App() {
               onSample={openSample}
             />
           </Suspense>
+        ) : failed ? (
+          <LoadFailed onRetry={failed} />
         ) : current && Timeline ? (
           <Timeline
             key={current.id}

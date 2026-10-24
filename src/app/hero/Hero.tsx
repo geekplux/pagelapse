@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { SampleFixture } from '../../core/types.ts';
 import { DECK_CAPTURES, type SampleEntry } from '../../samples/index.ts';
 import { PageIcon, UrlForm } from '../UrlForm.tsx';
@@ -10,12 +11,14 @@ interface Props {
   onUrl: (url: string) => void;
   /** The sample dealt as the deck (Wikipedia), once loaded. */
   deck: SampleFixture | undefined;
+  /** A sample or the workspace failed to load: the notice, under the options. */
+  failed?: ReactNode;
   /** Opens the deck's sample on capture `ts`. */
   onCapture: (ts: string) => void;
 }
 
 /** The first view (no `?sample=` or `?url=`): the headline, the address field, the samples, and the deck of captures. */
-export function Hero({ samples, onSample, onUrl, deck, onCapture }: Props) {
+export function Hero({ samples, onSample, onUrl, deck, failed, onCapture }: Props) {
   const [first, latest] = [deck?.snapshots[0]?.ts, deck?.snapshots.at(-1)?.ts];
 
   return (
@@ -33,6 +36,7 @@ export function Hero({ samples, onSample, onUrl, deck, onCapture }: Props) {
             </button>
           ))}
         </div>
+        {failed}
       </section>
       {/* Laid out before the Wikipedia sample arrives, at its height, so nothing below it moves. */}
       <figure className="intro-deck" aria-busy={!deck}>
