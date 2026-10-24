@@ -152,8 +152,11 @@
 .rb-slider { cursor: pointer; touch-action: pan-y; user-select: none; }
 /* The slider's focus ring is drawn on the visible part of the axis band (the band may scroll wider than the column), just
    inside it, so all four sides show and it never runs under the thumbnails above it. */
-.rb-slider:focus-visible { outline: none; }
-.rb-ring { position: absolute; left: 0; right: 0; pointer-events: none; }
+/* Without :has, the slider keeps its own ring. The overlay's sides sit 4 px outside the column, clear of the first and
+   last year labels; its top stays inside the band, clear of the thumbnails. */
+.rb-slider:focus-visible { outline-offset: -2px; }
+@supports selector(:has(*)) { .rb-slider:focus-visible { outline: none; } }
+.rb-ring { position: absolute; left: calc(-1 * var(--space-1)); right: calc(-1 * var(--space-1)); pointer-events: none; }
 .rb:has(.rb-slider:focus-visible) > .rb-ring { outline: 2px solid var(--sand-12); outline-offset: -2px; }
 .rb-cv { fill: none; stroke: var(--sand-8); stroke-width: var(--line); transition: stroke var(--dur) var(--ease), stroke-width var(--dur) var(--ease); }
 .rb-cv[data-side="before"] { stroke: var(--cyan-11); stroke-width: 1; }
