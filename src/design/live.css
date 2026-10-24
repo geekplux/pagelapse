@@ -1,22 +1,8 @@
-/* Live mode: the URL form (in the header row), the run's status line (atop the side column), and the empty and
+/* Live mode: the run's status line (atop the side column), and the empty and
    error cards. */
-.url-form { flex: 1 1 22rem; min-width: 0; max-width: 34rem; display: grid; gap: var(--space-1); }
-.url-form label { font-size: var(--fs-12); line-height: var(--lh-12); color: var(--sand-11); }
-.url-row { display: flex; gap: var(--space-2); }
-.url-row input {
-  flex: 1; width: 0; min-width: 0; min-height: 2.5rem; padding: 0 var(--space-3); border: var(--line) solid var(--sand-8); border-radius: var(--radius-8);
-  background: var(--bg); color: var(--sand-12); font: var(--fs-14) / var(--lh-14) var(--font-ui);
-  transition: border-color var(--dur) var(--ease);
-}
-.url-row input:hover { border-color: var(--sand-9); }
-.url-row input::placeholder { color: var(--sand-10); opacity: 1; }
-.url-row input[aria-invalid="true"] { border-style: dashed; border-color: var(--sand-12); }
 /* The view's one primary action: the only solid sand-12 fill (accent.test.ts). */
 .btn-go { background: var(--sand-12); color: var(--sand-1); border-color: var(--sand-12); }
 .btn-go:hover { background: var(--sand-11); }
-.url-error { font-weight: 500; }
-/* Kept in the accessibility tree (an alert must exist before its text arrives); no gap while empty. */
-.url-error:empty { margin-top: calc(-1 * var(--space-1)); }
 
 .live-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .live-status p { flex: 1 1 20rem; color: var(--sand-11); }

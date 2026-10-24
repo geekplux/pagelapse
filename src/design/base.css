@@ -51,32 +51,10 @@ a:hover { text-decoration-color: currentColor; }
 main:focus { outline: none; }
 
 /* One measure for header, content and footer: 16 px gutters on phones, 40 px from 640 px. */
-.site-header, main, .site-footer { width: min(100% - 2 * var(--space-3), 84rem); margin-inline: auto; }
-@media (min-width: 40rem) { .site-header, main, .site-footer { width: min(100% - 2 * var(--space-5), 84rem); } }
+.head-row, main, .site-footer { width: min(100% - 2 * var(--space-3), 75rem); margin-inline: auto; }
+@media (min-width: 40rem) { .head-row, main, .site-footer { width: min(100% - 2 * var(--space-5), 75rem); } }
 .skip-link { position: absolute; left: var(--space-3); top: calc(-1 * var(--space-6)); padding: var(--space-2) var(--space-3); background: var(--bg); border: var(--line) solid var(--sand-8); border-radius: var(--radius-8); z-index: 1; }
 .skip-link:focus { top: var(--space-3); }
-
-/* Header: one row (wordmark, the URL form, the sample toggles), wrapping on narrow screens. */
-.site-header { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); padding-block: var(--space-3); }
-.site-header h1 { font: inherit; line-height: 0; }
-.home-link { text-decoration: none; display: inline-block; }
-.wordmark { display: inline-flex; align-items: center; gap: var(--space-2); }
-.wm-text { font-size: var(--fs-20); line-height: var(--lh-20); font-weight: 700; letter-spacing: -0.02em; }
-
-/* Samples: quiet text toggles; the pressed one sits on a sand-3 fill in sand-12 and medium weight (never colour alone). */
-.picker { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); margin: 0; padding: 0; border: 0; min-inline-size: 0; }
-.picker-label { color: var(--sand-11); margin-right: var(--space-1); }
-.chip {
-  min-height: 2rem; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-6); background: none; color: var(--sand-11); font: 400 var(--fs-14) / var(--lh-14) var(--font-ui); cursor: pointer;
-  transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease);
-}
-.chip:hover { color: var(--sand-12); }
-.chip[aria-pressed="true"] { background: var(--sand-3); color: var(--sand-12); font-weight: 500; }
-.chip-short { display: none; }
-@media (max-width: 39.99rem) {
-  .chip-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .chip-short { display: inline; }
-}
 
 /* The sample or live run: no card, grouped by space and alignment. */
 /* The footer always starts below the first viewport, so a short state view shows only its message. */
@@ -265,7 +243,6 @@ kbd { padding: 0 var(--space-1); border-radius: var(--radius-4); background: var
 }
 @media (forced-colors: active) {
   :focus-visible { outline-color: Highlight; }
-  .chip[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .tl-marker, .tl-caret { fill: CanvasText; stroke: Canvas; }
   .tl-ring, .tl-stem.is-sel { stroke: Highlight; }
   .tl-trace { stroke: CanvasText; }

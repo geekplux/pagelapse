@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { cssDecls } from './cssRules.ts';
 import base from './base.css?raw';
+import hero from './hero.css?raw';
 import live from './live.css?raw';
 import tokens from './tokens.css?raw';
 import visual from './visual.css?raw';
 
 // The binding UI rules of docs/redesign/DESIGN.md that a stylesheet can break: four font sizes, two families,
 // 0.5px lines, the four radii, one curve and duration for motion, tabular figures only on numbers.
-const decls = Object.entries({ 'base.css': base, 'live.css': live, 'visual.css': visual }).flatMap(([f, css]) => cssDecls(f, css));
+const decls = Object.entries({ 'base.css': base, 'live.css': live, 'visual.css': visual, 'hero.css': hero }).flatMap(([f, css]) => cssDecls(f, css));
 const show = (ds: typeof decls) => ds.map((d) => `${d.file} ${d.selector} { ${d.prop}: ${d.value} }`);
 /** Forced-colors overrides use system colours and may draw heavier lines: they are not part of the visual design. */
 const designed = decls.filter((d) => !/\b(Canvas|CanvasText|Highlight|HighlightText|ButtonText|ButtonFace|GrayText)\b/.test(d.value));
@@ -72,9 +73,13 @@ describe('motion', () => {
     expect(show(bad)).toEqual([]);
   });
 
-  it('every animation is ease-out, 250 ms (the live run\'s pulsing dot excepted)', () => {
-    const bad = designed.filter((d) => d.prop === 'animation' && d.selector !== '.live-dot' && !/var\(--dur\) var\(--ease\)/.test(d.value));
+  it('every animation is ease-out, 250 ms (the live run\'s pulsing dot, the 450 ms deal and the 150 ms menu excepted)', () => {
+    expect(tokens).toMatch(/--dur-deal: 450ms;/);
+    expect(tokens).toMatch(/--dur-menu: 150ms;/);
+    const bad = designed.filter((d) => d.prop === 'animation' && d.selector !== '.live-dot' && !/var\(--dur(-deal|-menu)?\) var\(--ease\)/.test(d.value));
     expect(show(bad)).toEqual([]);
+    expect(designed.filter((d) => /--dur-deal/.test(d.value)).map((d) => d.selector)).toEqual(['.is-dealing .deck-card']);
+    expect(designed.filter((d) => /--dur-menu/.test(d.value)).map((d) => d.selector)).toEqual(['.addr-menu']);
   });
 
   it('reduced motion turns every animation and transition off', () => {

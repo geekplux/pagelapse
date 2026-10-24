@@ -1,0 +1,141 @@
+/* The header row, the address field with its samples menu, and the hero: headline, field, sample options and the deck
+   of captures (docs/redesign/target/V3Hero.html, V3HeroPhone.html, V3Menu.html, V3Motion.html). */
+
+/* Header: the wordmark, the address field (workspace) and the GitHub link in one 72 px row; the workspace's row sits
+   on a full-width hairline. */
+.site-header.is-work { border-bottom: var(--line) solid var(--sand-6); }
+.head-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 calc(2 * var(--space-3)); min-height: 4.5rem; }
+.brand { font: inherit; line-height: 0; }
+.home-link { display: inline-block; text-decoration: none; }
+.wordmark { display: inline-flex; align-items: center; gap: calc(2.5 * var(--space-1)); }
+.wm-text { font-size: var(--fs-20); line-height: var(--lh-20); font-weight: 700; letter-spacing: -0.02em; }
+.gh-link {
+  display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; margin-left: auto; margin-right: calc(-2.5 * var(--space-1));
+  border-radius: var(--radius-8); color: var(--sand-11); transition: color var(--dur) var(--ease);
+}
+.gh-link:hover { color: var(--sand-12); }
+@media (min-width: 48rem) {
+  .is-work .addr { flex: 0 1 32.5rem; margin-left: auto; }
+  .is-work .gh-link { margin-left: 0; }
+}
+@media (max-width: 47.99rem) {
+  .is-work .addr { order: 1; flex-basis: 100%; margin-bottom: var(--space-3); }
+}
+
+/* The address field and "Show its history". */
+.addr { position: relative; display: flex; gap: var(--space-2); }
+.addr-box { position: relative; flex: 1; min-width: 0; display: flex; }
+.addr-field {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); height: 2.5rem; padding: 0 calc(3 * var(--space-1));
+  border: var(--line) solid var(--sand-8); border-radius: var(--radius-8); background: var(--bg); color: var(--sand-11); cursor: text;
+  transition: border-color var(--dur) var(--ease);
+}
+.addr-field:hover { border-color: var(--sand-9); }
+/* The ring sits on the field, not on the bare input inside it. */
+.addr-field:focus-within { outline: 2px solid var(--sand-12); outline-offset: 0; }
+.addr-field input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--sand-12); font: var(--fs-14) / var(--lh-14) var(--font-ui); outline: none; }
+.addr-field input::placeholder { color: var(--sand-10); opacity: 1; }
+.addr-field:has(input[aria-invalid="true"]) { border-style: dashed; border-color: var(--sand-12); }
+.addr .btn-go { min-height: 2.5rem; }
+/* Kept in the accessibility tree (an alert must exist before its text arrives); under the field, taking no room. */
+.url-error { position: absolute; top: calc(100% + var(--space-1)); left: 0; z-index: 1; font-weight: 500; }
+
+/* The samples menu under the field: opacity and a 4 px rise over 150 ms; it closes at once (display: none). */
+.addr-menu {
+  position: absolute; top: calc(100% + 3 * var(--space-1)); left: 0; right: 0; z-index: 5; padding: calc(1.5 * var(--space-1));
+  border-radius: var(--radius-12); background: var(--bg); box-shadow: var(--shadow-menu); animation: menu-in var(--dur-menu) var(--ease);
+}
+.addr-menu[hidden] { display: none; }
+.addr-menu-h { padding: var(--space-2) calc(2.5 * var(--space-1)) var(--space-1); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); }
+/* The open sample: a check mark on a sand-3 fill; the option the arrow keys reached: the focus ring. */
+.addr-opt {
+  display: flex; align-items: center; gap: calc(2.5 * var(--space-1)); min-height: 2.5rem; padding: 0 calc(2.5 * var(--space-1));
+  border-radius: var(--radius-6); color: var(--sand-12); cursor: pointer; transition: background-color var(--dur) var(--ease);
+}
+.addr-opt:hover { background: var(--sand-2); }
+.addr-opt.is-current { background: var(--sand-3); }
+.addr-opt.is-active { outline: 2px solid var(--sand-12); outline-offset: -2px; }
+.addr-opt > svg { flex: none; color: var(--sand-10); }
+.addr-opt.is-current > svg { color: var(--sand-12); }
+.addr-host { margin-left: auto; color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); }
+@keyframes menu-in { from { opacity: 0; transform: translateY(4px); } }
+
+main.is-intro { padding-top: 0; }
+/* The hero: centred headline, lede, the 48 px field and the sample options. */
+.intro-head { display: flex; flex-direction: column; align-items: center; padding-top: calc(4 * var(--space-4)); text-align: center; }
+.intro-head h1 { font: 700 var(--fs-40) / var(--lh-40) var(--font-ui); letter-spacing: var(--track-40); }
+.intro-lede { max-width: 37.5rem; margin-top: var(--space-3); color: var(--sand-11); font-size: var(--fs-20); line-height: var(--lh-20); text-wrap: balance; }
+.addr.is-hero { flex-wrap: wrap; row-gap: 0; width: min(100%, 40rem); margin-top: var(--space-5); text-align: left; }
+.is-hero .addr-field { height: 3rem; padding: 0 var(--space-3); }
+.is-hero .addr-field input { font-size: var(--fs-20); line-height: var(--lh-20); }
+.is-hero .btn-go { min-height: 3rem; padding: 0 calc(5 * var(--space-1)); }
+.is-hero .url-error { position: static; flex-basis: 100%; margin-top: var(--space-2); }
+.is-hero .url-error:empty { margin-top: 0; }
+.intro-samples { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-2); margin-top: var(--space-3); color: var(--sand-11); }
+.intro-samples > span { margin-right: var(--space-1); }
+.sample-opt {
+  display: inline-flex; align-items: center; gap: var(--space-2); min-height: 2.25rem; padding: 0 calc(3 * var(--space-1)) 0 calc(2.5 * var(--space-1));
+  border: var(--line) solid var(--sand-7); border-radius: var(--radius-8); background: var(--bg); color: var(--sand-12); font: inherit; cursor: pointer;
+  transition: background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.sample-opt:hover { background: var(--sand-2); border-color: var(--sand-8); }
+.sample-opt svg { color: var(--sand-10); }
+
+/* The deck: cards at their capture dates (positions from deck.ts), dealt once on load, newest first. */
+.intro-deck { margin: calc(2 * var(--space-5)) 0 0; }
+.intro-deck figcaption { margin-top: var(--space-3); color: var(--sand-11); }
+.deck { position: relative; }
+.deck-card {
+  position: absolute; padding: 0; border: 0; border-radius: var(--radius-6); overflow: hidden; background: var(--frame); box-shadow: var(--shadow-card); cursor: pointer;
+  transition: transform var(--dur) var(--ease);
+}
+.deck-card.is-front { box-shadow: var(--shadow-card-front); }
+.deck-card img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+/* Lift: the card rises 12 px and its date shows above it (the date is the word beside the amber bar). */
+.deck-card.is-hot:not(.is-front) { transform: translateY(-12px); }
+.deck-date {
+  position: absolute; display: inline-flex; align-items: center; height: 1.5rem; padding: 0 var(--space-2); border-radius: var(--radius-6);
+  background: var(--sand-12); color: var(--sand-1); font: var(--fs-12) / var(--lh-12) var(--font-mono); white-space: nowrap; pointer-events: none;
+  opacity: 0; transition: opacity var(--dur) var(--ease);
+}
+.deck-date.is-on { opacity: 1; }
+.deck-latest {
+  position: absolute; right: calc(3 * var(--space-1)); display: inline-flex; align-items: center; gap: var(--space-2); height: 1.75rem; padding: 0 calc(2.5 * var(--space-1));
+  border-radius: var(--radius-6); background: var(--bg); box-shadow: 0 0 0 var(--line) var(--sand-7); pointer-events: none;
+}
+.deck-latest b { color: var(--amber-11); font-weight: 600; }
+.deck-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber-11); }
+.deck-axis { position: absolute; left: 0; overflow: visible; }
+.deck-line { fill: none; stroke: var(--sand-8); stroke-width: var(--line); }
+.deck-first { fill: var(--sand-12); }
+.deck-year { font: var(--fs-12) var(--font-mono); fill: var(--sand-11); }
+.deck-bar { fill: var(--sand-9); transition: fill var(--dur) var(--ease); }
+.deck-bar.is-on { fill: var(--amber-11); }
+.is-dealing .deck-card { animation: deck-deal var(--dur-deal) var(--ease) backwards; }
+.is-dealing .deck-bar { transform-box: fill-box; transform-origin: bottom; animation: deck-grow var(--dur) var(--ease) backwards; }
+@keyframes deck-deal { from { opacity: 0; transform: translateX(var(--deck-from)); } }
+@keyframes deck-grow { from { transform: scaleY(0); } }
+@media (min-width: 40rem) { main.is-intro ~ .site-footer { margin-top: calc(4 * var(--space-4)); } }
+
+/* Phones (target/V3HeroPhone.html): a 56 px header, everything left-aligned and stacked. */
+@media (max-width: 39.99rem) {
+  .head-row { min-height: 3.5rem; }
+  .wordmark .logo { width: 24px; height: 24px; }
+  .intro-head { align-items: stretch; padding-top: var(--space-5); text-align: left; }
+  .intro-lede { margin-top: calc(3 * var(--space-1)); font-size: var(--fs-14); line-height: var(--lh-14); }
+  .addr.is-hero { flex-direction: column; width: auto; margin-top: var(--space-4); }
+  .is-hero .addr-field input { font-size: var(--fs-14); line-height: var(--lh-14); }
+  .is-hero .btn-go { justify-content: center; }
+  .intro-samples { flex-direction: column; align-items: stretch; margin-top: calc(2 * var(--space-3)); }
+  .intro-samples > span { margin-right: 0; }
+  .sample-opt { min-height: 2.75rem; }
+  .deck-latest { display: none; }
+  .intro-deck figcaption { font-size: var(--fs-12); line-height: var(--lh-12); }
+}
+@media (forced-colors: active) {
+  .addr-opt.is-current { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .deck-bar, .deck-first { fill: CanvasText; }
+  .deck-bar.is-on { fill: Highlight; }
+  .deck-line { stroke: CanvasText; }
+  .deck-year { fill: CanvasText; }
+}

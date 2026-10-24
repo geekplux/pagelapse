@@ -33,6 +33,9 @@
   /* Motion: one curve, one base duration. */
   --ease: ease-out;
   --dur: 250ms;
+  /* The two named exceptions (target/V3Motion.html): the hero deck's deal and the address menu's rise. */
+  --dur-deal: 450ms;
+  --dur-menu: 150ms;
 
   /* The one spacing scale (spacing.test.ts allows nothing else). */
   --space-1: 4px;
@@ -45,6 +48,10 @@
   /* Non-palette colours: the shadow of a layer over a picture or other layers, the slider divider (white with a
      dark hairline, so it holds on any picture), and the backdrop of a replayed page (pages assume white). */
   --shadow: 0 0 0 var(--line) rgb(0 0 0 / 0.3), 0 2px 6px rgb(0 0 0 / 0.18);
+  /* Hero deck cards (each casts left onto the one under it; the front card a little more) and the address menu. */
+  --shadow-card: 0 0 0 var(--line) var(--sand-8), -6px 0 12px -6px rgb(0 0 0 / 0.18);
+  --shadow-card-front: 0 0 0 var(--line) var(--sand-8), -8px 0 16px -8px rgb(0 0 0 / 0.22);
+  --shadow-menu: 0 0 0 var(--line) var(--sand-7), 0 8px 24px rgb(0 0 0 / 0.1);
   --divider: white;
   --divider-edge: rgb(0 0 0 / 0.35);
   --divider-ink: rgb(33 32 28);
