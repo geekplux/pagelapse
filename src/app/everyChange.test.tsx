@@ -1,11 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { TimelineEntry } from '../core/types.ts';
+import type { ChangeRecord, TimelineEntry } from '../core/types.ts';
 import { shownSummary } from './describe.ts';
 import { EveryChange, mixedSources } from './EveryChange.tsx';
 
+const record = (headingsAdded: string[], extra: Partial<ChangeRecord> = {}): ChangeRecord => ({
+  pair: 'p', title: 't', headingsAdded, headingsRemoved: [], added: [], removed: [], modified: [],
+  stats: { wordsAdded: 3, wordsRemoved: 1, blocksAdded: 1, blocksRemoved: 0, blocksModified: 0 }, ...extra,
+});
 const entry = (to: string, ai?: string, magnitude: TimelineEntry['significance']['magnitude'] = 'minor') =>
-  ({ from: `${Number(to.slice(0, 4)) - 1}${to.slice(4)}`, to, ruleSummary: `Added section "${to.slice(0, 4)}" (+3 / −1 words)`, aiSummary: ai, significance: { magnitude, score: 0.2, reasons: [] } }) as unknown as TimelineEntry;
+  ({ from: `${Number(to.slice(0, 4)) - 1}${to.slice(4)}`, to, record: record([to.slice(0, 4)]), aiSummary: ai, significance: { magnitude, score: 0.2, reasons: [] } }) as unknown as TimelineEntry;
 
 describe('EveryChange (one row per change, newest first)', () => {
   const html = (entries: TimelineEntry[], selected = 0, trivial = 0) =>
@@ -17,6 +21,9 @@ describe('EveryChange (one row per change, newest first)', () => {
     expect(out.match(/aria-current="true"[^]*?<\/button>/)?.[0]).toContain('“2020”');
     expect(out).toContain('<span aria-hidden="true">Mar 2019</span><span class="sr-only">1 March 2019</span>');
     expect(out).toContain('major');
+    // One name per row, without stray spaces; the list itself is unnamed (the region is "Every change").
+    expect(out).toContain('aria-label="1 March 2019 to 1 March 2020, minor, Added section “2020”"');
+    expect(out).toMatch(/<ol class="changes" role="list">/);
   });
 
   it('tags AI lines only in a list that mixes sources', () => {
@@ -36,9 +43,12 @@ describe('EveryChange (one row per change, newest first)', () => {
 });
 
 describe('shownSummary', () => {
-  it('curls quotes and drops the word counts from rule summaries; AI lines stay as written', () => {
-    expect(shownSummary({ ruleSummary: 'Renamed section "A" to "B c" (+2 / −1 words)' })).toBe('Renamed section “A” to “B c”');
-    expect(shownSummary({ ruleSummary: 'Moved content around' })).toBe('Moved content around');
-    expect(shownSummary({ ruleSummary: 'x', aiSummary: 'Said "so" (+1 / −1 words)' })).toBe('Said "so" (+1 / −1 words)');
+  it('curls only the quotes around names and drops the word counts from rule summaries; AI lines stay as written', () => {
+    expect(shownSummary({ record: record(['Downloads']) })).toBe('Added section “Downloads”');
+    expect(shownSummary({ record: record([], { headingsRenamed: [['A', 'B c']] }) })).toBe('Renamed section “A” to “B c”');
+    // A name with straight quotes of its own keeps them; only the marks around it are curly.
+    expect(shownSummary({ record: record(['The "Wayback" Machine']) })).toBe('Added section “The "Wayback" Machine”');
+    expect(shownSummary({ record: record([], { stats: { wordsAdded: 0, wordsRemoved: 0, blocksAdded: 0, blocksRemoved: 0, blocksModified: 0 } }) })).toBe('Moved content around');
+    expect(shownSummary({ record: record(['x']), aiSummary: 'Said "so" (+1 / −1 words)' })).toBe('Said "so" (+1 / −1 words)');
   });
 });

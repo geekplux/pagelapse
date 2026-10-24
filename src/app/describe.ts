@@ -1,3 +1,4 @@
+import { ruleSummary } from '../core/ruleSummary.ts';
 import { formatTimestampLong } from '../core/timestamp.ts';
 import type { TimelineEntry } from '../core/types.ts';
 
@@ -9,9 +10,9 @@ export function describeChange(e: TimelineEntry, i: number, n: number): string {
 }
 
 /**
- * The summary as the page shows it: the AI line as written, or the rule summary with curly quotes and without its
- * word counts (the change section lists those), e.g. `Added section “Downloads”`.
+ * The summary as the page shows it: the AI line as written, or the rule summary with curly quotes around the names it
+ * quotes and without its word counts (the change section lists those), e.g. `Added section “Downloads”`.
  */
-export function shownSummary(e: Pick<TimelineEntry, 'ruleSummary' | 'aiSummary'>): string {
-  return e.aiSummary ?? e.ruleSummary.replace(/ \(\+\d+ \/ −\d+ words\)$/, '').replace(/"([^"]*)"/g, '“$1”');
+export function shownSummary(e: Pick<TimelineEntry, 'record' | 'aiSummary'>): string {
+  return e.aiSummary ?? ruleSummary(e.record, { quotes: ['“', '”'], words: false });
 }

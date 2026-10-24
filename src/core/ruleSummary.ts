@@ -5,7 +5,13 @@ import type { ChangeRecord } from './types.ts';
 export const MAX_RULE_SUMMARY_CHARS = 120;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
-const quote = (text: string, max = 48) => `"${clip(text, max)}"`;
+/** How a summary is written: straight quotes and word counts (stored, sent to the model), or for display. */
+export interface SummaryStyle {
+  /** Opening and closing marks around names; default straight double quotes. */
+  quotes?: readonly [string, string];
+  /** Append "(+n / −n words)"; default true. */
+  words?: boolean;
+}
 const lower = (s: string) => s.toLowerCase();
 
 /**
@@ -20,10 +26,12 @@ function informative(list: string[], title: string): string {
   return list.reduce((best, h) => (score(h) > score(best) ? h : best));
 }
 
-const sections = (verb: string, list: string[], title: string) => {
+const sections = (quote: Quote, verb: string, list: string[], title: string) => {
   const h = informative(list, title);
   return list.length === 1 ? `${verb} section ${quote(h)}` : `${verb} ${plural(list.length, 'section')} incl. ${quote(h)}`;
 };
+
+type Quote = (text: string, max?: number) => string;
 
 /** Release-style numbers: `1.69.0`, `v2.1.0`, `Version 1.44`. */
 const VERSION = /\bversion\s+(\d+(?:\.\d+)+)|\bv?(\d+\.\d+\.\d+(?:\.\d+)?)\b/gi;
@@ -55,16 +63,18 @@ export function namedSections(record: ChangeRecord): { added: string[]; removed:
  * reworded/added/removed passages; ends with word counts, e.g.
  * `Renamed section "Cyberattacks" to "2024 cyberattacks" (+304 / −220 words)`.
  */
-export function ruleSummary(record: ChangeRecord): string {
+export function ruleSummary(record: ChangeRecord, style: SummaryStyle = {}): string {
   const { stats: s, title } = record;
+  const [open, close] = style.quotes ?? ['"', '"'];
+  const quote: Quote = (text, max = 48) => `${open}${clip(text, max)}${close}`;
   const { added, removed, renamed } = namedSections(record);
   const [from, to] = renamed[0] ?? ['', ''];
   const named = [
     record.titleChanged && `title changed to ${quote(title)}`,
     renamed.length === 1 && `renamed section ${quote(from, 40)} to ${quote(to, 40)}`,
     renamed.length > 1 && `renamed ${plural(renamed.length, 'section')} incl. ${quote(to)}`,
-    added.length > 0 && sections('added', added, title),
-    removed.length > 0 && sections('removed', removed, title),
+    added.length > 0 && sections(quote, 'added', added, title),
+    removed.length > 0 && sections(quote, 'removed', removed, title),
   ].filter((p): p is string => typeof p === 'string');
   const counted = [
     s.blocksModified > 0 && `reworded ${plural(s.blocksModified, 'passage')}`,
@@ -78,6 +88,6 @@ export function ruleSummary(record: ChangeRecord): string {
   let out = '';
   for (const part of parts) if (!out || out.length + part.length + 2 <= MAX_RULE_SUMMARY_CHARS) out = out ? `${out}; ${part}` : part;
   const words = `(+${s.wordsAdded} / −${s.wordsRemoved} words)`;
-  if (s.wordsAdded + s.wordsRemoved > 0 && out.length + words.length < MAX_RULE_SUMMARY_CHARS) out += ` ${words}`;
+  if (style.words !== false && s.wordsAdded + s.wordsRemoved > 0 && out.length + words.length < MAX_RULE_SUMMARY_CHARS) out += ` ${words}`;
   return clip(out.charAt(0).toUpperCase() + out.slice(1), MAX_RULE_SUMMARY_CHARS);
 }
