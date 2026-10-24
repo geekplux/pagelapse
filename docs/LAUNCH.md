@@ -48,7 +48,7 @@ A maintainer prepares a "ten years of our project" post. Paste the project's hom
 
 ### Watch a redesign happen
 
-Open the Wikipedia sample, choose the change from February 2022 to March 2023 and drag the divider: Wikipedia's 2022 design arrives, with the contents moving into a sidebar. Switch to Onion skin to fade one look into the other, then read the text diff to see that the words barely changed while the layout did.
+Open the Wikipedia sample, choose the change from February 2022 to March 2023 and drag the divider: Wikipedia's 2022 design arrives, with the contents moving into a sidebar. Switch to Side by side to see both looks at once, then read the text diff to see that the words barely changed while the layout did.
 
 ## Comparison
 

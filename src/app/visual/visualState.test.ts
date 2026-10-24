@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureForChange, changeForCapture, frameNo, initialView, overviewPair, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
+import { DEFAULT_MODE, MODES, captureForChange, changeForCapture, frameNo, initialView, overviewPair, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
 
 const caps = ['2013', '2014', '2015', '2016', '2017'].map((y) => `${y}0101000000`);
 // 2015 is a trivial capture: the 2014 -> 2016 change skips it.
@@ -39,14 +39,19 @@ describe('visualState', () => {
 
   it('keeps the default `at` out of the query', () => {
     expect(viewQuery(entries[1]!, caps[3]!)).toEqual({ change: `${caps[1]}-${caps[3]}`, at: undefined, view: undefined });
-    expect(viewQuery(entries[1]!, caps[1]!, 'onion')).toEqual({ change: `${caps[1]}-${caps[3]}`, at: caps[1], view: 'onion' });
+    expect(viewQuery(entries[1]!, caps[1]!, 'side')).toEqual({ change: `${caps[1]}-${caps[3]}`, at: caps[1], view: 'side' });
     expect(viewQuery(entries[1]!, caps[3]!, 'slider').view).toBeUndefined();
     expect(viewQuery(entries[1]!, caps[3]!, 'slider', 'single').view).toBe('slider');
     expect(viewQuery(entries[1]!, caps[3]!, 'single', 'single').view).toBeUndefined();
   });
 
-  it('parses compare modes', () => {
-    expect(['single', 'side', 'slider', 'onion', 'zoom', undefined].map((v) => parseMode(v))).toEqual(['single', 'side', 'slider', 'onion', undefined, undefined]);
+  it('parses compare modes; the retired onion skin is unknown, so a `view=onion` link opens Slider', () => {
+    expect(['single', 'side', 'slider', 'onion', 'zoom', undefined].map((v) => parseMode(v))).toEqual(['single', 'side', 'slider', undefined, undefined, undefined]);
+    expect(parseMode('onion') ?? DEFAULT_MODE).toBe('slider');
+  });
+
+  it('lists the modes in the segmented control\'s order: Slider, Side by side, Single', () => {
+    expect(MODES.map(([, label]) => label)).toEqual(['Slider', 'Side by side', 'Single']);
   });
 
   it('moves the divider by key: ±5, ±25 by page, Home/End, Enter resets; clamped to 0-100', () => {
@@ -61,10 +66,13 @@ describe('visualState', () => {
     expect(splitFromPointer(50, 100, 200)).toBe(0);
     expect(splitFromPointer(400, 100, 200)).toBe(100);
     expect(splitFromPointer(10, 0, 0)).toBe(50);
+    // 1:1 with the pointer: one pixel of a 1200 px stage is not rounded to a whole percent.
+    expect(splitFromPointer(601, 0, 1200)).toBe(50.1);
   });
 
   it('says how much of each side the slider shows', () => {
     expect(splitText(40, { from: '20131106090756', to: '20251218000000' })).toBe('40% before (November 2013), 60% after (December 2025)');
+    expect(splitText(50.1, { from: '20131106090756', to: '20251218000000' })).toBe('50% before (November 2013), 50% after (December 2025)');
     expect(splitText(100, { from: '20250404000000', to: '20251218000000' })).toBe('100% before (April 2025), 0% after (December 2025)');
   });
 

@@ -26,7 +26,7 @@ Open the address `pnpm dev` prints (usually http://localhost:5173). The first vi
 ## Features
 
 - **The visual scrub.** See the page as it looked at each capture. A filmstrip of every capture sits on a timeline whose marks grow with the size of each change. Arrow keys, a drag or a click move through the years.
-- **Compare modes.** Slider (drag the divider between Before and After), Side by side, Onion skin (fade After over Before) and Single (flip Before / After).
+- **Compare modes.** Slider (drag the divider between Before and After), Side by side and Single (flip Before / After).
 - **Play.** A pausable time-lapse of a sample, one capture every 1.2 s. It only starts when you press it.
 - **Only meaningful changes.** Whitespace, dates, visit counters and tracking parameters are recognised as trivial and hidden. The count stays visible and you can show them.
 - **The text diff.** Added and removed words are marked with `+` / `−`, underline and strike-through, not colour alone. Heading changes are listed as added, removed or renamed.

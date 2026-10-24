@@ -6,9 +6,8 @@ const KEYS: [string, string][] = [
   ['Timeline', 'Left / Right: previous or next change. Home / End: first or last. Page Up / Page Down: about a year later or earlier. Escape hides the tooltip.'],
   ['Filmstrip', 'Left / Right, Home / End move along the strip; Enter or Space shows that capture.'],
   ['Slider divider', 'Left / Right: 5%. Page Up / Page Down: 25%. Home / End: either edge. Enter: back to 50%.'],
-  ['Onion skin', 'Left / Right on the opacity range: 5% steps.'],
   ['Before / After (Single)', 'Left / Right switches between the Before and After capture.'],
-  ['Compare', 'Up / Down or Left / Right moves between the modes once the list is open.'],
+  ['Compare', 'Left / Right moves between Slider, Side by side and Single.'],
   ['Play', 'Any key stops the time-lapse.'],
 ];
 

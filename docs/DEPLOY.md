@@ -77,7 +77,7 @@ Set `SITE=https://pagelapse.geekplux.com` first.
 
 1. **Health.** `curl -s "$SITE/api/health"` prints `{"ok":true,"version":"0.1.0","ai":"available"}`. `"ai":"unavailable"` means the `AI` binding is missing from `wrangler.jsonc` (or you are on a preview, which has none by design).
 2. **Headers.** `curl -sI "$SITE/"` shows `content-security-policy` with `frame-src https://web.archive.org`, plus `x-content-type-options: nosniff`, `referrer-policy` and `permissions-policy`. `curl -sI "$SITE/samples/git-scm/20131106090756-302c3cea.webp"` shows `cache-control: public, max-age=31536000, immutable`.
-3. **The first view.** Open `$SITE`. The git-scm.com sample shows at once, with its pictures. Try Slider, Side by side, Onion skin and Play.
+3. **The first view.** Open `$SITE`. The git-scm.com sample shows at once, with its pictures. Try Slider, Side by side, Single and Play.
 4. **A live run.** Paste `https://git-scm.com/` and press Enter. Captures arrive one by one and the run ends with a timeline of changes, each with an "AI summary".
 5. **The KV cache.** Start the same URL again: it finishes in a few seconds, because the listing and every capture come from KV. To confirm directly:
 

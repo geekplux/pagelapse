@@ -41,10 +41,11 @@ export function initialView(entries: readonly Pair[], captures: readonly string[
   return { index, at: at ?? entries[index]?.to ?? captures.at(-1) ?? '' };
 }
 
-/** How the pane compares a change's two captures. Slider is the first view (D23). */
-export type Mode = 'single' | 'side' | 'slider' | 'onion';
-export const MODES: readonly [Mode, string][] = [['single', 'Single'], ['side', 'Side by side'], ['slider', 'Slider'], ['onion', 'Onion skin']];
+/** How the pane compares a change's two captures, in the segmented control's order. Slider is the first view (D23). */
+export type Mode = 'slider' | 'side' | 'single';
+export const MODES: readonly [Mode, string][] = [['slider', 'Slider'], ['side', 'Side by side'], ['single', 'Single']];
 export const DEFAULT_MODE: Mode = 'slider';
+/** A known mode, else undefined (the caller falls back to its default; a retired `onion` link opens Slider). */
 export const parseMode = (v?: string): Mode | undefined => MODES.find(([m]) => m === v)?.[0];
 
 /** Live runs open in Single: one archived page per selection, a compare mode on request (D24). */
@@ -69,14 +70,14 @@ const SPLIT_KEYS: Record<string, (v: number) => number> = {
 /** The divider position (0-100, % of Before shown) after `key`, or `null` when the key does not move it. Enter resets to 50. */
 export const splitFromKey = (key: string, v: number): number | null => (SPLIT_KEYS[key] ? clamp(SPLIT_KEYS[key](v)) : null);
 
-/** The divider position under a pointer at `x` over a box starting at `left`, `width` wide. */
-export const splitFromPointer = (x: number, left: number, width: number) => (width > 0 ? clamp(((x - left) / width) * 100) : 50);
+/** The divider position under a pointer at `x` over a box starting at `left`, `width` wide: 1:1, to a tenth of a percent. */
+export const splitFromPointer = (x: number, left: number, width: number) => (width > 0 ? Math.min(100, Math.max(0, Math.round(((x - left) / width) * 1000) / 10)) : 50);
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthYear = (ts: string) => `${MONTHS[Number(ts.slice(4, 6)) - 1] ?? ''} ${ts.slice(0, 4)}`.trim();
 
 /** The slider's `aria-valuetext`: `40% before (November 2013), 60% after (December 2025)`; same-year captures stay apart. */
-export const splitText = (v: number, e: Pair) => `${v}% before (${monthYear(e.from)}), ${100 - v}% after (${monthYear(e.to)})`;
+export const splitText = (v: number, e: Pair) => `${Math.round(v)}% before (${monthYear(e.from)}), ${100 - Math.round(v)}% after (${monthYear(e.to)})`;
 
 /** Same-origin URL of a recorded picture (`public/samples/<id>/`), full size or thumbnail. */
 export const shotSrc = (sampleId: string, file: string, thumb = false) => `/samples/${sampleId}/${file}${thumb ? '.thumb' : ''}.webp`;

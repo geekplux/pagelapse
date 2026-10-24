@@ -56,7 +56,7 @@ What to look for:
 Open it:
 
 - [2018·12·20 → 2019·06·24 in Slider](https://pagelapse.geekplux.com/?sample=rust-lang&change=20181220082130-20190624102109&view=slider): the banner goes, the tagline changes.
-- [2019·06·24 → 2020·01·12 in Onion skin](https://pagelapse.geekplux.com/?sample=rust-lang&change=20190624102109-20200112221536&view=onion): fade the newer capture over the older one.
+- [2019·06·24 → 2020·01·12 in Side by side](https://pagelapse.geekplux.com/?sample=rust-lang&change=20190624102109-20200112221536&view=side): the older and the newer capture next to each other.
 
 ## Try these live
 
