@@ -13,7 +13,8 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - A calm layout: one focal point per view, secondary details folded behind native disclosures, one spacing scale and one ink accent, all checked by tests and a layout audit.
 - One-line summaries of each meaningful change: Workers AI on a deployment (batched, cached per pair of captures, capped per day) with a labelled deterministic fallback.
 - Live pictures: the Internet Archive's own replay of the selected capture in a sandboxed frame, loaded only when you rest on a capture, with text-outline thumbnails.
-- Live mode: paste any URL to look it up in the Internet Archive, with progress, Cancel, and clear empty and error states.
+- Live mode: paste any URL to look it up in the Internet Archive. In the redesign its progress (`n of N` and a bar) and Cancel take the title's meta line, which becomes the usual captures, span and changes line when the run ends, so nothing on the page moves; empty and error states are plain text with the next actions.
+- Motion: opening a sample or a capture from the first view grows it into the stage (a view transition, 350 ms), Play's playhead slides through each capture's hold, and a live run's outlines fade in and its bars grow as they arrive. Reduced motion turns all of it off.
 - A Cloudflare Worker API for captures, extracted pages and summaries, with caching, per-visitor rate limits and a global cooldown when the archive asks to slow down.
 - Compare modes (Slider, Side by side, Single) and a pausable time-lapse Play. Onion skin was removed in the redesign; an old `view=onion` link opens Slider.
 - The visual pane: what each sample capture looked like, from committed screenshots.
