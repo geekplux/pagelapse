@@ -17,6 +17,17 @@ export function clip(text: string, max = MAX_SNIPPET_CHARS): string {
   return `${space > max * 0.6 ? cut.slice(0, space) : cut}…`;
 }
 
+/** Month and weekday names (and their short forms), ordinal suffixes and number words: dates and counts, not names. */
+const NOT_A_NAME = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:rs(?:day)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|st|nd|rd|th|k|m|bn|thousand|million|billion|trillion)$/;
+
+/**
+ * Whether a heading reads as a section name: it has a word that is not a number, a date part or a count unit, so
+ * "40", "12 May 2024" and "1.3 million" are not names, while "2024 cyberattacks" and "Why Rust?" are.
+ */
+export function looksLikeTitle(text: string): boolean {
+  return (text.toLowerCase().match(/\p{L}+/gu) ?? []).some((w) => !NOT_A_NAME.test(w) && (w.length > 1 || !/\p{Script=Latin}/u.test(w)));
+}
+
 /** One side of a word diff, starting a few words before its first edit so the excerpt shows the change. */
 function excerpt(words: WordOp[], side: 'del' | 'ins'): string {
   let [text, at] = ['', -1];
@@ -52,16 +63,22 @@ export function toChangeRecord(diff: PageDiff, a: SnapshotPage, b: SnapshotPage)
       const size = countWords(block.text);
       stats[`words${side}` as const] += size;
       stats[`blocks${side}` as const]++;
-      if (block.kind === 'heading') (side === 'Added' ? headingsAdded : headingsRemoved).push(clip(block.text, 80));
-      else (side === 'Added' ? added : removed).push({ v: clip(block.text), size });
+      if (block.kind === 'heading') {
+        if (looksLikeTitle(block.text)) (side === 'Added' ? headingsAdded : headingsRemoved).push(clip(block.text, 80));
+      } else (side === 'Added' ? added : removed).push({ v: clip(block.text), size });
     } else if (op.type === 'modified' && !op.normalizedEqual) {
       const side = (t: WordOp['type']) => countWords(op.words.filter((w) => w.type === t).map((w) => w.text).join(''));
       const [ins, del] = [side('ins'), side('del')];
       stats.wordsAdded += ins;
       stats.wordsRemoved += del;
       stats.blocksModified++;
-      if (op.kind === 'heading') renamed.push([clip(a.blocks[op.a]!.text, 80), clip(b.blocks[op.b]!.text, 80)]);
-      else modified.push({ v: { before: excerpt(op.words, 'del'), after: excerpt(op.words, 'ins') }, size: ins + del });
+      // A rename needs a section name on both sides: pairing folds digits and ignores kind, so a paragraph "40" can
+      // pair with the heading "2024 cyberattacks". A name on one side only is a section added or removed.
+      const [x, y] = [a.blocks[op.a]!, b.blocks[op.b]!];
+      const [was, now] = [x.kind === 'heading' && looksLikeTitle(x.text), y.kind === 'heading' && looksLikeTitle(y.text)];
+      if (was && now) renamed.push([clip(x.text, 80), clip(y.text, 80)]);
+      else if (was || now) (was ? headingsRemoved : headingsAdded).push(clip((was ? x : y).text, 80));
+      else if (op.kind !== 'heading') modified.push({ v: { before: excerpt(op.words, 'del'), after: excerpt(op.words, 'ins') }, size: ins + del });
     }
   }
   const record: ChangeRecord = {
