@@ -155,7 +155,8 @@ export const opensOnDecade = (overview: boolean, q: OpenQuery): boolean => overv
 /**
  * The captures whose pictures the workspace shows first, worked out without the timeline (main.tsx decodes them before
  * the first render): the decade compare's two; else in Single the capture shown; else the change's two (the featured
- * change when the address names none). A capture named alone stands for its change. Unknown values are dropped later.
+ * change when the address names none). A capture named alone (`?at=`) yields just that capture; the timeline decodes
+ * its change's pair once it renders. Unknown values are dropped later.
  */
 export function firstCaptures(f: { snapshots: readonly { ts: string; shot?: ShotRef | undefined }[]; featured?: string | undefined }, q: OpenQuery, overview: boolean): string[] {
   const decade = opensOnDecade(overview, q) ? overviewPair(f.snapshots) : undefined;

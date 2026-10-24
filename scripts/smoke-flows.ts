@@ -934,7 +934,7 @@ export const flows: readonly Flow[] = [
       await page.locator('.vp-play').click();
       const first = defaultFixture.snapshots[0]!.ts;
       await page.locator(`.rb-th[aria-current="true"][data-ts="${first}"]`).waitFor({ timeout: 2_000 });
-      await page.keyboard.press('Shift');
+      await page.keyboard.press('Shift'); // any key stops Play, so the flow leaves the page still
       return { notes: [`Previous -> "${narrowed}"`, `Play started at capture #1 (${first})`] };
     },
   },
