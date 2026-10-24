@@ -55,6 +55,14 @@ describe('workspace stage', () => {
     expect(first).not.toContain('Change 13 of 13');
   });
 
+  it('under the decade compare the ribbon keeps the latest change, not the featured one (Play then starts from the first capture)', () => {
+    const latest = fixture.snapshots.at(-1)!.ts;
+    const current = (html: string) => /<[^>]*class="rb-th[^"]*"[^>]*aria-current="true"[^>]*>/.exec(html)?.[0] ?? /<[^>]*aria-current="true"[^>]*class="rb-th[^"]*"[^>]*>/.exec(html)?.[0];
+    expect(fixture.featured).not.toMatch(new RegExp(`-${latest}$`));
+    expect(current(render({ overview: true }))).toContain(`data-ts="${latest}"`);
+    expect(current(render())).toContain(`data-ts="${fixture.featured!.split('-')[1]}"`);
+  });
+
   it('has Play, Previous / Next, the compare control and Copy link in one row', () => {
     const row = /<div class="controls">.*<\/div>/.exec(render({ change: PAIR }))![0];
     for (const want of ['data-play', 'aria-label="Previous change"', 'aria-label="Next change"', 'id="vp-modes"', 'Copy link']) expect(row).toContain(want);

@@ -47,7 +47,10 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
   );
   const shown = useMemo(() => ({ ...timeline, entries: all, trivialCaptures: showTrivial ? [] : trivialCaptures }), [timeline, all, showTrivial, trivialCaptures]);
   const [view, setView] = useState(() => {
-    const v = initialView(entries, snapshots.map((s) => s.ts), { change: initialChange, at: initialAt, featured: fixture.featured });
+    // Under the decade compare the timeline keeps the latest change selected (so Play starts from the first capture):
+    // a featured change is for samples that open on it.
+    const featured = overview ? undefined : fixture.featured;
+    const v = initialView(entries, snapshots.map((s) => s.ts), { change: initialChange, at: initialAt, featured });
     return { key: entries[v.index] ? pairOf(entries[v.index]!) : '', at: v.at };
   });
   const [mode, setMode] = useState<Mode>(() => parseMode(initialMode) ?? DEFAULT_MODE);
