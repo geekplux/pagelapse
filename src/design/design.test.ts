@@ -21,7 +21,8 @@ describe('type', () => {
 
   it('every font size is one of the four tokens', () => {
     const size = designed.filter((d) => d.prop === 'font-size' || d.prop === 'font');
-    const bad = size.filter((d) => d.value !== 'inherit' && !/var\(--fs-(12|14|20|40)\)/.test(d.value));
+    // `.sr-comma` is a spoken-only comma at size 0: no visible type, so not a fifth size.
+    const bad = size.filter((d) => d.value !== 'inherit' && !/var\(--fs-(12|14|20|40)\)/.test(d.value) && !(d.selector === '.sr-comma' && d.value === '0'));
     expect(show(bad)).toEqual([]);
     expect(size.length).toBeGreaterThan(20);
   });

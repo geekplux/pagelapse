@@ -167,8 +167,8 @@ ins::after, del::after { content: "] "; }
 .change:hover, .change[aria-current="true"] { background: var(--sand-2); }
 .change-when { color: var(--sand-11); }
 .change-mag { display: flex; align-items: center; gap: var(--space-2); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); }
-/* A comma for the row's spoken name: clipped in place (an absolutely positioned one would add a space before it). */
-.sr-comma { clip-path: inset(50%); }
+/* Read as a comma by screen readers, takes no width (a clipped glyph still widened the right-aligned phone cell). */
+.sr-comma { font-size: 0; }
 .change-mag i { flex: none; height: 4px; border-radius: var(--radius-4); background: var(--sand-9); }
 .change[aria-current="true"] .change-mag i { background: var(--amber-11); }
 /* Phones: the dates and the bar share the first line, the summary takes the second (target/V3WorkPhone.html). */
