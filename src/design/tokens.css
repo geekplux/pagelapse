@@ -1,65 +1,61 @@
-/* Design tokens. Colours mirror src/design/palette.ts (palette.test.ts keeps them equal). */
+/* Design tokens (docs/redesign/DESIGN.md). Colours mirror src/design/palette.ts (palette.test.ts keeps them equal);
+   design.test.ts holds every other stylesheet to these tokens. */
 :root {
   color-scheme: light dark;
-  --paper: #F6F1E7;
-  --card: #FFFDF8;
-  --ink: #1F1B16;
-  --ink-2: #5C5346;
-  --rule: #D9CFBF;
-  --rule-strong: #8A7F6E;
-  --added: #1F5FB0;
-  --added-tint: #E3EDFA;
-  --removed: #B4441A;
-  --removed-tint: #FBE6DA;
-  --mag-1: #9C8558;
-  --mag-2: #85693F;
-  --mag-3: #5E4826;
-  --mag-4: #3A2A14;
-  --mark-plus: #7FB0EE;
-  --mark-minus: #E8895A;
+  /* Radix Colors: sand (neutral), cyan (Before, removed), amber (After, added, selected). Steps by role:
+     1-2 backgrounds, 3-5 component backgrounds, 6-8 borders, 9-10 solids, 11-12 text. */
+  --sand-1: #FDFDFC; --sand-2: #F9F9F8; --sand-3: #F1F0EF; --sand-4: #E9E8E6; --sand-5: #E2E1DE; --sand-6: #DAD9D6; --sand-7: #CFCECA; --sand-8: #BCBBB5; --sand-9: #8D8D86; --sand-10: #82827C; --sand-11: #63635E; --sand-12: #21201C;
+  --cyan-1: #FAFDFE; --cyan-2: #F2FAFB; --cyan-3: #DEF7F9; --cyan-4: #CAF1F6; --cyan-5: #B5E9F0; --cyan-6: #9DDDE7; --cyan-7: #7DCEDC; --cyan-8: #3DB9CF; --cyan-9: #00A2C7; --cyan-10: #0797B9; --cyan-11: #107D98; --cyan-12: #0D3C48;
+  --amber-1: #FEFDFB; --amber-2: #FEFBE9; --amber-3: #FFF7C2; --amber-4: #FFEE9C; --amber-5: #FBE577; --amber-6: #F3D673; --amber-7: #E9C162; --amber-8: #E2A336; --amber-9: #FFC53D; --amber-10: #FFBA18; --amber-11: #AB6400; --amber-12: #4F3422;
+  /* The page ground, and the surface behind a picture. */
+  --bg: #FFFFFF; --frame: #FFFFFF;
 
-  --font-display: Fraunces, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-  --font-read: Charter, "Bitstream Charter", "Iowan Old Style", "Sitka Text", Cambria, Georgia, serif;
-  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
-  /* Modular scale, ratio 1.25 from 16 px. */
-  --step--1: 0.8rem;
-  --step-1: 1.25rem;
-  --step-2: 1.5625rem;
-  --step-3: 1.953rem;
-  --step-4: 2.441rem;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  /* The one spacing scale (PLAN section 4 "Calm layout", D32; spacing.test.ts allows nothing else). */
+  /* Type: Schibsted Grotesk for UI and text, IBM Plex Mono for dates, numbers and keys (both self-hosted, base.css). */
+  --font-ui: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* The only four sizes, each with its line height: 12/16, 14/20, 20/28, 40/48 px. */
+  --fs-12: 0.75rem; --lh-12: 1rem;
+  --fs-14: 0.875rem; --lh-14: 1.25rem;
+  --fs-20: 1.25rem; --lh-20: 1.75rem;
+  --fs-40: 2.5rem; --lh-40: 3rem;
+  --track-40: -0.025em;
+  /* Running text in the diff reads at 14 on a 22 px line. */
+  --lh-14-text: 1.375rem;
+
+  /* Lines and radii: hairlines are 0.5px; radii 4 (thumbnails, tags), 6 (inner segments, tags on pictures),
+     8 (buttons, fields, the stage), 12 (menus). */
+  --line: 0.5px;
+  --radius-4: 4px;
+  --radius-6: 6px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+
+  /* Motion: one curve, one base duration. */
+  --ease: ease-out;
+  --dur: 250ms;
+
+  /* The one spacing scale (spacing.test.ts allows nothing else). */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 16px;
   --space-4: 24px;
   --space-5: 40px;
   --space-6: 64px;
-  /* The one accent is ink (D33): a solid fill for the view's one primary action; selection is outline, underline or caret. */
-  --accent: var(--ink);
-  /* Non-palette colours: the print's drop shadow, and the backdrop of a replayed page (pages assume white). */
-  --shadow: rgb(31 27 22 / 0.55);
+
+  /* Non-palette colours: the shadow of a layer over a picture or other layers, the slider divider (white with a
+     dark hairline, so it holds on any picture), and the backdrop of a replayed page (pages assume white). */
+  --shadow: 0 0 0 var(--line) rgb(0 0 0 / 0.3), 0 2px 6px rgb(0 0 0 / 0.18);
+  --divider: white;
+  --divider-edge: rgb(0 0 0 / 0.35);
+  --divider-ink: rgb(33 32 28);
   --replay-bg: white;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #14120F;
-    --card: #1D1A16;
-    --ink: #EDE6D9;
-    --ink-2: #A89F90;
-    --rule: #3A342C;
-    --rule-strong: #71685A;
-    --added: #7FB0EE;
-    --added-tint: #1E2A3D;
-    --removed: #E8895A;
-    --removed-tint: #3A2318;
-    --mag-1: #7D6946;
-    --mag-2: #957A50;
-    --mag-3: #BFA272;
-    --mag-4: #E6CFA0;
-    --mark-plus: #1F5FB0;
-    --mark-minus: #B4441A;
+    --sand-1: #111110; --sand-2: #191918; --sand-3: #222221; --sand-4: #2A2A28; --sand-5: #31312E; --sand-6: #3B3A37; --sand-7: #494844; --sand-8: #62605B; --sand-9: #6F6D66; --sand-10: #7C7B74; --sand-11: #B5B3AD; --sand-12: #EEEEEC;
+    --cyan-1: #0B161A; --cyan-2: #101B20; --cyan-3: #082C36; --cyan-4: #003848; --cyan-5: #004558; --cyan-6: #045468; --cyan-7: #12677E; --cyan-8: #11809C; --cyan-9: #00A2C7; --cyan-10: #23AFD0; --cyan-11: #4CCCE6; --cyan-12: #B6ECF7;
+    --amber-1: #16120C; --amber-2: #1D180F; --amber-3: #302008; --amber-4: #3F2700; --amber-5: #4D3000; --amber-6: #5C3D05; --amber-7: #714F19; --amber-8: #8F6424; --amber-9: #FFC53D; --amber-10: #FFD60A; --amber-11: #FFCA16; --amber-12: #FFE7B3;
+    --bg: #111110; --frame: #191918;
   }
 }

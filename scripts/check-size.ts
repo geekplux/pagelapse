@@ -37,7 +37,8 @@ const pictures = checkPictures(root);
 const rows: [string, number, number][] = [
   ['initial JS (gzip)', initialJs.reduce((n, f) => n + gz(read(f)), 0), 100 * KB],
   ['CSS (gzip, all files)', cssFiles.reduce((n, f) => n + gz(read(`assets/${f}`)), 0), 15 * KB],
-  [`fonts (${fonts.length} woff2)`, fonts.reduce((n, f) => n + read(`fonts/${f}`).length, 0), 60 * KB],
+  // Schibsted Grotesk (variable, 400 to 700) and IBM Plex Mono 400 + 500, latin subsets: about 76 KB.
+  [`fonts (${fonts.length} woff2)`, fonts.reduce((n, f) => n + read(`fonts/${f}`).length, 0), 80 * KB],
   ['default sample (gzip)', gz(sample), 40 * KB],
   [`pictures (${pictures.count} webp)`, pictures.total, PICTURE_BUDGET.total],
   ['largest full picture', pictures.largestFull, PICTURE_BUDGET.full],

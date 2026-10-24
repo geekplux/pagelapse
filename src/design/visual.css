@@ -29,7 +29,7 @@
 
 /* One controls row: Play, Previous / Next, Compare (and Before / After in Single), then "Change details". */
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.controls > .vp-modes, .controls > .change-details { flex-basis: 100%; }
+.controls > .change-details { flex-basis: 100%; }
 /* Phones: once the row has scrolled away above, Previous / Next sticks to the bottom of the screen (its slot keeps
    its size, so nothing moves), and focus scrolls stop above it. */
 @media (max-width: 39.99rem) {
@@ -37,53 +37,55 @@
   /* A changes-list row brought into view stops clear of the sticky bar too (AAA 2.4.12). */
   .change { scroll-margin-bottom: calc(var(--space-6) + var(--space-2)); }
   .nav-slot { min-height: 2.5rem; }
-  .diff-nav[data-stuck] { position: fixed; z-index: 1; inset: auto 0 0; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--paper); border-top: 1px solid var(--rule-strong); }
+  .diff-nav[data-stuck] { position: fixed; z-index: 1; inset: auto 0 0; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--bg); border-top: var(--line) solid var(--sand-6); }
 }
 
-/* Compare: a disclosure button naming the mode, then native radios as quiet text segments. */
+/* Compare: a disclosure button naming the mode, then native radios as a segmented control. */
 .vp-compare::after { content: " ▾" / ""; }
 .vp-compare[aria-expanded="true"]::after { content: " ▴" / ""; }
 .vp-modes:not([hidden]) { display: flex; }
-.vp-modes { flex-wrap: wrap; gap: 0 var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
-.vp-mode { position: relative; display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--ink-2); font: 500 0.9rem/1 var(--font-ui); white-space: nowrap; cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 0.45em; }
+.vp-modes { flex-wrap: wrap; gap: 2px /* spacing-allow: segmented control inset (DESIGN.md) */; width: fit-content; min-width: 0; margin: 0; padding: 2px /* spacing-allow: segmented control inset (DESIGN.md) */; border: 0; border-radius: var(--radius-8); background: var(--sand-3); }
+.vp-mode { position: relative; display: inline-flex; align-items: center; min-height: 2.25rem; padding: 0 var(--space-3); border-radius: var(--radius-6); color: var(--sand-11); font: 400 var(--fs-14) / var(--lh-14) var(--font-ui); white-space: nowrap; cursor: pointer; transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+.vp-mode:hover { color: var(--sand-12); }
 .vp-mode input { position: absolute; inset: 0; margin: 0; appearance: none; cursor: pointer; }
 .vp-play { white-space: nowrap; }
-/* Playing, or swapped: a heavier ink border and bold text, besides the changed label. */
-.vp-play[data-playing], .vp-onion .btn[aria-pressed="true"] { border: 2px solid var(--ink); font-weight: 700; }
+/* Playing, or swapped: a sand-3 fill and semibold text, besides the changed label. */
+.vp-play[data-playing], .vp-onion .btn[aria-pressed="true"] { background: var(--sand-3); font-weight: 600; }
 .vp-sides { display: inline-flex; }
-.vp-side { min-height: 2.5rem; padding: var(--space-1) var(--space-3); border: 1px solid var(--rule-strong); background: none; color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 0.45em; }
-.vp-side + .vp-side { border-left: 0; }
+.vp-sides { padding: 2px /* spacing-allow: segmented control inset (DESIGN.md) */; gap: 2px /* spacing-allow: segmented control inset (DESIGN.md) */; border-radius: var(--radius-8); background: var(--sand-3); }
+.vp-side { min-height: 2.25rem; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-6); background: none; color: var(--sand-11); font: 400 var(--fs-14) / var(--lh-14) var(--font-ui); cursor: pointer; transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease); }
 .vp-side b, .vp-label b { font-family: var(--font-mono); }
-.vp-side [data-op="added"], .vp-label [data-op="added"] { color: var(--added); }
-.vp-side [data-op="removed"], .vp-label [data-op="removed"] { color: var(--removed); }
-/* Pressed or checked: ink, bold and underlined; never a fill, never hue alone. */
-:is(.vp-mode:has(:checked), .vp-side[aria-checked="true"]) { color: var(--ink); font-weight: 700; text-decoration-color: var(--ink); }
+.vp-side [data-op="added"], .vp-label [data-op="added"] { color: var(--amber-11); }
+.vp-side [data-op="removed"], .vp-label [data-op="removed"] { color: var(--cyan-11); }
+/* Pressed or checked: the raised segment (bg, a sand-7 hairline) in sand-12 and medium weight; never hue alone. */
+:is(.vp-mode:has(:checked), .vp-side[aria-checked="true"]) { background: var(--bg); color: var(--sand-12); font-weight: 500; box-shadow: 0 0 0 var(--line) var(--sand-7); }
 
-/* The mounted print: a card mat, a strong hairline, the picture at 16:10 with its size reserved. */
-.vp-mat { position: relative; margin: 0; padding: var(--space-2); background: var(--card); border: 1px solid var(--rule-strong); border-radius: 2px; box-shadow: 0 18px 40px -28px var(--shadow); }
-.vp-shot { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: var(--paper) center / cover no-repeat; }
+/* The stage: the picture at 16:10 with its size reserved, on the frame surface inside a sand-7 hairline. */
+.vp-mat { position: relative; margin: 0; padding: 0; background: var(--frame); border: var(--line) solid var(--sand-7); border-radius: var(--radius-8); overflow: hidden; }
+.vp-mat > figcaption, .vp-mat > .vp-cap { padding-inline: var(--space-3); padding-bottom: var(--space-2); }
+.vp-shot { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: var(--frame) center / cover no-repeat; }
 .vp-none {
-  display: grid; place-content: center; gap: var(--space-2); padding: var(--space-3); text-align: center; color: var(--ink-2);
-  background: repeating-linear-gradient(135deg, var(--card) 0 9px, var(--rule) 9px 10px); border: 1px dashed var(--rule-strong);
+  display: grid; place-content: center; gap: var(--space-2); padding: var(--space-3); text-align: center; color: var(--sand-11);
+  background: var(--sand-2); border: var(--line) dashed var(--sand-8);
 }
-.vp-none p:first-child { color: var(--ink); font: 600 var(--step-1) / 1.3 var(--font-display); }
-.vp-none p { padding: var(--space-1) var(--space-2); background: var(--card); }
-.vp-label { position: absolute; z-index: 1; top: var(--space-3); left: var(--space-3); padding: var(--space-1) var(--space-2); background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); max-width: calc(50% - 20px); overflow-wrap: anywhere; }
+.vp-none p:first-child { color: var(--sand-12); font: 600 var(--fs-20) / var(--lh-20) var(--font-ui); }
+.vp-label { position: absolute; z-index: 1; top: var(--space-3); left: var(--space-3); display: inline-flex; align-items: center; gap: var(--space-2); min-height: 28px; padding: 0 var(--space-2); background: var(--bg); color: var(--sand-12); border-radius: var(--radius-6); font-size: var(--fs-14); line-height: var(--lh-14); box-shadow: var(--shadow); max-width: calc(50% - 20px); overflow-wrap: anywhere; }
 .vp-label[data-side="after"] { left: auto; right: var(--space-3); }
-@media (max-width: 39.99rem) { .vp-label { padding: 0 var(--space-1); font-size: 0.7rem; } }
+@media (max-width: 39.99rem) { .vp-label { min-height: 0; padding: 0 var(--space-1); font-size: var(--fs-12); line-height: var(--lh-12); } }
 
 /* Compare: the two pictures share one 16:10 cell. Slider clips After at --split; onion skin fades the top one. */
 .vp-cmp { position: relative; display: grid; }
 .vp-cmp > :not(.vp-split) { grid-area: 1 / 1; min-width: 0; }
 .vp-clip { clip-path: inset(0 0 0 var(--split)); }
 .vp-top { opacity: var(--op); }
-/* The divider: a 32 px wide drag strip with its own touch handling, a 2 px ink line on a card halo, a card knob. */
-.vp-split { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - var(--space-3)) /* spacing-allow: the divider follows --split */; width: 32px; display: grid; place-items: center; touch-action: none; cursor: ew-resize; }
-.vp-split::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin-inline: auto; width: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); }
-.vp-knob { position: relative; display: grid; place-items: center; width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 50%; background: var(--card); color: var(--ink); box-shadow: 0 0 0 2px var(--card); font: 700 0.85rem/1 var(--font-mono); }
-.vp-split:focus-visible .vp-knob { background: var(--ink); color: var(--card); }
-.vp-onion { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-top: var(--space-2); font: 0.85rem var(--font-ui); }
-.vp-onion input { vertical-align: middle; accent-color: var(--ink); }
+/* The divider: a 40 px wide drag strip with its own touch handling, a 3 px white line with a dark hairline, a 40 px knob. */
+.vp-split { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - 20px) /* spacing-allow: the divider follows --split */; width: 40px; display: grid; place-items: center; touch-action: none; cursor: ew-resize; }
+.vp-split::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin-inline: auto; width: 3px; background: var(--divider); box-shadow: 0 0 0 var(--line) var(--divider-edge); }
+.vp-knob { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--divider); color: var(--divider-ink); box-shadow: var(--shadow); font: 500 var(--fs-14) / var(--lh-14) var(--font-mono); }
+.vp-split:focus-visible { outline: none; }
+.vp-split:focus-visible .vp-knob { outline: 2px solid var(--sand-12); outline-offset: 2px; }
+.vp-onion { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-top: var(--space-2); }
+.vp-onion input { vertical-align: middle; accent-color: var(--sand-12); }
 .vp-onion input[type=range] { min-height: 24px; }
 .vp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 @media (max-width: 39.99rem) { .vp-pair { grid-template-columns: 1fr; } }
@@ -91,42 +93,42 @@
 .vp-frame { background: center / cover no-repeat; }
 @media (prefers-reduced-motion: no-preference) {
   .vp-frame[data-fade] { background-image: var(--prev); }
-  .vp-frame[data-fade] .vp-shot { animation: vp-fade 120ms ease-out; }
+  .vp-frame[data-fade] .vp-shot { animation: vp-fade var(--dur) var(--ease); }
 }
 @keyframes vp-fade { from { opacity: 0; } }
 /* One caption line: frame, date, the link out; honest badges below it. */
-.vp-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); padding-top: var(--space-2); color: var(--ink-2); font-size: 0.8rem; }
-.vp-cap > :first-child { color: var(--ink); font-weight: 700; }
-.vp-cap a { margin-left: auto; color: var(--ink); padding-block: var(--space-1); }
+.vp-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); padding-top: var(--space-2); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); }
+.vp-cap > :first-child { color: var(--sand-12); font-weight: 500; }
+.vp-cap a { margin-left: auto; color: var(--sand-12); padding-block: var(--space-1); }
 .vp-cap a + a { margin-left: 0; }
 .vp-note { margin-bottom: var(--space-2); }
-.vp-badge, .vp-note { flex-basis: 100%; font-family: var(--font-ui); color: var(--ink); padding: var(--space-1) var(--space-2); border-left: 3px solid var(--rule-strong); font-size: 0.85rem; }
+.vp-badge, .vp-note { flex-basis: 100%; width: fit-content; font-family: var(--font-ui); color: var(--sand-11); padding: 0 var(--space-2); border-radius: var(--radius-4); background: var(--sand-3); font-size: var(--fs-12); line-height: var(--lh-12); }
 
-/* The contact sheet: numbered frames; the shown one has a thick ink outline (on a paper gap, so it holds against any
+/* The contact sheet: numbered frames; the shown one has a sand-12 ring (on a bg gap, so it holds against any
    thumbnail edge) and a caret above it. */
 .film-strip { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(4.4rem, 1fr); gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-2) var(--space-2); list-style: none; overflow-x: auto; }
 @media (prefers-reduced-motion: no-preference) { .film-strip { scroll-behavior: smooth; } }
-.frame { position: relative; display: grid; gap: var(--space-1); width: 100%; padding: 0; border: 0; background: none; color: var(--ink-2); text-align: left; cursor: pointer; }
-.frame img, .frame-none { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; border: 1px solid var(--rule-strong); }
-.frame-none { display: grid; place-content: center; border-style: dashed; font: 0.72rem var(--font-mono); }
+.frame { position: relative; display: grid; gap: var(--space-1); width: 100%; padding: 0; border: 0; background: none; color: var(--sand-11); text-align: left; cursor: pointer; transition: transform var(--dur) var(--ease); }
+.frame img, .frame-none { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; border-radius: var(--radius-4); box-shadow: 0 0 0 var(--line) var(--sand-7); }
+.frame-none { display: grid; place-content: center; background: var(--sand-2); font: var(--fs-12) var(--font-mono); }
 .frame[data-trivial] img { filter: grayscale(1) contrast(0.75); }
-.frame:hover img { border-color: var(--ink); }
-.frame[aria-current="true"] { color: var(--ink); }
-.frame[aria-current="true"] :is(img, .frame-none, .sil) { outline: 3px solid var(--ink); outline-offset: 2px; }
-.frame[aria-current="true"]::before { content: "▼" / ""; position: absolute; top: calc(-1 * var(--space-3)); left: 0; right: 0; text-align: center; font-size: 0.7rem; line-height: 1; color: var(--ink); }
-.frame[aria-current="true"] .frame-cap { font-weight: 700; }
-.frame-cap { display: flex; flex-wrap: wrap; gap: 0 var(--space-1); font-size: 0.7rem; line-height: 1.35; }
-.frame-trivial, .frame-partial { font-style: italic; }
+.frame:hover { transform: translateY(-2px); }
+.frame[aria-current="true"] { color: var(--sand-12); }
+.frame[aria-current="true"] :is(img, .frame-none, .sil) { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--sand-12); }
+.frame[aria-current="true"]::before { content: "▼" / ""; position: absolute; top: calc(-1 * var(--space-3)); left: 0; right: 0; text-align: center; font-size: var(--fs-12); line-height: 1; color: var(--sand-12); }
+.frame[aria-current="true"] .frame-cap { font-weight: 600; }
+.frame-cap { display: flex; flex-wrap: wrap; gap: 0 var(--space-1); font-size: var(--fs-12); line-height: var(--lh-12); }
+.frame-trivial, .frame-partial { color: var(--sand-11); }
 
-.tl-tip img { width: 160px; height: auto; border: 1px solid var(--rule); }
+.tl-tip img { width: 160px; height: auto; border-radius: var(--radius-4); }
 
 @media (forced-colors: active) {
-  .frame[aria-current="true"] :is(img, .frame-none, .sil) { outline-color: Highlight; }
+  .frame[aria-current="true"] :is(img, .frame-none, .sil) { outline: 3px solid Highlight; outline-offset: 2px; }
   .frame[aria-current="true"]::before { color: CanvasText; }
-  :is(.vp-side[aria-checked="true"], .vp-mode:has(:checked)) { text-decoration-color: CanvasText; }
+  :is(.vp-side[aria-checked="true"], .vp-mode:has(:checked)) { outline: 2px solid Highlight; }
   .vp-split::before { forced-color-adjust: none; background: CanvasText; box-shadow: 0 0 0 2px Canvas; }
   .vp-split:focus-visible .vp-knob { background: Highlight; color: HighlightText; }
-  .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border: 2px solid CanvasText; }
 }
 
 /* Live replay (phase 15): the archive's 1280×800 page scaled into the mat (`--k` from a ResizeObserver), its text
@@ -134,19 +136,19 @@
 .lf { position: relative; overflow: hidden; }
 .lf iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; background: var(--replay-bg); transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
 .lf iframe:not([data-loaded]), .lf iframe[data-hidden] { visibility: hidden; }
-.sil { display: block; width: 100%; height: 100%; background: var(--card); }
-.sil rect { fill: var(--rule); }
-.sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--rule-strong); }
+.sil { display: block; width: 100%; height: 100%; background: var(--frame); }
+.sil rect { fill: var(--sand-4); }
+.sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--sand-6); }
 /* While a run fetches, the pane's outline is quieter than the strip filling in below it. */
 :is([data-live="captures"], [data-live="snapshots"]) .vpane .sil { opacity: 0.6; }
 .frame-pending .frame-none { border-style: dotted; }
-.frame .sil { aspect-ratio: 16 / 10; height: auto; border: 1px solid var(--rule-strong); }
-.lf-tag, .lf-note p { position: absolute; left: var(--space-2); bottom: var(--space-2); padding: var(--space-1) var(--space-2); border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--card); color: var(--ink); font-size: 0.75rem; }
+.frame .sil { aspect-ratio: 16 / 10; height: auto; border-radius: var(--radius-4); box-shadow: 0 0 0 var(--line) var(--sand-7); }
+.lf-tag, .lf-note p { position: absolute; left: var(--space-2); bottom: var(--space-2); padding: var(--space-1) var(--space-2); border-radius: var(--radius-6); background: var(--bg); color: var(--sand-12); box-shadow: var(--shadow); font-size: var(--fs-12); line-height: var(--lh-12); }
 /* The tag stays inside the picture at any width; on phones it keeps to one line (the full text stays readable to
    assistive tech), so it never covers more than a sliver of the outline. */
 .lf-tag { max-width: calc(100% - 2 * var(--space-2)); }
 @media (max-width: 39.99rem) { .lf-tag { max-width: 60%; padding-block: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
 /* The pane's one "still loading" note sits below the picture(s) in normal flow, so nothing covers or clips it. */
-.lf-note p { position: static; margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-width: 0 0 0 3px; font: 0.9rem / 1.45 var(--font-ui); background: none; }
+.lf-note p { position: static; margin-top: var(--space-2); padding: 0; box-shadow: none; color: var(--sand-11); font: var(--fs-14) / var(--lh-14) var(--font-ui); background: none; }
 .vpane .live-wait { display: grid; place-content: center; padding: var(--space-3); text-align: center; }
 @media (forced-colors: active) { .sil rect, .sil [data-kind] { fill: CanvasText; } .sil { background: Canvas; } }

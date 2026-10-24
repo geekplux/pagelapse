@@ -66,7 +66,7 @@ function measure() {
   const eyebrow = (el: Element | null) => !!el && /uppercase/.test(getComputedStyle(el).textTransform) && /monospace/.test(getComputedStyle(el).fontFamily);
   const eyebrows = els.filter((el) => seen(el) && eyebrow(el) && !!el.textContent?.trim() && !eyebrow(el.parentElement));
   const probe = document.createElement('i');
-  probe.style.color = 'var(--ink)';
+  probe.style.color = 'var(--sand-12)';
   document.body.append(probe);
   const ink = getComputedStyle(probe).color;
   probe.remove();

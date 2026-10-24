@@ -113,7 +113,8 @@ Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers 
   - www.rust-lang.org by the Rust project contributors (site source MIT or Apache-2.0).
 
   The pictures are screenshots of archived captures. The page designs, logos and text belong to their authors. Details are in each sample's "About these captures" and in [`public/samples/README.md`](public/samples/README.md).
-- [Fraunces](https://github.com/undercasetype/Fraunces) by The Fraunces Project Authors, under the [SIL Open Font License 1.1](public/fonts/OFL.txt).
+- [Schibsted Grotesk](https://github.com/schibsted/schibsted-grotesk) by The Schibsted-Grotesk Project Authors, under the [SIL Open Font License 1.1](public/fonts/OFL-SchibstedGrotesk.txt).
+- [IBM Plex Mono](https://github.com/IBM/plex) by IBM Corp., under the [SIL Open Font License 1.1](public/fonts/OFL-IBMPlexMono.txt).
 
 ## Licence
 

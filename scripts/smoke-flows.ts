@@ -215,7 +215,7 @@ export async function openDisclosure(page: Page, name: string): Promise<void> {
   }, name);
 }
 
-/** Opens the timeline's key ("Key · N trivial hidden", or "Timeline key" with no trivial edits). */
+/** Opens the timeline's key ("Key, N trivial hidden", or "Timeline key" with no trivial edits). */
 export async function openTimelineKey(page: Page): Promise<void> {
   await page.locator('.tl-key').evaluate((d) => ((d as HTMLDetailsElement).open = true));
 }
@@ -273,10 +273,11 @@ export const flows: readonly Flow[] = [
         const loaded = [...document.fonts].filter((f) => f.status === 'loaded');
         return { bg: getComputedStyle(document.body).backgroundColor, fonts: loaded.map((f) => `${f.family} ${f.style}`) };
       });
-      const paper = palette[scheme].paper.match(/[0-9a-f]{2}/gi)!.map((h) => parseInt(h, 16));
-      if (bg !== `rgb(${paper.join(', ')})`) throw new Error(`${scheme}: body background ${bg}, expected ${palette[scheme].paper}`);
-      if (fonts.length < 2) throw new Error(`self-hosted Fraunces not loaded (loaded: ${fonts.join(', ') || 'none'})`);
-      return { timeToReadyMs, notes: [`${defaultTimeline.entries.length} change dates visible`, `${scheme} paper ${bg}`, `fonts: ${fonts.join(', ')}`] };
+      const ground = palette[scheme].bg.match(/[0-9a-f]{2}/gi)!.map((h) => parseInt(h, 16));
+      if (bg !== `rgb(${ground.join(', ')})`) throw new Error(`${scheme}: body background ${bg}, expected ${palette[scheme].bg}`);
+      const families = new Set(fonts.map((f) => f.replace(/ (normal|italic)$/, '')));
+      if (!families.has('Schibsted Grotesk') || !families.has('IBM Plex Mono')) throw new Error(`self-hosted fonts not loaded (loaded: ${fonts.join(', ') || 'none'})`);
+      return { timeToReadyMs, notes: [`${defaultTimeline.entries.length} change dates visible`, `${scheme} ground ${bg}`, `fonts: ${fonts.join(', ')}`] };
     },
   },
   {
@@ -627,14 +628,14 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'brand',
-    description: 'favicon.svg at 16, 32 and 64 px on paper and on ink',
+    description: 'favicon.svg at 16, 32 and 64 px on the light and the dark ground',
     shot: 'brand-favicon',
     viewports: ['desktop'],
     clip: '#brand-sheet',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
       const sizes = [16, 32, 64];
-      const { paper, ink } = palette.light;
+      const [paper, ink] = [palette.light.bg, palette.dark.bg];
       const loaded = await page.evaluate(
         async ({ sizes, paper, ink }) => {
           const sheet = document.createElement('div');
@@ -655,7 +656,7 @@ export const flows: readonly Flow[] = [
         { sizes, paper, ink },
       );
       if (loaded !== sizes.length * 2) throw new Error(`${loaded} of ${sizes.length * 2} favicons rendered`);
-      return { notes: [`favicon.svg rendered at ${sizes.join(', ')} px on paper and ink`] };
+      return { notes: [`favicon.svg rendered at ${sizes.join(', ')} px on the light and the dark ground`] };
     },
   },
   {
@@ -1210,7 +1211,8 @@ export const flows: readonly Flow[] = [
         }));
         const problems = [
           m.label !== f?.label && `sample "${m.label}"`,
-          m.dates.join() !== `${from},${to}` && `change ${m.dates.join(' → ')}`,
+          // The gallery writes dates as YYYY·MM·DD; the app shows them as `17 Mar 2014`.
+          m.dates.join() !== [from, to].map((d) => formatTimestampShort(`${d!.replace(/\D/g, '')}000000`)).join() && `change ${m.dates.join(' → ')}`,
           m.mode !== MODE[mode!] && `mode ${m.mode}`,
         ].filter(Boolean);
         if (problems.length) throw new Error(`${path}: ${problems.join('; ')}, expected ${from} → ${to} in ${mode}`);
