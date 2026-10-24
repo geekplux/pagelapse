@@ -1,7 +1,7 @@
 /* Live mode: the run's status line (atop the side column), and the empty and
    error cards. */
 /* The view's one primary action: the only solid sand-12 fill (accent.test.ts). */
-.btn-go { background: var(--sand-12); color: var(--sand-1); border-color: var(--sand-12); }
+.btn-go { border: 0; background: var(--sand-12); color: var(--sand-1); }
 .btn-go:hover { background: var(--sand-11); }
 
 .live-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
