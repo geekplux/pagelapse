@@ -98,6 +98,17 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // The ribbon's scroll offset as a CSS variable on the outer box (no React state, so no render per scroll event):
+  // the tooltips subtract it, so a tip stays over its bar or thumbnail however the ribbon scrolls under it.
+  useLayoutEffect(() => {
+    const el = box.current;
+    const o = outer.current;
+    if (!el || !o) return;
+    const sync = () => o.style.setProperty('--rb-sx', `${el.scrollLeft}px`);
+    sync();
+    el.addEventListener('scroll', sync, { passive: true });
+    return () => el.removeEventListener('scroll', sync);
+  }, []);
 
   const { entries, trivialCaptures, snapshots } = timeline;
   const n = times.length;
@@ -204,12 +215,12 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
 
   const outlines = items.some((v) => v.page);
   const tip = hover ?? (focusTip ? selected : null);
-  // Read only when a tip shows: tracking every scroll event in state would re-render each thumbnail.
-  const scrollX = tip !== null || thumbTip !== null ? (box.current?.scrollLeft ?? 0) : 0;
   const tipEntry = tip === null ? undefined : entries[tip];
   const tipBar = tip === null ? undefined : g.bars[tip];
   const thumbItem = thumbTip === null || tipEntry ? undefined : items[thumbTip];
   const half = Math.min(cw / 2, 136);
+  /** A tip's left: content x minus the live scroll offset, kept `edge` px inside the column. */
+  const follow = (x: number, edge: number) => `clamp(${edge}px, calc(${x}px - var(--rb-sx, 0px)), ${Math.max(edge, cw - edge)}px)`;
   return (
     <div className="rb" ref={outer}>
       <p id="rb-hint" hidden>
@@ -305,7 +316,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
           className="rb-tip"
           aria-hidden="true"
           {...tipHandlers(tip!, () => sliderEl.current)}
-          style={{ left: clamp(tipBar.x - scrollX, half, cw - half), top: stripH + AXIS - top - (tipBar.trivial ? 6 : tipBar.h) - GAP }}
+          style={{ left: follow(tipBar.x, half), top: stripH + AXIS - top - (tipBar.trivial ? 6 : tipBar.h) - GAP }}
         >
           <span className="mono">
             {formatTimestampShort(tipEntry.from)} → {formatTimestampShort(tipEntry.to)}, <b>{tipEntry.significance.magnitude}</b>,{' '}
@@ -315,7 +326,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
         </div>
       )}
       {thumbItem && thumbTip !== null && (
-        <div className="rb-tip rb-tip-cap" aria-hidden="true" style={{ left: clamp(cx(thumbTip) - scrollX, 64, cw - 64), top: -GAP }}>
+        <div className="rb-tip rb-tip-cap" aria-hidden="true" style={{ left: follow(cx(thumbTip), 64), top: -GAP }}>
           <span className="mono">{formatTimestampShort(thumbItem.ts)}</span>
           {trivial.has(thumbItem.ts) && <span>trivial edit</span>}
           {thumbItem.status === 'partial' && <span>partial copy</span>}
