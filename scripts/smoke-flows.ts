@@ -1006,12 +1006,18 @@ export const flows: readonly Flow[] = [
       const [paper, ink] = [palette.light.bg, palette.dark.bg];
       const loaded = await page.evaluate(
         async ({ sizes, paper, ink }) => {
+          // A constructed stylesheet, not style attributes: the deploy CSP (style-src 'self') blocks inline styles.
+          const css = new CSSStyleSheet();
+          css.replaceSync(`#brand-sheet{display:inline-flex;flex-direction:column;align-self:flex-start;margin:16px}
+            #brand-sheet>div{display:flex;gap:24px;align-items:center;padding:24px}
+            #brand-sheet>.paper{background:${paper}}#brand-sheet>.ink{background:${ink}}`);
+          document.adoptedStyleSheets = [...document.adoptedStyleSheets, css];
           const sheet = document.createElement('div');
           sheet.id = 'brand-sheet';
-          sheet.setAttribute('style', 'display:inline-flex;flex-direction:column;align-self:flex-start;margin:16px');
-          for (const bg of [paper, ink]) {
+          for (const [bg, name] of [[paper, 'paper'], [ink, 'ink']] as const) {
             const row = document.createElement('div');
-            row.setAttribute('style', `display:flex;gap:24px;align-items:center;padding:24px;background:${bg}`);
+            row.className = name;
+            row.dataset.bg = bg;
             for (const s of sizes) row.insertAdjacentHTML('beforeend', `<img src="/favicon.svg" width="${s}" height="${s}" alt="Pagelapse icon, ${s} px">`);
             sheet.append(row);
           }
