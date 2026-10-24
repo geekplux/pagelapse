@@ -1,15 +1,5 @@
 [
   {
-    "id": "git-scm",
-    "label": "git-scm.com home page",
-    "url": "https://git-scm.com/",
-    "description": "The Git project's home page: the tagline, the latest release number and the links to docs and downloads, through a decade of releases and redesigns.",
-    "maxChars": 6000,
-    "license": "MIT",
-    "attribution": "Trimmed text excerpt from git-scm.com by the Git project contributors; the site source is MIT-licensed (github.com/git/git-scm.com).",
-    "featured": "20250404010448-20251218145830"
-  },
-  {
     "id": "wikipedia-internet-archive",
     "label": "Wikipedia: Internet Archive",
     "url": "https://en.wikipedia.org/wiki/Internet_Archive",
@@ -24,6 +14,46 @@
       "note": "Infobox rows and paragraphs stating monetary figures were hidden before the screenshot."
     },
     "featured": "20220202204805-20230326224104"
+  },
+  {
+    "id": "nasa",
+    "label": "nasa.gov home page",
+    "url": "https://www.nasa.gov/",
+    "description": "NASA's home page: the missions, pictures and news it leads with, over a decade of captures and redesigns.",
+    "maxChars": 6000,
+    "dropBlocks": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\d[\\d,.]*\\s?(?:million|billion)\\s+(?:dollars|euros)|\\bfiscal year\\b|\\bFY ?\\d{2,4}\\b|\\bcontracts? (?:award|valued|worth)\\b",
+    "license": "LicenseRef-US-Government-Work",
+    "attribution": "Trimmed text excerpt from www.nasa.gov by NASA (blocks stating monetary figures are omitted). NASA content is a US government work and generally not subject to copyright in the United States; see NASA's media usage guidelines (www.nasa.gov/nasa-brand-center/images-and-media). Images and text from third parties on nasa.gov may not be in the public domain, and the NASA insignia and logos are protected.",
+    "visualRedact": {
+      "selector": "main p, main li, main h2, main h3, main a",
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bfiscal year\\b|\\bFY ?\\d{2,4}\\b",
+      "note": "Paragraphs, list items and links stating monetary figures or budgets were hidden before the screenshot."
+    }
+  },
+  {
+    "id": "creative-commons",
+    "label": "creativecommons.org home page",
+    "url": "https://creativecommons.org/",
+    "description": "The home page of Creative Commons, the organisation behind the CC licences: how it describes its mission and its licences, over a decade of captures and redesigns.",
+    "maxChars": 6000,
+    "dropBlocks": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bfundrais(?:er|ers|ing)\\b|\\bmake a gift\\b|\\bgive today\\b",
+    "license": "CC-BY-4.0",
+    "attribution": "Trimmed text excerpt from creativecommons.org by Creative Commons, licensed CC BY 4.0 (blocks about donations or stating monetary figures are omitted). Creative Commons and the CC logos are trademarks of Creative Commons.",
+    "visualRedact": {
+      "selector": "p, li, a, button, h2, h3",
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bfundrais(?:er|ers|ing)\\b|\\bmake a gift\\b|\\bgive today\\b",
+      "note": "Donate buttons and links, and paragraphs about donations or stating monetary figures, were hidden before the screenshot."
+    }
+  },
+  {
+    "id": "git-scm",
+    "label": "git-scm.com home page",
+    "url": "https://git-scm.com/",
+    "description": "The Git project's home page: the tagline, the latest release number and the links to docs and downloads, through a decade of releases and redesigns.",
+    "maxChars": 6000,
+    "license": "MIT",
+    "attribution": "Trimmed text excerpt from git-scm.com by the Git project contributors; the site source is MIT-licensed (github.com/git/git-scm.com).",
+    "featured": "20250404010448-20251218145830"
   },
   {
     "id": "rust-lang",

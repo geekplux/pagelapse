@@ -82,7 +82,13 @@ export function AppFooter({ sample, hero = false }: { sample?: SampleFixture | u
             <p>
               This sample: captures from <a href={archive.home}>{archive.name}</a>, recorded{' '}
               <span className="mono">{sample.source.recordedAt}</span> with {sample.source.recorder}. {sample.source.attribution} Licence:{' '}
-              <a className="licence-link" href={`https://spdx.org/licenses/${sample.source.license}.html`}>{sample.source.license}</a>.
+              {/* A `LicenseRef-` id (a US government work) has no SPDX page: the attribution explains it. */}
+              {sample.source.license.startsWith('LicenseRef-') ? (
+                <span className="mono">{sample.source.license}</span>
+              ) : (
+                <a className="licence-link" href={`https://spdx.org/licenses/${sample.source.license}.html`}>{sample.source.license}</a>
+              )}
+              .
             </p>
             {visual && (
               <p>

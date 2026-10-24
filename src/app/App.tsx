@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import type { SampleFixture } from '../core/types.ts';
-import { DECK_SAMPLE, defaultSample, displayAddress, type SampleEntry, samples } from '../samples/index.ts';
+import { DECK_SAMPLE, defaultEntry, displayAddress, type SampleEntry, sampleFor, samples } from '../samples/index.ts';
 import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
 import { Hero } from './hero/Hero.tsx';
@@ -66,9 +66,9 @@ export function App() {
   const [current, setCurrent] = useState<Current | null>(() => {
     const { sample, change, at, view } = parseUrlState(location.search);
     if (hero) return null;
-    // A deep link to a lazily loaded sample renders once it has loaded; unknown ids fall back to the default.
-    const lazy = samples.some((s) => s.id === sample && s.id !== defaultSample.id);
-    return lazy ? null : { id: defaultSample.id, fixture: defaultSample, change, at, view };
+    // A deep link's sample is loaded before the first render (main.tsx); an unknown or unrecorded id opens the default.
+    const fixture = sampleFor(sample).loaded();
+    return fixture ? { id: fixture.id, fixture, change, at, view } : null;
   });
   // Polite announcement on sample switch; focus stays where it is. Empty on first load.
   const [announcement, setAnnouncement] = useState('');
@@ -150,7 +150,7 @@ export function App() {
     setLive((l) => ({ url, run: (l?.run ?? 0) + 1, focus }));
     write(how, { url });
   };
-  const openSample = () => void load(samples.find((s) => s.id === defaultSample.id)!).then(focusContent);
+  const openSample = () => void load(defaultEntry).then(focusContent);
 
   // The page shown (hero, a sample, a live run), so Back and Forward between entries of the same page (a skip link's
   // #hash, a change scrubbed since) leave it as it is: a live run is not started again.
@@ -161,7 +161,7 @@ export function App() {
     const onPop = () => {
       const s = parseUrlState(location.search);
       const check = s.url ? validateTargetUrl(s.url) : null;
-      const entry = samples.find((e) => e.id === s.sample) ?? samples[0]!;
+      const entry = sampleFor(s.sample);
       if (page.current === (isHeroState(s) ? 'hero' : check?.ok ? `url:${check.url}` : `sample:${entry.id}`)) return;
       if (isHeroState(s)) {
         wanted.current = undefined;
@@ -182,10 +182,10 @@ export function App() {
   useEffect(() => {
     if (live || hero) return;
     const { sample, change, at, view } = parseUrlState(location.search);
-    const entry = samples.find((s) => s.id === sample);
-    if (!current && entry) void load(entry, { change, at, view }, false);
-    // An unknown `?sample=` shows the default sample: say so in the address bar (keeping any resolved change).
-    if (sample && !entry) writeUrlState({ ...parseUrlState(location.search), sample: defaultSample.id });
+    const entry = sampleFor(sample);
+    if (!current) void load(entry, { change, at, view }, false);
+    // An unknown or unrecorded `?sample=` shows the default sample: say so in the address bar (keeping any resolved change).
+    if (sample && sample !== entry.id) writeUrlState({ ...parseUrlState(location.search), sample: entry.id });
     // Runs once on mount: only the initial deep link is restored from the URL.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -247,7 +247,7 @@ export function App() {
             initialChange={current.change}
             initialAt={current.at}
             initialMode={current.view}
-            overview={current.id === defaultSample.id}
+            overview={current.id === defaultEntry.id}
             onChange={(q) => writeUrlState({ sample: current.id, ...q })}
           />
         ) : (

@@ -1,7 +1,8 @@
 import { parseSampleFixture } from '../core/fixture.ts';
 import type { SampleFixture } from '../core/types.ts';
-import { overviewPair, shotSrc } from '../app/visual/visualState.ts';
-import gitScm from './git-scm.json';
+import { retryableImport } from '../app/workspace.ts';
+import { shotSrc } from '../app/visual/visualState.ts';
+import config from './samples.config.json';
 
 /** A built-in sample: its name and page (the hero's options, the address menu) plus a loader for its fixture. */
 export interface SampleEntry {
@@ -10,21 +11,40 @@ export interface SampleEntry {
   /** The recorded page, as in samples.config.json. */
   url: string;
   load: () => Promise<SampleFixture>;
+  /** The fixture once `load` has resolved (a deep link loads it before the first render, main.tsx). */
+  loaded: () => SampleFixture | undefined;
 }
 
-/** The sample shown on first load (git-scm.com, for its clearly visible 2025 redesign; D23); statically bundled so it renders offline, instantly. */
-export const defaultSample: SampleFixture = parseSampleFixture(gitScm);
+/** What the registry needs of a samples.config.json entry. */
+export interface SampleConfig {
+  id: string;
+  label: string;
+  url: string;
+}
 
-const lazy = (load: () => Promise<{ default: unknown }>) => () => load().then((m) => parseSampleFixture(m.default));
+/** The recorded fixtures, as a build-time list of files: a config entry without one is never offered. */
+const FIXTURES = import.meta.glob<{ default: unknown }>(['./*.json', '!./samples.config.json']);
 
-/** Registry of built-in samples (ids match samples.config.json); non-default ones load lazily. */
-export const samples: readonly SampleEntry[] = [
-  { id: defaultSample.id, name: 'git-scm.com', url: defaultSample.url, load: () => Promise.resolve(defaultSample) },
-  { id: 'wikipedia-internet-archive', name: 'Wikipedia: Internet Archive', url: 'https://en.wikipedia.org/wiki/Internet_Archive', load: lazy(() => import('./wikipedia-internet-archive.json')) },
-  { id: 'rust-lang', name: 'rust-lang.org', url: 'https://www.rust-lang.org/', load: lazy(() => import('./rust-lang.json')) },
-];
+/** The config entries that have a recorded fixture (`./<id>.json` in `fixtures`), in config order. */
+export const recorded = <C extends SampleConfig>(entries: readonly C[], fixtures: Record<string, unknown>): C[] =>
+  entries.filter((c) => `./${c.id}.json` in fixtures);
 
-/** The sample the hero deals as its deck of captures (DESIGN.md: Wikipedia, whatever the default sample is). */
+/** The short name an option shows: the label without " home page" (`git-scm.com`, `Wikipedia: Internet Archive`). */
+export const sampleName = (label: string) => label.replace(/ home page$/, '');
+
+/** Registry of the built-in samples that are recorded, in samples.config.json order; each loads lazily, once. */
+export const samples: readonly SampleEntry[] = recorded(config, FIXTURES).map((c) => {
+  const fixture = retryableImport(() => FIXTURES[`./${c.id}.json`]!().then((m) => parseSampleFixture(m.default)));
+  return { id: c.id, name: sampleName(c.label), url: c.url, load: fixture.load, loaded: fixture.loaded };
+});
+
+/** The default sample: the first recorded one (Wikipedia: Internet Archive). An unknown `?sample=` opens it. */
+export const defaultEntry: SampleEntry = samples[0]!;
+
+/** The sample `id` names, or the default when it names none that is recorded (`?sample=nope`, an unrecorded entry). */
+export const sampleFor = (id?: string): SampleEntry => samples.find((s) => s.id === id) ?? defaultEntry;
+
+/** The sample the hero deals as its deck of captures (DESIGN.md: Wikipedia, also the default sample). */
 export const DECK_SAMPLE = 'wikipedia-internet-archive';
 /** Its pictured captures: the deck keeps their height while the sample loads (samples.test.ts keeps it true). */
 export const DECK_CAPTURES = 14;
@@ -54,12 +74,3 @@ export function decodePicture(src: string): Promise<void> {
 export function changePictures(f: SampleFixture, pair?: string): string[] {
   return f.snapshots.flatMap((s) => (s.shot?.file && pair?.split('-').includes(s.ts) ? [shotSrc(f.id, s.shot.file)] : []));
 }
-
-/** The default sample's first view: its decade compare (first complete capture ↔ latest), as a `<from>-<to>` pair. */
-const hero = overviewPair(defaultSample.snapshots);
-const heroPair = hero ? `${hero.from}-${hero.to}` : defaultSample.featured;
-
-// A deep link to the default sample starts its decade pictures before React's first render (D23); the hero (no
-// `?sample=`) does not need them.
-if (typeof Image === 'function' && new URLSearchParams(location.search).get('sample') === defaultSample.id)
-  for (const src of changePictures(defaultSample, heroPair)) void decodePicture(src);
