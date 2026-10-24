@@ -1,4 +1,5 @@
-import { relative } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
@@ -20,6 +21,25 @@ function chunkModules(): Plugin {
 }
 
 /**
+ * `virtual:sample-catalog`: the id, label and url of every samples.config.json entry, picked at build time, so the
+ * first load carries only what the hero and the address menu show (the recorders' filters and attributions stay out).
+ */
+function sampleCatalog(): Plugin {
+  const id = 'virtual:sample-catalog';
+  const file = resolve(import.meta.dirname, 'src/samples/samples.config.json');
+  return {
+    name: 'pl-sample-catalog',
+    resolveId: (source) => (source === id ? `\0${id}` : undefined),
+    load(loaded) {
+      if (loaded !== `\0${id}`) return undefined;
+      this.addWatchFile(file);
+      const entries = (JSON.parse(readFileSync(file, 'utf8')) as { id: string; label: string; url: string }[]).map(({ id, label, url }) => ({ id, label, url }));
+      return `export default ${JSON.stringify(entries)};`;
+    },
+  };
+}
+
+/**
  * `vite build` reads wrangler.jsonc (production, what Workers Builds deploys). `vite dev` reads wrangler.local.jsonc
  * (no AI binding, so no Cloudflare login). `vite preview` serves the production build with remote bindings off, so it
  * needs no login either: the `AI` binding is present but unreachable, and summaries fall back to rules (D11).
@@ -30,7 +50,7 @@ const workerConfig = (command: 'build' | 'serve', isPreview?: boolean) =>
 export default defineConfig(({ command, isPreview }) => ({
   // The Cloudflare plugin builds the Worker next to the client and runs `vite dev`/`preview` in workerd (D1).
   // Tests use a fake Env instead (D15), so Vitest skips it.
-  plugins: [react(), chunkModules(), process.env.VITEST ? [] : cloudflare(workerConfig(command, isPreview))],
+  plugins: [react(), chunkModules(), sampleCatalog(), process.env.VITEST ? [] : cloudflare(workerConfig(command, isPreview))],
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts', 'worker/**/*.test.ts'],

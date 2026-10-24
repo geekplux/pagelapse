@@ -2,7 +2,8 @@ import { parseSampleFixture } from '../core/fixture.ts';
 import type { SampleFixture } from '../core/types.ts';
 import { retryableImport } from '../app/workspace.ts';
 import { shotSrc } from '../app/visual/visualState.ts';
-import config from './samples.config.json';
+// Only id, label and url of each samples.config.json entry (vite.config.ts picks them at build time).
+import config from 'virtual:sample-catalog';
 
 /** A built-in sample: its name and page (the hero's options, the address menu) plus a loader for its fixture. */
 export interface SampleEntry {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseSampleFixture } from '../core/fixture.ts';
 import { DECK_CAPTURES, DECK_SAMPLE, defaultEntry, recorded, sampleFor, sampleName, samples } from './index.ts';
 import config from './samples.config.json';
+import catalog from 'virtual:sample-catalog';
 
 const RAW = import.meta.glob<string>(['./*.json', '!./samples.config.json'], { query: '?raw', import: 'default', eager: true });
 const KB = 1000;
@@ -28,6 +29,10 @@ describe('committed samples', () => {
     expect(config[0]!.id).toBe('wikipedia-internet-archive');
     expect(defaultEntry.id).toBe('wikipedia-internet-archive');
     expect(DECK_SAMPLE).toBe(defaultEntry.id);
+  });
+
+  it('ships only the id, label and url of each config entry to the app (the build-time catalog)', () => {
+    expect(catalog).toEqual(config.map(({ id, label, url }) => ({ id, label, url })));
   });
 
   it('never offers an entry without a recorded fixture, and offers one as soon as it is recorded', () => {
