@@ -6,7 +6,7 @@ import tokensCss from './tokens.css?raw';
 const THEMES: Theme[] = ['light', 'dark'];
 const CVD: (CvdKind | undefined)[] = [undefined, 'protan', 'deutan', 'tritan'];
 
-// [foreground, background, minimum ratio]: every pair the UI draws (docs/redesign/DESIGN.md).
+// [foreground, background, minimum ratio]: every pair the UI draws (docs/DESIGN.md).
 const PAIRS: [Token, Token, number][] = [
   // Text (WCAG 1.4.3): >= 4.5:1. sand-12 and sand-11 on every surface; the Before / After words on the ground and on
   // the picture frame; the solid button's label; removed rows and words (sand-11 text) and added ones (sand-12).

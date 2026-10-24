@@ -1,4 +1,4 @@
-/* Design tokens (docs/redesign/DESIGN.md). Colours mirror src/design/palette.ts (palette.test.ts keeps them equal);
+/* Design tokens (docs/DESIGN.md). Colours mirror src/design/palette.ts (palette.test.ts keeps them equal);
    design.test.ts holds every other stylesheet to these tokens. */
 :root {
   color-scheme: light dark;

@@ -1,6 +1,6 @@
 # Pagelapse redesign: implementation plan
 
-Goal: ship the approved v3 design (`docs/redesign/DESIGN.md`, `docs/redesign/target/`) without losing any working feature (samples offline, live lookups, compare, play, text diff, summaries, shareable links, keyboard, screen-reader text, light/dark).
+Goal: ship the approved v3 design (`docs/DESIGN.md`, `docs/redesign/target/`) without losing any working feature (samples offline, live lookups, compare, play, text diff, summaries, shareable links, keyboard, screen-reader text, light/dark).
 
 ## Process (Sean's build process, speed mode)
 

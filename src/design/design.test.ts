@@ -6,7 +6,7 @@ import live from './live.css?raw';
 import tokens from './tokens.css?raw';
 import visual from './visual.css?raw';
 
-// The binding UI rules of docs/redesign/DESIGN.md that a stylesheet can break: four font sizes, two families,
+// The binding UI rules of docs/DESIGN.md that a stylesheet can break: four font sizes, two families,
 // 0.5px lines, the four radii, one curve and duration for motion, tabular figures only on numbers.
 const decls = Object.entries({ 'base.css': base, 'live.css': live, 'visual.css': visual, 'hero.css': hero }).flatMap(([f, css]) => cssDecls(f, css));
 const show = (ds: typeof decls) => ds.map((d) => `${d.file} ${d.selector} { ${d.prop}: ${d.value} }`);

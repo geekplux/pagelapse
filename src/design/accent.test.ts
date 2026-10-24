@@ -6,7 +6,7 @@ import live from './live.css?raw';
 import visual from './visual.css?raw';
 
 // Sand is the neutral; cyan means Before / removed and amber means After / added / selected, each paired with a word,
-// a symbol (− / +), a ring or a text style (docs/redesign/DESIGN.md).
+// a symbol (− / +), a ring or a text style (docs/DESIGN.md).
 const decls = Object.entries({ 'base.css': base, 'live.css': live, 'visual.css': visual, 'hero.css': hero }).flatMap(([f, css]) => cssDecls(f, css));
 const using = (re: RegExp) => decls.filter((d) => re.test(d.value));
 const outside = (re: RegExp, allowed: RegExp) => using(re).filter((d) => !allowed.test(d.selector)).map((d) => `${d.selector} { ${d.prop}: ${d.value} }`);
