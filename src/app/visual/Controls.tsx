@@ -15,7 +15,7 @@ interface StepProps {
   onSelect: (i: number) => void;
   /** Which capture the pane shows, for the live region (`Before, 6 November 2013`). */
   showing?: string | undefined;
-  /** Quiet while Play steps, so the time-lapse does not chatter. */
+  /** Quiet while Play steps, or while a live run's selection follows its newest change, so neither chatters. */
   quiet?: boolean | undefined;
   /** The decade compare's two ends (`first`, `latest`), when it is the pair shown. */
   overview?: readonly [string, string] | undefined;

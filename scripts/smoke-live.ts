@@ -228,12 +228,25 @@ export const liveFlows: readonly Flow[] = [
       const api = await mockApi(page, { data: (t) => (t.includes('rust') ? rust : git), snapshot: () => ({ delay: 150 }) });
       await openReady(page, baseUrl);
       if (api.log.length || api.frames.length) throw new Error(`the first view called the API or the Archive: ${[...api.log.map((l) => l.path), ...api.frames.map((f) => f.url)].join(', ')}`);
-      // Record what the polite live region says, and when.
+      // Record what the polite live region says, and when; and what every other live region says (one inserted with
+      // its text is not read, so only changes inside a region already there count; `aria-live="off"` is quiet).
       await page.evaluate(() => {
-        const w = window as unknown as { said: [number, string][] };
+        const w = window as unknown as { said: [number, string][]; others: string[] };
         w.said = [];
+        w.others = [];
         const region = document.querySelector('p.sr-only[role="status"][aria-live="polite"]')!;
         new MutationObserver(() => w.said.push([performance.now(), region.textContent ?? ''])).observe(region, { childList: true, characterData: true, subtree: true });
+        new MutationObserver((records) => {
+          const seen = new Set<Element>();
+          for (const r of records) {
+            const el = r.target instanceof Element ? r.target : r.target.parentElement;
+            const live = el?.closest('[aria-live], [role="status"], [role="alert"], [role="log"]');
+            if (!live || live === region || seen.has(live) || live.getAttribute('aria-live') === 'off') continue;
+            seen.add(live);
+            const name = live.id ? `#${live.id}` : `.${[...live.classList].join('.')}`;
+            if (live.textContent?.trim()) w.others.push(`${name} [${document.querySelector('[data-live]')?.getAttribute('data-live')}] "${live.textContent.trim()}"`);
+          }
+        }).observe(document.body, { childList: true, characterData: true, subtree: true });
       });
       // Where the timeline starts, sampled through the runs (with the run's status): it must not jump by more than a
       // status line while captures arrive, and not at all when the run ends.
@@ -284,6 +297,9 @@ export const liveFlows: readonly Flow[] = [
       const said = await page.evaluate(() => (window as unknown as { said: [number, string][] }).said.filter(([, t]) => t));
       const gaps = said.slice(1).map(([t], i) => t - said[i]![0]);
       if (said.length < 2 || gaps.some((g) => g < 1900)) throw new Error(`announcements ${said.map(([t, s]) => `${Math.round(t)} ${s}`).join(' | ')}`);
+      // Nothing else spoke while nobody touched anything: the change label stays quiet while it follows the run.
+      const others = await page.evaluate(() => (window as unknown as { others: string[] }).others);
+      if (others.length) throw new Error(`${others.length} other live-region updates during the runs: ${others.slice(0, 8).join(' | ')}`);
       // Copy link: select the first change; the address bar is the shareable link and restores it.
       await page.locator('.rb-slider').focus();
       await page.keyboard.press('Home');
@@ -297,7 +313,7 @@ export const liveFlows: readonly Flow[] = [
         notes: [
           `${markers} bars, max ${max} snapshot requests in flight, ${api.snaps(rust.url).length} first-run requests all before the switch`,
           `request log (ms from start): ${api.snaps(git.url).slice(0, 6).map((l) => `${l.ts?.slice(0, 8)} ${l.start - api.log[0]!.start}-${(l.end ?? 0) - api.log[0]!.start}`).join(', ')} …`,
-          `announced: ${said.map(([t, s]) => `${Math.round(t)} ms "${s}"`).join(' | ')}`,
+          `announced: ${said.map(([t, s]) => `${Math.round(t)} ms "${s}"`).join(' | ')}; no other live region spoke`,
           `deep link ${link} restored change 1`,
           `timeline top moved ${jump}px over ${tops.length} samples, 0px at the run's end; meta line "${done}"`,
         ],
@@ -381,10 +397,15 @@ export const liveFlows: readonly Flow[] = [
       await page.waitForFunction((n) => document.querySelectorAll('.changes .change').length > n, max, { timeout: 10_000 });
       const during = await values();
       if (during !== before) throw new Error(`slider changed from ${before} to ${during} without input`);
+      const label = () => page.locator('.step-label').getAttribute('aria-live');
+      const quiet = await label();
+      if (quiet !== 'off') throw new Error(`the change label is aria-live="${quiet}" while it follows the run`);
       const listed = () => page.evaluate(() => document.querySelectorAll('.changes .change').length);
       await page.keyboard.press('End');
       const [end, now] = [await values(), await listed()];
       if (end !== `${now}/${now}` || now <= max) throw new Error(`End went to ${end}, expected the newest of ${now} changes`);
+      const spoken = await label();
+      if (spoken !== 'polite') throw new Error(`the change label is aria-live="${spoken}" once the user moved the selection`);
       const said = await page
         .waitForFunction(() => /\d+ more changes? arrived\./.exec(document.querySelector('.rb-live [role="status"]')?.textContent ?? '')?.input, null, { timeout: 4000 })
         .then((h) => h.jsonValue());
@@ -392,7 +413,7 @@ export const liveFlows: readonly Flow[] = [
       await page.waitForFunction((n) => document.querySelectorAll('.changes .change').length > n, now, { timeout: 10_000 });
       const still = await values();
       if (still !== end) throw new Error(`slider changed from ${end} to ${still} without input`);
-      return { notes: [`slider ${before} on focus, ${during} while changes arrived, ${end} after End (newest), ${still} while more arrived`, `announced "${said}"`] };
+      return { notes: [`slider ${before} on focus, ${during} while changes arrived, ${end} after End (newest), ${still} while more arrived`, `announced "${said}"`, `change label aria-live ${quiet} while following, ${spoken} after End`] };
     },
   },
   {

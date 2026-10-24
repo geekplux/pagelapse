@@ -254,6 +254,9 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
                     count={all.length}
                     onSelect={select}
                     showing={showingText(captures.map((c) => c.ts), entry, shownAt, trivialSet.has(shownAt))}
+                    // Until the user moves the selection, it follows the run's newest change and its label is not read
+                    // out at each one (the polite run status says how far the run got, and when it is done).
+                    quiet={!asked}
                   />
                 }
               />
