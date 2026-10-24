@@ -918,6 +918,27 @@ export const flows: readonly Flow[] = [
     },
   },
   {
+    name: 'decade-first-view',
+    description: "The default sample's first view is the decade compare: Previous narrows to the latest change (Change N of N), and Play starts from the first capture",
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const { entries } = defaultTimeline;
+      const step = () => page.locator('.step-label [aria-hidden]').textContent().then((t) => t?.replace(/\s+/g, ' ').trim());
+      await openReady(page, baseUrl);
+      if ((await step()) !== 'First and latest') throw new Error(`first view step "${await step()}"`);
+      await page.locator('.diff-nav .btn').first().click();
+      await expectSelected(page, defaultFixture, entries.length - 1);
+      const narrowed = await step();
+      if (narrowed !== `Change ${entries.length} of ${entries.length}`) throw new Error(`Previous from the decade compare: "${narrowed}"`);
+      await openReady(page, baseUrl);
+      await page.locator('.vp-play').click();
+      const first = defaultFixture.snapshots[0]!.ts;
+      await page.locator(`.rb-th[aria-current="true"][data-ts="${first}"]`).waitFor({ timeout: 2_000 });
+      await page.keyboard.press('Shift');
+      return { notes: [`Previous -> "${narrowed}"`, `Play started at capture #1 (${first})`] };
+    },
+  },
+  {
     name: 'diff-copy-link',
     description: 'Copy link puts the deep link on the clipboard, confirms politely, and the link restores the view; trivial edits can be shown and selected',
     async run({ page, baseUrl }) {
