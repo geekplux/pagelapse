@@ -6,7 +6,7 @@
 .site-header.is-work { border-bottom: var(--line) solid var(--sand-6); }
 .head-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 calc(2 * var(--space-3)); min-height: 4.5rem; }
 .brand { font: inherit; line-height: 0; }
-.home-link { display: inline-block; text-decoration: none; }
+.home-link { display: inline-block; padding-block: calc(1.5 * var(--space-1)); text-decoration: none; }
 .wordmark { display: inline-flex; align-items: center; gap: calc(2.5 * var(--space-1)); }
 .wm-text { font-size: var(--fs-20); line-height: var(--lh-20); font-weight: 700; letter-spacing: -0.02em; }
 .gh-link {

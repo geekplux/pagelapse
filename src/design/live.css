@@ -6,7 +6,7 @@
 /* The meta line and a live run's status share one grid cell; the one not shown is hidden but still laid out, so the
    box keeps its height when the run ends (target/V1Live.html). */
 .sheet-meta-box { display: grid; }
-.sheet-meta-box > * { grid-area: 1 / 1; }
+.sheet-meta-box > * { grid-area: 1 / 1; align-content: start; }
 .sheet-meta-box > [aria-hidden="true"] { visibility: hidden; }
 .sheet-meta-box > .sheet-meta:focus { outline: none; }
 .live-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-height: var(--lh-14); color: var(--sand-11); }
@@ -16,7 +16,7 @@
 .live-count b { color: var(--sand-12); font-weight: 500; }
 .live-count[data-empty] { visibility: hidden; }
 /* Determinate progress: a 2 px sand-4 track filled in sand-12 (no hue, no spinner); the fill eases to each new count. */
-.live-bar { flex: 0 1 15rem; min-width: 4rem; height: 2px; border-radius: 1px; background: var(--sand-4); overflow: hidden; }
+.live-bar { flex: 1 1 4rem; max-width: 15rem; height: 2px; border-radius: 1px; background: var(--sand-4); overflow: hidden; }
 .live-bar i { display: block; height: 100%; background: var(--sand-12); transform-origin: left; transition: transform var(--dur) var(--ease); }
 /* Cancel / Start again: a text button on the 20 px line, with a 40 px tall target that does not grow the line. */
 .live-act { min-height: 2.5rem; margin-block: calc(-2.5 * var(--space-1)); padding-block: 0; }
@@ -30,6 +30,7 @@
 .state-card .state-actions { margin-top: var(--space-2); }
 .state-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
 .state-actions a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.state-actions .btn-link { min-height: 2.5rem; }
 
 @media (forced-colors: active) {
   .btn-go { forced-color-adjust: none; background: ButtonText; color: ButtonFace; }

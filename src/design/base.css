@@ -77,6 +77,8 @@ main { flex: 1; min-height: 100vh; }
 
 /* Disclosures: a quiet summary line that says what is inside; no animation; content stays in the DOM. */
 .fold > summary { width: fit-content; min-height: 1.5rem; cursor: pointer; color: var(--sand-12); }
+/* Phones: 40 px tall targets. */
+@media (max-width: 39.99rem) { .fold > summary { padding-block: calc(2.5 * var(--space-1)); } }
 .fold > summary:hover { text-decoration: underline; text-decoration-thickness: var(--line); text-decoration-color: var(--sand-8); }
 .fold[open] > summary { margin-bottom: var(--space-2); }
 
@@ -179,6 +181,8 @@ ins::after, del::after { content: "] "; }
 .changes-trivial { padding: calc(3.5 * var(--space-1)) 0; border-top: var(--line) solid var(--sand-6); color: var(--sand-11); }
 .changes + .changes-trivial { margin-inline: calc(-3 * var(--space-1)); padding-inline: calc(3 * var(--space-1)); }
 .changes-trivial .btn-link { padding-block: 0; }
+/* Phones: "Show them" gets a 40 px tall target without growing its line. */
+@media (max-width: 39.99rem) { .changes-trivial .btn-link { min-height: 2.5rem; margin-block: calc(-2.5 * var(--space-1)); } }
 .loading { padding-block: var(--space-5); color: var(--sand-11); }
 
 /* Footer: the mark and one line on the left, "Made by GeekPlux" on the right; keyboard keys and the details below. */
