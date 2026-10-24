@@ -6,7 +6,7 @@
 
 **Live demo:** [pagelapse.geekplux.com](https://pagelapse.geekplux.com), or [run it yourself in 10 seconds](#try-it-in-10-seconds).
 
-![Pagelapse's first view: the headline "See how any web page changed over the years", an address field with "Show its history", three sample options, and the Wikipedia article "Internet Archive" dealt as a deck of 14 captures along a 2015 to 2026 axis, the latest one whole on the right](docs/hero.webp)
+![Pagelapse's first view: the headline "See how any web page changed over the years", an address field with "Show its history", three sample options, and below them the Wikipedia article "Internet Archive" dealt as a deck of its captures by date, the latest (10 Feb 2026) whole on the right](docs/hero.webp)
 
 Paste a URL. Pagelapse finds the page's captures in the Wayback Machine, keeps the ones where something meaningful changed, and lays them out as a time-lapse. You can drag a divider between the looks before and after each change, play a built-in sample's decade back, read exactly which words changed, and get one line per change that says what happened.
 

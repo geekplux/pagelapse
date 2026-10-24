@@ -1569,10 +1569,15 @@ export const flows: readonly Flow[] = [
       mkdirSync(dir, { recursive: true });
       const shots: number[] = [];
       const shoot = async (i: number) => {
+        // Play keeps the ribbon in view, which scrolls the stage's top away: frame the stage once its picture is decoded.
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+        await page.evaluate(() => Promise.all([...document.images].map((img) => img.decode().catch(() => undefined))));
         await settle(page);
         writeFileSync(new URL(`frame-${String(shots.length).padStart(2, '0')}.png`, dir), await page.screenshot());
         shots.push(i);
       };
+      // No crossfades: each frame is one capture, not two half-faded ones.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
       await openReady(page, baseUrl);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       await shoot(-1);
