@@ -202,6 +202,8 @@ Each criterion is testable. "Verified by" names the mechanism (U = Vitest unit t
 
 ## 4. Design direction: "the archivist's proof sheet"
 
+> Historical: the current design spec is [docs/DESIGN.md](DESIGN.md) (v3, the redesign); this section records the original direction.
+
 The identity mixes three familiar objects: an **archival index card** (warm paper, ink, catalogue numbers), a **proofreader's marked-up galley** (insertions and deletions in the margin), and a **photographer's contact sheet** (a strip of numbered frames with the selected one circled). The timeline reads like a **seismograph strip** laid across the years: a quiet baseline with marks where the page "moved". The filmstrip beneath it is the contact sheet of the page's looks. It is specific to this product: time, archives, edits, pictures of the past. It is not a dashboard template. There is no decorative 3D, no gradients-for-gradients'-sake and no glassmorphism.
 
 ### Typography (no external font CDN at runtime)
@@ -1282,7 +1284,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
   - `CHANGELOG.md`.
   - `docs/EXTENDING.md`: add a sample (text and pictures), the summariser interface, significance tuning, archive sources, theme tokens, and the optional screenshot provider design.
   - `docs/GOOD_FIRST_ISSUES.md`: 8-10 candidates, e.g. Markdown export, side-by-side *text* diff, "jump to year", opening-hours masking (carry-over), a sample suggestion, UI string table, print stylesheet, `?n=`, and zoom in the picture pane, plus anything phase 17 deferred (D36).
-  - `docs/DESIGN.md`: a copy of section 4, including "Calm layout" (D31). `CONTRIBUTING.md` says UI changes are reviewed against it and that crowding is a FAIL.
+  - `docs/DESIGN.md`: the design spec (at phase 18 a copy of section 4 with "Calm layout", D31; since the redesign the v3 spec). `CONTRIBUTING.md` says UI changes are reviewed against it and that crowding is a FAIL.
   - `ci/github-workflow.yml` gains `pnpm size` and an optional smoke job.
 - **Acceptance criteria:**
   1. The README's first screen has the pitch, the hero picture and the "try it" path. Every link resolves (`scripts/check-docs.ts`, run in tests).
