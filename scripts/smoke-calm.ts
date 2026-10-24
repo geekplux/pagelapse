@@ -57,7 +57,8 @@ function measure() {
   const paper = getComputedStyle(document.body).backgroundColor;
   const framed = els.filter((el) => {
     // Controls and pictures are not boxes around content: the segmented controls' sand-3 track included.
-    if (!seen(el) || el.closest('input, button, select, textarea, summary, .btn, .vp-mat, .rb-strip, .vp-modes, .vp-sides')) return false;
+    // The diff's added/removed tint bands are marks, not boxes (target/V3Work.html).
+    if (!seen(el) || el.closest('input, button, select, textarea, summary, .btn, .vp-mat, .rb-strip, .vp-modes, .vp-sides, .diff-body .db-run')) return false;
     const cs = getComputedStyle(el);
     const r = el.getBoundingClientRect();
     if (cs.display === 'inline' || r.width < 48 || r.height < 24) return false;

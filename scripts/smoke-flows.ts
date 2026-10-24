@@ -350,11 +350,14 @@ export const flows: readonly Flow[] = [
         const stop = await page.evaluate(() => {
           const el = document.activeElement as HTMLElement | null;
           if (!el || el === document.body) return null;
-          // The address field draws its ring on the field around the input, the slider divider on its knob.
-          const ringed = el.id === 'url-input' ? el.closest('.addr-field')! : (el.querySelector(':scope.vp-split > .vp-knob') ?? el);
+          // The address field draws its ring on the field around the input, the slider divider on its knob, the ribbon's
+          // slider on the ribbon's ring overlay (`.rb:has(.rb-slider:focus-visible) > .rb-ring`).
+          const overlay = el.matches('.rb-slider') ? el.closest('.rb')?.querySelector(':scope > .rb-ring') : null;
+          const ringed = el.id === 'url-input' ? el.closest('.addr-field')! : (overlay ?? el.querySelector(':scope.vp-split > .vp-knob') ?? el);
           const cs = getComputedStyle(ringed);
+          const box = ringed.getBoundingClientRect();
           const region = el.closest('header, main, footer')?.tagName.toLowerCase() ?? 'other';
-          const ring = cs.outlineStyle === 'solid' && parseFloat(cs.outlineWidth) >= 2;
+          const ring = cs.outlineStyle === 'solid' && parseFloat(cs.outlineWidth) >= 2 && box.width > 0 && box.height > 0;
           return { region, name: (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40), ring };
         });
         if (!stop) break;
