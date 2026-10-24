@@ -85,9 +85,10 @@ export function StepNav({ entry, index, count, onSelect, showing, quiet, overvie
 const SAID_MS = { ok: 2000, failed: 6000 };
 
 /**
- * Copies the address bar (the shareable link). The button itself says "Link copied" (2 s) or "Copy failed" (6 s); on
- * phones, where it is an icon, the word shows for that time. A failure also says, visibly, where the link is, and a
- * polite status region announces the outcome. The confirmation belongs to the view it was given for.
+ * Copies the address bar (the shareable link). The button says "Link copied" with a check (2 s) or "Copy failed" with
+ * an alert icon (6 s); on phones, where it is an icon, only the icon changes, so nothing in the row moves. A failure
+ * also says, visibly and out of the flow, where the link is, and a polite status region announces the outcome. The
+ * confirmation belongs to the view it was given for.
  */
 function CopyLink({ view }: { view: string }) {
   const [said, setSaid] = useState<{ view: string; ok: boolean } | null>(null);
@@ -110,11 +111,13 @@ function CopyLink({ view }: { view: string }) {
         () => done(false),
       );
   return (
-    <>
+    <span className="vp-copy-wrap">
       <button type="button" className="btn btn-quiet vp-copy" data-said={shown ? (shown.ok ? 'ok' : 'failed') : undefined} onClick={copy}>
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
           {shown?.ok ? (
             <path d="m3.5 8.5 3 3 6-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          ) : shown ? (
+            <path d="M8 2.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11ZM8 5v3.5M8 10.75v.25" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           ) : (
             <path d="M7 9a2.5 2.5 0 0 0 3.5 0l2-2A2.5 2.5 0 0 0 9 3.5l-.7.7M9 7a2.5 2.5 0 0 0-3.5 0l-2 2A2.5 2.5 0 0 0 7 12.5l.7-.7" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
           )}
@@ -130,7 +133,7 @@ function CopyLink({ view }: { view: string }) {
       <span className="vp-copy-note" role="status">
         {shown && (shown.ok ? <span className="sr-only">Link copied</span> : 'Could not copy: the link is in the address bar.')}
       </span>
-    </>
+    </span>
   );
 }
 

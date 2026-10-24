@@ -18,9 +18,9 @@
 .controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
 .ctrl-start, .ctrl-end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .ctrl-start > .nav-slot { margin-left: var(--space-2); }
-.ctrl-end > .vp-copy { margin-right: calc(-1 * var(--space-2)); }
+.ctrl-end > .vp-copy-wrap { margin-right: calc(-1 * var(--space-2)); }
 /* Copy link's failure note hangs under the row, right-aligned, in the gap before the strip: nothing moves. */
-.controls, .ctrl-end { position: relative; }
+.vp-copy-wrap { position: relative; display: inline-flex; }
 .vp-copy-note { position: absolute; top: 100%; right: 0; margin-top: var(--space-1); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); white-space: nowrap; }
 .vp-copy[data-said] { color: var(--sand-12); }
 .diff-nav { display: flex; align-items: center; gap: var(--space-1); }
@@ -45,8 +45,11 @@
   .controls .vp-sides { order: 1; flex: 1 0 100%; }
   .vp-side { flex: 1; justify-content: center; }
   .vp-side time > [aria-hidden] { display: none; }
-  /* Copy link is its icon on phones; "Link copied" or "Copy failed" shows in words while it holds. */
-  .vp-copy:not([data-said]) .vp-copy-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  /* Copy link is its icon on phones (a check or an alert while it holds); a failure's note floats above it, on the
+     stage's edge, as a tag. */
+  .vp-copy-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .vp-copy-note:not(:empty) { top: auto; bottom: 100%; z-index: 3; margin: 0 0 var(--space-1); padding: var(--space-1) var(--space-2); border-radius: var(--radius-6); background: var(--bg); box-shadow: 0 0 0 var(--line) var(--sand-7); }
+  .vp-copy-note:has(> .sr-only) { padding: 0; box-shadow: none; }
   .vp-mode[data-mode="side"]:not(:has(:checked)) { display: none; }
   html { scroll-padding-bottom: calc(var(--space-6) + var(--space-2)); }
   /* A changes-list row brought into view stops clear of the sticky bar too (AAA 2.4.12). */
