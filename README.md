@@ -2,15 +2,15 @@
 
 **Pagelapse**: scrub through a decade of any web page. See how it looked and what changed, capture by capture, from the Internet Archive.
 
-`MIT licence` · `no API key needed` · `works offline for samples`
+`MIT licence` `no API key needed` `works offline for samples`
 
-**Live demo:** [pagelapse.geekplux.com](https://pagelapse.geekplux.com) · **Run it yourself:** [try it in 10 seconds](#try-it-in-10-seconds)
+**Live demo:** [pagelapse.geekplux.com](https://pagelapse.geekplux.com), or [run it yourself in 10 seconds](#try-it-in-10-seconds).
 
-![Pagelapse playing the git-scm.com home page as a time-lapse: first a slider splits the 2013 capture from the 2025 one, then the page steps through its 14 captures from 2013 to 2025, one per frame](docs/hero.gif)
-
-![Pagelapse showing the git-scm.com home page twelve years apart: a slider splits the first capture (November 2013) from the latest (December 2025), the summary of what changed sits to the right, and a filmstrip of all 14 captures runs below](docs/hero.webp)
+![Pagelapse's first view: the headline "See how any web page changed over the years", an address field with "Show its history", three sample options, and the Wikipedia article "Internet Archive" dealt as a deck of 14 captures along a 2015 to 2026 axis, the latest one whole on the right](docs/hero.webp)
 
 Paste a URL. Pagelapse finds the page's captures in the Wayback Machine, keeps the ones where something meaningful changed, and lays them out as a time-lapse. You can drag a divider between the looks before and after each change, play a built-in sample's decade back, read exactly which words changed, and get one line per change that says what happened.
+
+![Pagelapse playing the Wikipedia sample as a time-lapse: first a slider splits its 2018 capture from its 2026 one, then the article steps through its captures from 2014 to 2026, one per frame](docs/hero.gif)
 
 ## Try it in 10 seconds
 
@@ -21,14 +21,14 @@ git clone https://github.com/geekplux/pagelapse.git && cd pagelapse
 pnpm i && pnpm dev
 ```
 
-Open the address `pnpm dev` prints (usually http://localhost:5173). The first view is the built-in git-scm.com sample: text and pictures are bundled, so it needs no network, no account and no key. Pick Wikipedia or rust-lang.org from the header, or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
+Open the address `pnpm dev` prints (usually http://localhost:5173). The first view deals the captures of the built-in Wikipedia sample. Open a card or a sample (Wikipedia, git-scm.com or rust-lang.org): their text and pictures ship with the app, so they need no network, no account and no key. Or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
 
 ## Features
 
-- **The visual scrub.** See the page as it looked at each capture. A filmstrip of every capture sits on a timeline whose marks grow with the size of each change. Arrow keys, a drag or a click move through the years.
+- **The visual scrub.** See the page as it looked at each capture. The time ribbon joins a thumbnail of every capture to its date on a year axis, with a bar per change that grows with its size. Arrow keys, a drag or a click move through the years.
 - **Compare modes.** Slider (drag the divider between Before and After), Side by side and Single (flip Before / After).
 - **Play.** A pausable time-lapse of a sample, one capture every 1.2 s. It only starts when you press it.
-- **Only meaningful changes.** Whitespace, dates, visit counters and tracking parameters are recognised as trivial and hidden. The count stays visible and you can show them.
+- **Only meaningful changes.** Whitespace, dates, visit counters and tracking parameters are recognised as trivial and hidden. "Every change" lists the rest, newest first, and says how many were hidden, with a way to show them.
 - **The text diff.** Added and removed words are marked with `+` / `−`, underline and strike-through, not colour alone. Heading changes are listed as added, removed or renamed.
 - **A one-line summary per change.** A deterministic "auto summary" always works. A deployment with Workers AI writes an "AI summary" instead. Each line says which kind it is.
 - **Shareable links.** The address keeps the sample or URL, the selected change and the compare mode, and "Copy link" copies it.
@@ -49,7 +49,7 @@ flowchart LR
 
 1. The browser asks the Pagelapse Worker (Cloudflare) for the page's captures. The Worker queries the Wayback CDX API and picks up to 16 captures spread over time, preferring captures whose size changed.
 2. For each capture, the Worker fetches the raw archived HTML (the `id_` URL), extracts the readable text and the heading outline, and caches the result. It never stores raw HTML.
-3. The browser diffs consecutive captures, scores how much changed, and drops trivial edits. The timeline fills in as captures arrive.
+3. The browser diffs consecutive captures, scores how much changed, and drops trivial edits. The time ribbon fills in as captures arrive.
 4. Summaries for the meaningful changes are requested in small batches as changes are found.
 
 ### Where AI is used (and where it is not)
@@ -61,7 +61,7 @@ Everything else is deterministic code: sampling, extraction, diffing, scoring, t
 ### Where the pictures come from
 
 - **Samples:** screenshots of the top of each archived capture (1280×800, stored as 960×600 WebP), recorded once with `pnpm record:visuals` and committed under `public/samples/`. They were recorded from [Arquivo.pt](https://arquivo.pt/)'s replay, because the Internet Archive could not be reached from the machine that recorded them. See [`public/samples/README.md`](public/samples/README.md).
-- **Live runs:** the Internet Archive's own replay of the capture you select, in a sandboxed frame, loaded straight from `web.archive.org` by your browser. Archived copies can lack some styles or images, and the pane says so. Live filmstrip thumbnails are text outlines drawn from the extracted page, not pictures.
+- **Live runs:** the Internet Archive's own replay of the capture you select, in a sandboxed frame, loaded straight from `web.archive.org` by your browser. Archived copies can lack some styles or images, and the pane says so. Live thumbnails on the ribbon are text outlines drawn from the extracted page, not pictures.
 
 ## Being kind to the Internet Archive
 
@@ -77,9 +77,9 @@ Pagelapse has no accounts, cookies or analytics. A live lookup sends the URL to 
 
 ## Accessibility
 
-- Everything works from the keyboard: the timeline is a slider, the filmstrip and the Before / After pair are single tab stops moved with the arrow keys, and the footer lists every shortcut.
-- Changes never rely on colour alone. They use `+` / `−` symbols, underline and strike-through, magnitude words and marker sizes, and screen readers hear "added" and "removed" text.
-- The palette is checked in the unit tests for contrast and for protanopia, deuteranopia and tritanopia. There is one accent, and it is ink.
+- Everything works from the keyboard: the time ribbon is a slider, its thumbnails and the Before / After pair are single tab stops moved with the arrow keys, the samples are options of the address field, and the footer lists every shortcut.
+- Changes never rely on colour alone. They use `+` / `−` symbols, underline and strike-through, magnitude words and bar heights, and screen readers hear "added" and "removed" text.
+- The palette is checked in the unit tests for contrast and for protanopia, deuteranopia and tritanopia. Cyan marks Before and amber After, always with a word, a ring or a dot.
 - Reduced-motion settings turn off cross-fades and smooth scrolling, and nothing plays by itself.
 - axe-core and keyboard flows run in headless Chrome. Testing with more screen readers is welcome: please [open an issue](https://github.com/geekplux/pagelapse/issues/new/choose) for anything that gets in your way.
 
@@ -95,6 +95,7 @@ pnpm build && pnpm run check:deploy
 
 ## Roadmap
 
+- Open-licensed samples from nasa.gov and creativecommons.org: configured, waiting to be recorded ([how](docs/EXTENDING.md#recording-nasa-and-creative-commons)).
 - Re-recording the samples from the Internet Archive itself.
 - An optional screenshot provider for live thumbnails (Cloudflare Browser Rendering). It is designed but not built: see [EXTENDING](docs/EXTENDING.md#optional-screenshot-provider-designed-not-built).
 - Smaller ideas are listed in [good first issues](docs/GOOD_FIRST_ISSUES.md).
@@ -108,8 +109,8 @@ Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers 
 - The [Internet Archive](https://archive.org/) and its [Wayback Machine](https://web.archive.org/) are the source of every live capture.
 - [Arquivo.pt](https://arquivo.pt/) served the captures that the built-in samples were recorded from.
 - Sample texts and pictures:
-  - git-scm.com by the Git project contributors (site source MIT);
   - the Wikipedia article "Internet Archive" by Wikipedia contributors (CC BY-SA 4.0, CC BY-SA 3.0 before June 2023; a trimmed excerpt, without the blocks that state monetary figures);
+  - git-scm.com by the Git project contributors (site source MIT);
   - www.rust-lang.org by the Rust project contributors (site source MIT or Apache-2.0).
 
   The pictures are screenshots of archived captures. The page designs, logos and text belong to their authors. Details are in each sample's "About these captures" and in [`public/samples/README.md`](public/samples/README.md).

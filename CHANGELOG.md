@@ -6,25 +6,28 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 
 ### Added
 
-- Deploy config for Workers Builds: `wrangler.jsonc` is production only (the `AI` binding moved to the top level and local dev to `wrangler.local.jsonc`, so `pnpm run build` + `npx wrangler deploy` deploys every binding with no environments warning), declares the custom domain `pagelapse.geekplux.com`, and adds a `previews` block (own rate limiters, no production KV, no AI; the Worker falls back to an in-memory cache without `CACHE`). Canonical and Open Graph tags, `robots.txt` and `sitemap.xml`, and the README, examples and launch links now point at https://pagelapse.geekplux.com. `CACHE` is bound to the `PAGELAPSE_CACHE` KV namespace ([docs/DEPLOY.md](docs/DEPLOY.md)).
-- Deployment preparation: production Wrangler config, security headers for the static site (a Content Security Policy that allows only the Internet Archive's replay frames), year-long caching for hashed assets and sample pictures, a deploy dry run (`pnpm run check:deploy`) and a deployment guide ([docs/DEPLOY.md](docs/DEPLOY.md)). The site is not deployed yet.
-- A showcase: the first view opens on the default sample's decade compare (its first capture against its latest), an [examples gallery](examples/README.md) with deep links, a social preview image, a hero GIF and launch drafts ([docs/LAUNCH.md](docs/LAUNCH.md)).
-- Open-source packaging: a new README, CONTRIBUTING, Code of Conduct (Contributor Covenant 2.1), security policy, issue and pull request templates, design notes ([docs/DESIGN.md](docs/DESIGN.md)), an extension guide ([docs/EXTENDING.md](docs/EXTENDING.md)), good first issues, and a docs link check that runs with the tests.
-- A calm layout: one focal point per view, secondary details folded behind native disclosures, one spacing scale and one ink accent, all checked by tests and a layout audit.
-- One-line summaries of each meaningful change: Workers AI on a deployment (batched, cached per pair of captures, capped per day) with a labelled deterministic fallback.
-- Live pictures: the Internet Archive's own replay of the selected capture in a sandboxed frame, loaded only when you rest on a capture, with text-outline thumbnails.
-- Live mode: paste any URL to look it up in the Internet Archive. In the redesign its progress (`n of N` and a bar) and Cancel take the title's meta line, which becomes the usual captures, span and changes line when the run ends, so nothing on the page moves; empty and error states are plain text with the next actions.
-- Motion: opening a sample or a capture from the first view grows it into the stage (a view transition, 350 ms), Play's playhead slides through each capture's hold, and a live run's outlines fade in and its bars grow as they arrive. Reduced motion turns all of it off.
-- A Cloudflare Worker API for captures, extracted pages and summaries, with caching, per-visitor rate limits and a global cooldown when the archive asks to slow down.
-- Compare modes (Slider, Side by side, Single) and a pausable time-lapse Play. Onion skin was removed in the redesign; an old `view=onion` link opens Slider.
-- The visual pane: what each sample capture looked like, from committed screenshots.
-- The Pagelapse name, mark and wordmark.
-- A diff view with `+` / `−` / `~` symbols, underline and strike-through. In the redesign it sits beside the change (its two captures, summary and source, words, new, gone and renamed sections, and archive links), shows a long diff's first changes with "Show n more changes", and an "Every change" table lists every change, newest first.
-- A time ribbon: a thumbnail per capture joined by a hairline to its date on a year axis, a bar per change sized by how much changed, and keyboard and drag scrubbing. It replaced the earlier filmstrip and timeline in the redesign; the list of changes is now the "Every change" table under the diff.
-- Change detection: readable-text extraction, a word-level diff, significance scoring and a trivial-edit filter (whitespace, dates, counters, tracking parameters), tuned against an evaluation set.
-- Three built-in samples (git-scm.com, Wikipedia "Internet Archive" and rust-lang.org), recorded from Arquivo.pt and committed so the first view works offline.
-- The design system: the "archivist's proof sheet" palette and type, checked for contrast and colour-vision deficiencies.
-- The toolchain: React, Vite, TypeScript, Vitest, oxlint, headless-browser smoke tests, and size budgets.
+- **A first view that shows the idea at once:** the headline, the address field and one option per built-in sample, over a deck of the Wikipedia sample's captures dealt along their dates. Each card opens that capture, and opening grows the card into the stage (a 350 ms view transition). No `?sample=` or `?url=` in the address shows it; Back returns to it.
+- **The workspace:** a 1200×750 stage with three compare modes (Slider, the default; Side by side; Single) and Before / After tags, a controls row (Play, previous and next change, the compare mode, Copy link), the time ribbon, the change section and "Every change".
+- **The time ribbon:** a thumbnail per capture joined by a hairline to its date on a year axis, a bar per change sized by how much changed, hollow dots for trivial captures, and keyboard and drag scrubbing. It is one slider with a text alternative for screen readers.
+- **The change section:** the change's two dates, its one-line summary and source, word counts, new, gone and renamed sections and archive links, beside a text diff with hanging `+` / `−` / `~` markers, underline and strike-through. A long diff shows its first changes with "Show n more changes".
+- **Every change:** one row per meaningful change, newest first, with a line for the captures that only changed dates or counters and "Show them".
+- **Built-in samples** that work offline: Wikipedia "Internet Archive" (the default and the first view's deck), git-scm.com and rust-lang.org, recorded from Arquivo.pt with pictures of each capture. NASA (nasa.gov) and Creative Commons (creativecommons.org) are configured with their licences and money-figure filters; an entry is offered only once its fixture is recorded ([docs/EXTENDING.md](docs/EXTENDING.md#recording-nasa-and-creative-commons)).
+- **Live mode:** paste any URL to look it up in the Internet Archive. The run's progress (`n of N`, a bar) and Cancel take the title's meta line, captures arrive as text outlines and pending slots, and the selected capture shows the archive's own replay in a sandboxed frame, loaded only when you rest on it.
+- **One-line summaries** of each meaningful change: Workers AI on a deployment (batched, cached per pair of captures, capped per day), with a labelled deterministic fallback.
+- **Change detection:** readable-text extraction, a word-level diff, significance scoring and a trivial-edit filter (whitespace, dates, counters, tracking parameters), tuned against an evaluation set.
+- **Shareable links:** the address keeps the sample or URL, the change, the capture and the compare mode.
+- **Motion** from the design spec (deal, lift, open, select, play, arrive, menu), all off under reduced motion.
+- **The design system:** Radix sand, cyan (Before) and amber (After) in light and dark, self-hosted Schibsted Grotesk and IBM Plex Mono, four type sizes, 0.5px hairlines, the Sun path logo; contrast and colour-vision-deficiency checks in the tests ([docs/DESIGN.md](docs/DESIGN.md)).
+- **A Cloudflare Worker API** for captures, extracted pages and summaries, with caching, per-visitor rate limits and a global cooldown when the archive asks to slow down.
+- **Deployment preparation:** a production Wrangler config for Workers Builds with the custom domain pagelapse.geekplux.com, security headers (a Content Security Policy that allows only the archive's replay frames), long caching for hashed assets and sample pictures, and a dry run (`pnpm run check:deploy`). See [docs/DEPLOY.md](docs/DEPLOY.md). The site is not deployed yet.
+- **Open-source packaging:** README, CONTRIBUTING, Code of Conduct (Contributor Covenant 2.1), security policy, issue and pull request templates, an extension guide ([docs/EXTENDING.md](docs/EXTENDING.md)), good first issues, an [examples gallery](examples/README.md), a social preview, launch drafts ([docs/LAUNCH.md](docs/LAUNCH.md)) and a docs link check that runs with the tests.
+- **The toolchain:** React, Vite, TypeScript, Vitest, oxlint, headless-browser smoke tests, a calm-layout audit and size budgets.
+
+### Changed
+
+- The redesign replaced the paper palette and serif type, the sample tabs (now options of the address field and the first view), the filmstrip and timeline (now the time ribbon), the side card and "Change details" (now the controls row and the change section) and the list of changes (now "Every change").
+- Onion skin was removed; an old `view=onion` link opens Slider.
+- Wikipedia "Internet Archive" replaced git-scm.com as the default sample; an unknown or unrecorded `?sample=` opens it.
 
 ### Fixed
 

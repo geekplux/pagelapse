@@ -12,13 +12,13 @@ Drafts for announcing Pagelapse, plus the facts to keep them honest. Every post 
 
 > Watch a web page's decade in 15 seconds. Paste a URL and Pagelapse pulls the page's captures from the Internet Archive, keeps the ones where something meaningful changed, and lays them out as a time-lapse. Drag a divider between the looks before and after each change, play a sample's years back, and read which words changed, with a one-line summary per change.
 >
-> The first view is a built-in sample (git-scm.com, 2013 to 2025) that works offline with no key. Live lookups go through a small Cloudflare Worker.
+> The first view deals the captures of a built-in sample (the Wikipedia article about the Internet Archive, 2014 to 2026), and the samples work offline with no key. Live lookups go through a small Cloudflare Worker.
 >
 > Limits, honestly: it only sees what the archive captured, and at most 16 captures per page, so it can miss edits between captures. Archived copies sometimes lack styles, and the pane says so. The AI part is one optional line per change. Rules write it when no model is available.
 >
 > To be kind to the archive it fetches two captures at a time, caches everything, backs off on 429s and identifies itself.
 >
-> Demo: https://pagelapse.geekplux.com · Code (MIT): https://github.com/geekplux/pagelapse
+> Demo: https://pagelapse.geekplux.com, code (MIT): https://github.com/geekplux/pagelapse
 
 ## X post
 
@@ -44,11 +44,11 @@ Someone claims a project's home page "always said" something. Paste the URL, ope
 
 ### The retrospective
 
-A maintainer prepares a "ten years of our project" post. Paste the project's home page and step through its changes with Previous and Next, or with the arrow keys on the timeline, while the text diff shows the release number climbing. Pick the three biggest markers on the timeline (the largest changes), compare each in Side by side, and copy each one's link from Change details into the post.
+A maintainer prepares a "ten years of our project" post. Paste the project's home page and step through its changes with Previous and Next, or with the arrow keys on the time ribbon, while the text diff shows the release number climbing. Pick the three tallest bars on the ribbon (the largest changes), compare each in Side by side, and paste each one's Copy link into the post.
 
 ### Watch a redesign happen
 
-Open the Wikipedia sample, choose the change from February 2022 to March 2023 and drag the divider: Wikipedia's 2022 design arrives, with the contents moving into a sidebar. Switch to Side by side to see both looks at once, then read the text diff to see that the words barely changed while the layout did.
+Open the Wikipedia sample from the first view, pick the change from February 2022 to March 2023 on the ribbon and drag the divider: Wikipedia's 2022 design arrives, with the contents moving into a sidebar. Switch to Side by side to see both looks at once, then read the text diff to see that the words barely changed while the layout did.
 
 ## Comparison
 
@@ -71,4 +71,4 @@ Where Pagelapse fits: it picks the meaningful changes across a decade for you an
 - **No bulk crawling.** At most 16 captures per page, two at a time, cached, with backoff when the archive is busy.
 - **No copies of archived pages.** The Worker stores extracted text, never raw HTML. Live pictures are the archive's own replay, loaded by your browser.
 - **No AI on pictures, and no AI-written diffs.** A model writes one optional line per change. Rules write it when no model is available, and the label says which one wrote it.
-- **No guessing between captures.** If the archive has no capture of a moment, Pagelapse cannot show it, and the timeline shows the gaps as they are.
+- **No guessing between captures.** If the archive has no capture of a moment, Pagelapse cannot show it, and the time ribbon shows the gaps as they are.
