@@ -16,10 +16,10 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - Live mode: paste any URL to look it up in the Internet Archive, with progress, Cancel, and clear empty and error states.
 - A Cloudflare Worker API for captures, extracted pages and summaries, with caching, per-visitor rate limits and a global cooldown when the archive asks to slow down.
 - Compare modes (Slider, Side by side, Single) and a pausable time-lapse Play. Onion skin was removed in the redesign; an old `view=onion` link opens Slider.
-- The visual pane and filmstrip: what each sample capture looked like, from committed screenshots.
+- The visual pane: what each sample capture looked like, from committed screenshots.
 - The Pagelapse name, mark and wordmark.
 - A diff view with `+` / `−` symbols, underline and strike-through, plus heading changes.
-- A timeline of captures with marks sized by how much changed, keyboard scrubbing, and a list of all changes.
+- A time ribbon: a thumbnail per capture joined by a hairline to its date on a year axis, a bar per change sized by how much changed, keyboard and drag scrubbing, and a list of all changes. It replaced the earlier filmstrip and timeline in the redesign.
 - Change detection: readable-text extraction, a word-level diff, significance scoring and a trivial-edit filter (whitespace, dates, counters, tracking parameters), tuned against an evaluation set.
 - Three built-in samples (git-scm.com, Wikipedia "Internet Archive" and rust-lang.org), recorded from Arquivo.pt and committed so the first view works offline.
 - The design system: the "archivist's proof sheet" palette and type, checked for contrast and colour-vision deficiencies.
