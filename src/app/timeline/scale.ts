@@ -1,75 +1,72 @@
-// Pure geometry for the timeline strip: time -> x, year ticks and labels, marker size and stacking.
+// Pure geometry for the time ribbon (docs/redesign/target/V3Work.html): whole-year axis, change bars, the hairlines
+// from each thumbnail down to its date, year labels, and the keyboard and pointer targets.
 import { timestampToIso } from '../../core/timestamp.ts';
-import type { Magnitude } from '../../core/types.ts';
 
 const DAY = 864e5;
 export const YEAR = 365.25 * DAY;
-/**
- * Marker radius per magnitude: a step, not a continuum, so size alone separates the classes. Each step is
- * about 2.5x the area of the one below (diameters 12 / 19 / 27 px, matched by the legend dots in CSS).
- */
-export const MARKER_R = { minor: 6, moderate: 9.5, major: 13.5 } as const satisfies Record<Exclude<Magnitude, 'trivial'>, number>;
 
 export const tsToMs = (ts: string): number => Date.parse(timestampToIso(ts));
 
-/** Linear scale from the padded time domain of `times` onto [x0, x1]. A one-capture domain maps to the middle. */
-export function timeScale(times: readonly number[], x0: number, x1: number) {
-  const lo = Math.min(...times);
-  const hi = Math.max(...times);
-  const pad = Math.max((hi - lo) * 0.025, 30 * DAY);
-  const t0 = lo - pad;
-  const span = hi + pad - t0;
-  const x = (t: number) => x0 + ((t - t0) / span) * (x1 - x0);
-  return { x, t0, t1: t0 + span, pxPerYear: (YEAR / span) * (x1 - x0) };
+/**
+ * The axis: 1 January of the first capture's year to 1 January after the last one, onto [0, width]. `ticks` are
+ * every 1 January in between, both ends included.
+ */
+export function yearScale(times: readonly number[], width: number) {
+  const y0 = new Date(Math.min(...times)).getUTCFullYear();
+  const y1 = new Date(Math.max(...times)).getUTCFullYear() + 1;
+  const t0 = Date.UTC(y0, 0, 1);
+  const span = Date.UTC(y1, 0, 1) - t0;
+  const x = (t: number) => ((t - t0) / span) * width;
+  const ticks = Array.from({ length: y1 - y0 + 1 }, (_, i) => ({ year: y0 + i, x: x(Date.UTC(y0 + i, 0, 1)) }));
+  return { x, ticks };
 }
 
-/** 1 January (UTC) of every year inside [t0, t1]. */
-export function yearTicks(t0: number, t1: number): { year: number; t: number }[] {
-  const out = [];
-  for (let y = new Date(t0).getUTCFullYear() + 1; Date.UTC(y, 0, 1) <= t1; y++) out.push({ year: y, t: Date.UTC(y, 0, 1) });
+/** Height of a change bar (px): 6 + sqrt(score) x 38, so the tallest is 44 and a small change still shows. */
+export const barHeight = (score: number) => 6 + Math.sqrt(Math.min(1, Math.max(0, score))) * 38;
+
+const r1 = (v: number) => Math.round(v * 10) / 10;
+
+/** A thumbnail's hairline: down 6 px from its centre `cx`, then an S-bend to its date `x`, ending at `end` (y). */
+export const hairline = (cx: number, x: number, end: number) =>
+  `M${r1(cx)} 0V6C${r1(cx)} ${r1(end * 0.55)} ${r1(x)} ${r1(end * 0.45)} ${r1(x)} ${r1(end)}`;
+
+/** A year label's anchor: the first at the left edge, the last at the right edge, the rest centred on their tick. */
+export type Anchor = 'start' | 'middle' | 'end';
+
+/**
+ * Which ticks get a label, and how each is anchored: every `stride` years from the first (1, 2, 5, 10 ... the
+ * smallest that keeps ticks `minGap` px apart), then any label that would come within `gap` px of the one before it
+ * (labels are `w` px wide) is dropped, so labels never overlap at any width.
+ */
+export function yearLabels(ticks: readonly { year: number; x: number }[], width: number, w = 29, minGap = 44, gap = 8) {
+  const per = ticks.length > 1 ? ticks[1]!.x - ticks[0]!.x : width;
+  const stride = [1, 2, 5, 10, 20, 50].find((s) => s * per >= minGap) ?? 100;
+  const out: { year: number; x: number; anchor: Anchor }[] = [];
+  let right = -Infinity;
+  ticks.forEach((k, i) => {
+    if (i % stride) return;
+    const anchor: Anchor = k.x - w / 2 < 0 ? 'start' : k.x + w / 2 > width ? 'end' : 'middle';
+    const left = anchor === 'start' ? k.x : anchor === 'end' ? k.x - w : k.x - w / 2;
+    if (left < right + gap) return;
+    out.push({ ...k, anchor });
+    right = left + w;
+  });
   return out;
 }
 
 /**
- * Which year ticks get a label: the smallest stride (1, 2, 5, 10 ... years) that keeps labels `minGap` px
- * apart, minus labels that would collide with the `avoid` interval (the selected date label) or the edges.
+ * Index of the x nearest to `x`; -1 for none. Snapping is on x only, so a horizontal drag across bars of different
+ * heights always lands on the bar under the pointer's x, never on a neighbour that is nearer in 2D.
  */
-export function yearLabels<T extends { year: number; x: number }>(
-  ticks: readonly T[], pxPerYear: number, opts: { minGap: number; half: number; width: number; avoid?: [number, number] },
-): T[] {
-  const stride = [1, 2, 5, 10, 20, 50].find((s) => s * pxPerYear >= opts.minGap) ?? 100;
-  const [a, b] = opts.avoid ?? [Infinity, -Infinity];
-  return ticks.filter(
-    (k) => k.year % stride === 0 && k.x - opts.half >= 0 && k.x + opts.half <= opts.width && (k.x + opts.half < a || k.x - opts.half > b),
-  );
-}
-
-/** Marker radius in px for a magnitude (trivial changes have no marker; they fall back to the minor size). */
-export function markerRadius(magnitude: Magnitude): number {
-  return magnitude === 'trivial' ? MARKER_R.minor : MARKER_R[magnitude];
-}
-
-/**
- * Greedy vertical stacking: each marker takes the lowest level (0..maxLevel) where it clears every earlier
- * marker on that level by `gap` px and by at least `minSep` px centre to centre (24 px pointer targets).
- */
-export function stackLevels(xs: readonly number[], rs: readonly number[], maxLevel = 2, gap = 3, minSep = 24): number[] {
-  const placed: { x: number; r: number; level: number }[] = [];
-  return xs.map((x, i) => {
-    const r = rs[i] ?? MARKER_R.minor;
-    let level = 0;
-    while (level < maxLevel && placed.some((p) => p.level === level && Math.abs(p.x - x) < Math.max(p.r + r + gap, minSep))) level++;
-    placed.push({ x, r, level });
-    return level;
-  });
-}
-
-/** Index of the point nearest to (x, y), with its distance; -1 for no points. */
-export function nearestPoint(points: readonly { x: number; y: number }[], x: number, y: number): { index: number; dist: number } {
-  let best = { index: -1, dist: Infinity };
-  points.forEach((p, index) => {
-    const dist = Math.hypot(p.x - x, p.y - y);
-    if (dist < best.dist) best = { index, dist };
+export function nearestX(xs: readonly number[], x: number): number {
+  let best = -1;
+  let dist = Infinity;
+  xs.forEach((v, i) => {
+    const d = Math.abs(v - x);
+    if (d < dist) {
+      best = i;
+      dist = d;
+    }
   });
   return best;
 }

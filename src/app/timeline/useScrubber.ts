@@ -1,8 +1,8 @@
 import { type KeyboardEvent, type PointerEvent, useEffect, useRef, useState } from 'react';
-import { nearestPoint, stepIndex } from './scale.ts';
+import { nearestX, stepIndex } from './scale.ts';
 
-/** Hover radius for the tooltip (px from a marker centre). */
-const HOVER_PX = 24;
+/** Hover reach for the tooltip (px from a bar, along x). */
+const HOVER_PX = 12;
 /** Grace period (ms) before a hover tip hides, so the pointer can travel from the marker onto the tip. */
 const HOVER_GRACE_MS = 300;
 
@@ -10,15 +10,17 @@ const HOVER_GRACE_MS = 300;
 const leftFor = (e: PointerEvent<HTMLElement>, selector: string) => e.relatedTarget instanceof Element && e.relatedTarget.closest(selector) !== null;
 
 /**
- * Keyboard and pointer behaviour of the timeline slider. Keys step through changes; pointer down
- * selects the nearest marker and dragging keeps snapping to the nearest one. `hover` is the marker
- * under the pointer (for the tooltip), `focusTip` is true while the slider has keyboard focus.
+ * Keyboard and pointer behaviour of the ribbon's slider. Keys step through changes; pointer down
+ * selects the change whose bar is nearest the pointer's x, and dragging keeps snapping on x only (a horizontal drag
+ * never picks a neighbour). `hover` is the change under the pointer (for the tooltip), `focusTip` is true while the
+ * slider has keyboard focus.
  * Escape dismisses either tooltip, and the tooltip itself is hoverable (WCAG 1.4.13): moving away from
  * a marker hides it only after a short grace period, which entering the tip cancels, so hover ends once
  * the pointer has left both the marker and the tip. `onDragEnd` runs on pointer up after a drag (not a click).
  */
 export function useScrubber(
-  points: readonly { x: number; y: number }[],
+  /** Each change's bar x, in the slider's own coordinates. */
+  xs: readonly number[],
   times: readonly number[],
   selected: number,
   onSelect: (i: number) => void,
@@ -62,8 +64,9 @@ export function useScrubber(
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [hovering]);
   const nearest = (e: PointerEvent<HTMLElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    return nearestPoint(points, e.clientX - r.left, e.clientY - r.top);
+    const x = e.clientX - e.currentTarget.getBoundingClientRect().left;
+    const index = nearestX(xs, x);
+    return { index, dist: index < 0 ? Infinity : Math.abs(xs[index]! - x) };
   };
   const pick = (i: number) => i >= 0 && i !== selected && onSelect(i);
   return {
@@ -111,14 +114,14 @@ export function useScrubber(
         moved.current = false;
         if (dragged) onDragEnd?.();
       },
-      onPointerLeave: (e: PointerEvent<HTMLElement>) => leftFor(e, '.tl-tip') || clearSoon(),
+      onPointerLeave: (e: PointerEvent<HTMLElement>) => leftFor(e, '.rb-tip') || clearSoon(),
       onFocus: (e: { currentTarget: HTMLElement }) => setFocusTip(e.currentTarget.matches(':focus-visible')),
       onBlur: () => setFocusTip(false),
     },
     /** For the tooltip: entering it keeps (or pins) its change as hovered; leaving it clears unless back on the strip. */
     tipHandlers: (index: number) => ({
       onPointerEnter: () => hoverAt(index),
-      onPointerLeave: (e: PointerEvent<HTMLElement>) => leftFor(e, '.tl-slider') || clearSoon(),
+      onPointerLeave: (e: PointerEvent<HTMLElement>) => leftFor(e, '.rb-slider') || clearSoon(),
     }),
   };
 }
