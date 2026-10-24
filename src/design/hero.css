@@ -24,7 +24,7 @@
   /* V3WorkPhone: the field over a full-width button, both 44 px, under the logo row. */
   .is-work .addr { order: 1; flex-basis: 100%; min-width: 0; flex-direction: column; margin-bottom: var(--space-3); }
   .is-work .addr-field { height: 2.75rem; }
-  .is-work .btn-go { min-height: 2.75rem; justify-content: center; }
+  .is-work .addr .btn-go { min-height: 2.75rem; justify-content: center; }
 }
 
 /* The address field and "Show its history". */
@@ -85,6 +85,7 @@ main.is-intro { padding-top: 0; }
 }
 .sample-opt:hover { background: var(--sand-2); border-color: var(--sand-8); }
 .sample-opt svg { color: var(--sand-10); }
+.intro-head .load-failed { margin-top: var(--space-4); text-align: left; }
 
 /* The deck: cards at their capture dates (positions from deck.ts), dealt once on load, newest first. */
 .intro-deck { margin: calc(2 * var(--space-5)) 0 0; }
