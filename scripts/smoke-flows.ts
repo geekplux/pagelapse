@@ -717,7 +717,9 @@ export const flows: readonly Flow[] = [
       await page.locator('.diff-nav .btn').first().click();
       await expectSelected(page, f, t.entries.length - 2);
       await page.locator('.controls .vp-copy').click();
-      await page.locator('.controls [role="status"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
+      // Seen on the button, and said by the polite status region (its text is for screen readers on success).
+      await page.locator('.controls .vp-copy[data-said="ok"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
+      await page.waitForFunction(() => document.querySelector('.controls [role="status"]')?.textContent === 'Link copied', null, { timeout: 2_000 });
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       if (copied !== page.url() || !copied.includes('change=')) throw new Error(`copied "${copied}", page at ${page.url()}`);
       await openReady(page, baseUrl, new URL(copied).pathname + new URL(copied).search);
