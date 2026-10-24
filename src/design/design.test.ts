@@ -46,9 +46,9 @@ describe('type', () => {
 });
 
 describe('lines and radii', () => {
-  it('borders are 0.5px hairlines (graphic marks: magnitude dots and the live dot excepted)', () => {
+  it('borders are 0.5px hairlines (graphic marks: the magnitude dots excepted)', () => {
     const borders = designed.filter((d) => /^border(-(top|right|bottom|left))?(-width)?$/.test(d.prop) && /[1-9]/.test(d.value));
-    const bad = borders.filter((d) => !/var\(--line\)/.test(d.value) && !/\.(change-mag|live-dot)/.test(d.selector));
+    const bad = borders.filter((d) => !/var\(--line\)/.test(d.value) && !/\.change-mag/.test(d.selector));
     expect(show(bad)).toEqual([]);
     expect(tokens).toMatch(/--line: 0\.5px;/);
   });
@@ -74,10 +74,10 @@ describe('motion', () => {
     expect(show(bad)).toEqual([]);
   });
 
-  it('every animation is ease-out, 250 ms (the live run\'s pulsing dot, the 450 ms deal and the 150 ms menu excepted)', () => {
+  it('every animation is ease-out, 250 ms (the 450 ms deal and the 150 ms menu excepted)', () => {
     expect(tokens).toMatch(/--dur-deal: 450ms;/);
     expect(tokens).toMatch(/--dur-menu: 150ms;/);
-    const bad = designed.filter((d) => d.prop === 'animation' && d.selector !== '.live-dot' && !/var\(--dur(-deal|-menu)?\) var\(--ease\)/.test(d.value));
+    const bad = designed.filter((d) => d.prop === 'animation' && !/var\(--dur(-deal|-menu)?\) var\(--ease\)/.test(d.value));
     expect(show(bad)).toEqual([]);
     expect(designed.filter((d) => /--dur-deal/.test(d.value)).map((d) => d.selector)).toEqual(['.is-dealing .deck-card']);
     expect(designed.filter((d) => /--dur-menu/.test(d.value)).map((d) => d.selector)).toEqual(['.addr-menu']);

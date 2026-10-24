@@ -1,26 +1,38 @@
-/* Live mode: the run's status line (atop the side column), and the empty and
-   error cards. */
+/* Live mode: the run's status in the meta line's place, and the empty and error states. */
 /* The view's one primary action: the only solid sand-12 fill (accent.test.ts). */
 .btn-go { border: 0; background: var(--sand-12); color: var(--sand-1); }
 .btn-go:hover { background: var(--sand-11); }
 
-.live-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.live-status p { flex: 1 1 20rem; color: var(--sand-11); }
-.live-dot { display: inline-block; width: 8px; height: 8px; margin-right: var(--space-2); border: 1.5px solid var(--sand-12); border-radius: 50%; animation: live-pulse 1.2s ease-in-out infinite alternate; }
-@keyframes live-pulse { to { opacity: 0.3; } }
-/* Determinate progress beside the counter: a 2 px sand-4 track filled in sand-12 (no hue, no spinner). */
-.live-bar { appearance: none; width: 10rem; height: 2px; border: 0; border-radius: 1px; background: var(--sand-4); }
-.live-bar::-webkit-progress-bar { background: var(--sand-4); border-radius: 1px; }
-.live-bar::-webkit-progress-value { background: var(--sand-12); border-radius: 1px; }
-.live-bar::-moz-progress-bar { background: var(--sand-12); }
-.live-wait { padding: var(--space-3) 0; color: var(--sand-11); }
+/* The meta line and a live run's status share one grid cell; the one not shown is hidden but still laid out, so the
+   box keeps its height when the run ends (target/V1Live.html). */
+.sheet-meta-box { display: grid; }
+.sheet-meta-box > * { grid-area: 1 / 1; }
+.sheet-meta-box > [aria-hidden="true"] { visibility: hidden; }
+.sheet-meta-box > .sheet-meta:focus { outline: none; }
+.live-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-height: var(--lh-14); color: var(--sand-11); }
+@media (min-width: 40rem) { .live-status { gap: 0 calc(5 * var(--space-1)); } }
+.live-text:focus { outline: none; }
+.live-count { color: var(--sand-11); }
+.live-count b { color: var(--sand-12); font-weight: 500; }
+.live-count[data-empty] { visibility: hidden; }
+/* Determinate progress: a 2 px sand-4 track filled in sand-12 (no hue, no spinner); the fill eases to each new count. */
+.live-bar { flex: 0 1 15rem; min-width: 4rem; height: 2px; border-radius: 1px; background: var(--sand-4); overflow: hidden; }
+.live-bar i { display: block; height: 100%; background: var(--sand-12); transform-origin: left; transition: transform var(--dur) var(--ease); }
+/* Cancel / Start again: a text button on the 20 px line, with a 40 px tall target that does not grow the line. */
+.live-act { min-height: 2.5rem; margin-block: calc(-2.5 * var(--space-1)); padding-block: 0; }
+@media (max-width: 39.99rem) { .live-act { margin-left: auto; } }
 
-/* The message is the view's focal point, so it keeps a frame: a sand-7 hairline, no stripe, no shadow. */
-.state-card { display: grid; gap: var(--space-2); padding: var(--space-4); border: var(--line) solid var(--sand-7); border-radius: var(--radius-8); background: var(--bg); max-width: 48rem; }
+/* Empty and error states: the message is the view's focal point, as plain text and its next actions (no frame). */
+.state-card { display: grid; gap: var(--space-2); max-width: 40rem; }
 .sheet .state-card h3 { font: 600 var(--fs-20) / var(--lh-20) var(--font-ui); color: var(--sand-12); }
+.sheet .state-card h3:focus { outline: none; }
+.state-card p { color: var(--sand-11); }
+.state-card .state-actions { margin-top: var(--space-2); }
 .state-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
 .state-actions a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 
 @media (forced-colors: active) {
   .btn-go { forced-color-adjust: none; background: ButtonText; color: ButtonFace; }
+  .live-bar { forced-color-adjust: none; background: GrayText; }
+  .live-bar i { background: CanvasText; }
 }

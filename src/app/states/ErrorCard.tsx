@@ -31,7 +31,7 @@ interface Props {
   headingRef?: ((el: HTMLElement | null) => void) | undefined;
 }
 
-/** A calm card for a failed live run: what happened, why, and what to do next (AC 14). */
+/** A failed live run, in plain words: what happened, why, and what to do next (AC 14). */
 export function ErrorCard({ error, onRetry, onSample, announce, headingRef }: Props) {
   const [heading, cause] = COPY[error.code] ?? FALLBACK;
   const left = useCountdown(error.retryAfter);
@@ -44,7 +44,6 @@ export function ErrorCard({ error, onRetry, onSample, announce, headingRef }: Pr
   return (
     <section className="state-card" data-error={error.code} aria-labelledby="state-heading">
       <h3 id="state-heading" tabIndex={-1} ref={headingRef}>
-        <span aria-hidden="true">⚠ </span>
         {heading}
       </h3>
       <p>

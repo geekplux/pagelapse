@@ -130,7 +130,8 @@ export async function openLive(page: Page, baseUrl: string, url: string, status?
   await page.goto(new URL(liveUrl(url), baseUrl).href, { waitUntil: 'domcontentloaded' });
   await page.locator(status ? `[data-live="${status}"]` : '[data-live]').waitFor({ timeout: 20_000 });
 }
-const statusLine = (page: Page) => page.locator('.live-status p').innerText();
+/** The visible status line (a running or stopped run), or the meta line once the run is done. */
+const statusLine = (page: Page) => page.locator('.sheet-meta-box > :not([aria-hidden="true"])').innerText().then((t) => t.replace(/\s+/g, ' ').trim());
 /** Where keyboard focus is, as a short selector-like description (`body` when it was lost, WCAG 2.4.3). */
 const focusAt = (page: Page) =>
   page.evaluate(() => {
@@ -209,7 +210,7 @@ async function expectActions(page: Page, names: string[]): Promise<void> {
 async function loading(page: Page, baseUrl: string, phone: boolean): Promise<string[]> {
   const api = await mockApi(page, { snapshot: (i) => (i < 6 ? {} : { delay: null }) });
   await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
-  await page.waitForFunction(() => document.querySelector('.live-status p')?.textContent?.includes('capture 7 of 14'), null, { timeout: 10_000 });
+  await page.waitForFunction(() => document.querySelector('.live-status .live-count')?.textContent === '6 of 14', null, { timeout: 10_000 });
   // Phones show the ribbon's axis only (target/V3WorkPhone.html): no thumbnails, so no pending slots.
   const pending = await page.locator('.rb-pending').count();
   if (pending !== (phone ? 0 : 8)) throw new Error(`${pending} pending slots, expected ${phone ? 0 : 8}`);
@@ -234,14 +235,18 @@ export const liveFlows: readonly Flow[] = [
         const region = document.querySelector('p.sr-only[role="status"][aria-live="polite"]')!;
         new MutationObserver(() => w.said.push([performance.now(), region.textContent ?? ''])).observe(region, { childList: true, characterData: true, subtree: true });
       });
-      // Where the timeline starts, sampled through the runs: it must not jump by more than a status line.
+      // Where the timeline starts, sampled through the runs (with the run's status): it must not jump by more than a
+      // status line while captures arrive, and not at all when the run ends.
       await page.evaluate(() => {
-        const w = window as unknown as { tops: number[] };
+        const w = window as unknown as { tops: number[]; ends: [string, number][] };
         w.tops = [];
+        w.ends = [];
         setInterval(() => {
           // During the runs: the sample's own layout before them does not count.
           const t = document.querySelector('[data-live] .rb')?.getBoundingClientRect().top;
-          if (t !== undefined) w.tops.push(Math.round(t + scrollY));
+          if (t === undefined) return;
+          w.tops.push(Math.round(t + scrollY));
+          w.ends.push([document.querySelector('[data-live]')!.getAttribute('data-live')!, t + scrollY]);
         }, 50);
       });
       const input = page.getByRole('combobox', { name: 'Page address' });
@@ -263,11 +268,19 @@ export const liveFlows: readonly Flow[] = [
       const tops = await page.evaluate(() => (window as unknown as { tops: number[] }).tops);
       const jump = Math.max(...tops) - Math.min(...tops);
       if (jump > 48) throw new Error(`the timeline moved by ${jump}px during the runs: ${tops.filter((t, i) => t !== tops[i - 1]).join(' ')}`);
+      // The run's end: the status line turns into the meta line in the same box, so the ribbon stays where it was.
+      const ends = await page.evaluate(() => (window as unknown as { ends: [string, number][] }).ends);
+      const at = ends.findIndex(([s], i) => s === 'done' && ends[i - 1]?.[0] === 'snapshots');
+      if (at < 1) throw new Error(`no sample on both sides of the run's end: ${ends.map(([s]) => s).join(' ')}`);
+      const moved = ends.slice(at).map(([, t]) => Math.abs(t - ends[at - 1]![1]));
+      if (Math.max(...moved) > 0.5) throw new Error(`the ribbon moved by ${Math.max(...moved)}px when the run ended`);
       const max = api.maxInFlight(git.url);
       if (max > 2) throw new Error(`${max} snapshot requests in flight at once`);
       const done = await statusLine(page);
-      if (!done.startsWith(`Done: 14 captures, ${gitEntries} meaningful changes.`)) throw new Error(`status "${done}"`);
+      if (!done.startsWith(`14 captures Nov 2013 to Dec 2025 ${gitEntries} changes`)) throw new Error(`meta line "${done}"`);
       if (!page.url().includes(`url=${encodeURIComponent(git.url)}`)) throw new Error(`address bar ${page.url()}`);
+      // The polite region says the end last (it may wait out the 2 s throttle).
+      await page.waitForFunction((want) => (window as unknown as { said: [number, string][] }).said.at(-1)?.[1].startsWith(want), `Done: 14 captures, ${gitEntries} meaningful changes.`, { timeout: 3000 });
       const said = await page.evaluate(() => (window as unknown as { said: [number, string][] }).said.filter(([, t]) => t));
       const gaps = said.slice(1).map(([t], i) => t - said[i]![0]);
       if (said.length < 2 || gaps.some((g) => g < 1900)) throw new Error(`announcements ${said.map(([t, s]) => `${Math.round(t)} ${s}`).join(' | ')}`);
@@ -286,7 +299,7 @@ export const liveFlows: readonly Flow[] = [
           `request log (ms from start): ${api.snaps(git.url).slice(0, 6).map((l) => `${l.ts?.slice(0, 8)} ${l.start - api.log[0]!.start}-${(l.end ?? 0) - api.log[0]!.start}`).join(', ')} …`,
           `announced: ${said.map(([t, s]) => `${Math.round(t)} ms "${s}"`).join(' | ')}`,
           `deep link ${link} restored change 1`,
-          `timeline top moved ${jump}px over ${tops.length} samples`,
+          `timeline top moved ${jump}px over ${tops.length} samples, 0px at the run's end; meta line "${done}"`,
         ],
       };
     },
@@ -301,16 +314,20 @@ export const liveFlows: readonly Flow[] = [
   },
   {
     name: 'live-loading-reduced',
-    description: 'Mid-run under prefers-reduced-motion: the progress dot does not pulse',
+    description: 'Mid-run under prefers-reduced-motion: the progress bar, outlines and bars arrive without motion',
     shot: 'live-loading',
     suffix: '-reduced',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await page.emulateMedia({ reducedMotion: 'reduce' });
       const notes = await loading(page, baseUrl, false);
-      const d = await page.locator('.live-dot').evaluate((el) => getComputedStyle(el).animationDuration);
-      if (d !== '0s') throw new Error(`live dot animates for ${d} under reduce`);
-      return { notes: [...notes, 'live dot animation 0s'] };
+      const m = await page.evaluate(() => ({
+        bar: getComputedStyle(document.querySelector('.live-bar i')!).transitionDuration,
+        sil: getComputedStyle(document.querySelector('[data-live] .sil')!).animationDuration,
+        rb: getComputedStyle(document.querySelector('[data-live] .rb-bar')!).animationDuration,
+      }));
+      if (Object.values(m).some((d) => d !== '0s')) throw new Error(`motion under reduce: ${JSON.stringify(m)}`);
+      return { notes: [...notes, `progress, outline and bar durations under reduce: ${JSON.stringify(m)}`] };
     },
   },
   {
@@ -327,7 +344,7 @@ export const liveFlows: readonly Flow[] = [
       await sleep(2000);
       const after = api.snaps().length;
       if (after > at + 1) throw new Error(`${after - at} requests started after Cancel`);
-      const text = await statusLine(page);
+      const text = await page.locator('.live-status .live-text').innerText();
       if (!/^Stopped after \d+ of 14 captures\.$/.test(text)) throw new Error(`status "${text}"`);
       // Answers that arrived before Cancel are cached; the ones Cancel aborted are fetched again.
       const fetched = new Set(api.snaps().filter((l) => l.end && l.end < cancelledAt - 100).map((l) => l.ts));
@@ -335,11 +352,11 @@ export const liveFlows: readonly Flow[] = [
       if (!onStop.includes('Start again')) throw new Error(`after Cancel, focus on ${onStop}, expected Start again`);
       await page.getByRole('button', { name: 'Start again' }).click();
       // Start again goes away with the old run: focus moves to the new run's status line, not <body>.
-      const restarted = await expectFocus(page, '.live-status p', 'Start again');
+      const restarted = await expectFocus(page, '.live-status .live-text', 'Start again');
       // Focus on Cancel when the run ends (Cancel goes away): focus moves to the status line.
       await page.getByRole('button', { name: 'Cancel' }).focus();
       await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
-      const finished = await expectFocus(page, '.live-status p', 'run ended on Cancel');
+      const finished = await expectFocus(page, '.sheet-meta', 'run ended on Cancel');
       const again = api.snaps().slice(after).filter((l) => fetched.has(l.ts));
       if (again.length) throw new Error(`${again.length} captures fetched twice`);
       return {
@@ -413,7 +430,7 @@ export const liveFlows: readonly Flow[] = [
       // Try again goes away with the old run: focus lands on the new run's status, then on the new card's heading.
       const retried = await expectFocus(page, '#state-heading', 'error card Try again');
       if (api.log.length !== 2) throw new Error(`${api.log.length} captures requests after Try again, expected 2`);
-      const text = await expectText(page, '.state-card', /^⚠ This site is not in the Archive The site asked/);
+      const text = await expectText(page, '.state-card', /^This site is not in the Archive The site asked/);
       await page.getByRole('button', { name: 'Open a sample' }).click();
       await page.waitForSelector('[data-ready="true"]');
       const sampled = await expectFocus(page, '#content', 'error card Open a sample');
@@ -463,7 +480,7 @@ export const liveFlows: readonly Flow[] = [
       const failed = await page.locator('.rb-th .rb-none', { hasText: 'not fetched' }).count();
       if (failed !== 2) throw new Error(`${failed} "not fetched" thumbnails, expected 2`);
       const text = await statusLine(page);
-      if (!text.endsWith('2 captures could not be fetched.')) throw new Error(`status "${text}"`);
+      if (!text.endsWith('2 captures not fetched')) throw new Error(`meta line "${text}"`);
       return { notes: [text, await expectText(page, '#rb-hint', /2 could not be fetched\./)] };
     },
   },
@@ -528,7 +545,7 @@ export const liveFlows: readonly Flow[] = [
       await openLive(page, baseUrl, 'git-scm.com', 'error');
       await expectActions(page, ['Try again', 'Open a sample']);
       if (await page.getByRole('button', { name: 'Try again' }).getAttribute('aria-disabled')) throw new Error('Try again disabled without a wait');
-      return { notes: [await expectText(page, '.state-card', /^⚠ The Archive is not answering The Internet Archive is not responding right now\./)] };
+      return { notes: [await expectText(page, '.state-card', /^The Archive is not answering The Internet Archive is not responding right now\./)] };
     },
   },
   {
@@ -540,7 +557,7 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { captures: 'rate_limited' });
       await openLive(page, baseUrl, 'git-scm.com', 'error');
-      const text = await expectText(page, '.state-card', /^⚠ Too many lookups at once You started many new lookups in a short time\. Try again in (60|59) s\./);
+      const text = await expectText(page, '.state-card', /^Too many lookups at once You started many new lookups in a short time\. Try again in (60|59) s\./);
       const retry = page.getByRole('button', { name: 'Try again' });
       if ((await retry.getAttribute('aria-disabled')) !== 'true') throw new Error('Try again is not aria-disabled during the countdown');
       await retry.focus();
@@ -565,7 +582,7 @@ export const liveFlows: readonly Flow[] = [
       await input.fill('git-scm.com');
       await input.press('Enter');
       // During the run, with no user input: the silhouette and its tag's note, never a frame.
-      const hold = await expectText(page, '.vp-hold', /^the page itself loads when you pick a change or the run finishes$/);
+      const hold = await expectText(page, '.vp-hold', /^Loads after the run, or pick a change$/);
       if (!(await page.locator('.lf .sil').isVisible())) throw new Error('no silhouette while the run holds the frame');
       await page.locator('[data-live="done"]').waitFor({ timeout: 30_000 });
       const done = Date.now();

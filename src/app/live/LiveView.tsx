@@ -10,6 +10,7 @@ import { hostOf } from '../../samples/index.ts';
 import { EmptyState } from '../states/EmptyState.tsx';
 import { ErrorCard } from '../states/ErrorCard.tsx';
 import { LoadingStatus } from '../states/LoadingStatus.tsx';
+import { Silhouette } from '../visual/Silhouette.tsx';
 import { stepIndex, tsToMs } from '../timeline/scale.ts';
 import { Ribbon } from '../timeline/Ribbon.tsx';
 import { type UrlState, changeIndex } from '../urlState.ts';
@@ -105,7 +106,8 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   // Progress for screen readers, without the note on fetching slowly (AC 22).
   useEffect(() => announce(announced(text)), [announce, text]);
 
-  // Focus (WCAG 2.4.3). `target` is the status text, or the empty / error card's heading, whichever is showing.
+  // Focus (WCAG 2.4.3). `target` is the status text, the meta line once the run is done, or the empty / error card's
+  // heading, whichever is showing.
   const target = useRef<HTMLElement | null>(null);
   const setTarget = useCallback((el: HTMLElement | null) => void (target.current = el), []);
   /** The element in this view that last had focus, until focus leaves it for another element that stays on the page. */
@@ -134,7 +136,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     // Mount only: a retry button started this run.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // When the run ends and takes the focused button (Cancel) with it, focus the status text or the card's heading
+  // When the run ends and takes the focused button (Cancel) with it, focus the meta line or the card's heading
   // instead of <body>. Only then: a `?url=` page load, where nothing here had focus, never moves focus.
   const wasRunning = useRef(running);
   useEffect(() => {
@@ -182,18 +184,36 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     if (fresh > 0) newsFrame.current = requestAnimationFrame(() => setNews(`${fresh} more change${fresh === 1 ? '' : 's'} arrived.`));
   };
 
-  // The run's status line sits under the title block, so a running run shows its progress and Cancel in the first viewport.
-  const statusLine = !error && (
-    <LoadingStatus text={text} running={running} progress={captures.length ? [state.next, captures.length] : undefined} onCancel={cancel} onRetry={status === 'cancelled' ? onRetry : undefined} textRef={setTarget} />
+  // The run's status takes the meta line's place under the title (target/V1Live.html): progress and Cancel in the first
+  // viewport. Once the run is done (or fails), the meta line shows in the same box, which keeps its height.
+  const statusShown = running || status === 'cancelled';
+  const statusLine = (
+    <LoadingStatus
+      running={running}
+      shown={statusShown}
+      progress={[state.next, captures.length]}
+      stopped={status === 'cancelled' ? text : undefined}
+      onCancel={cancel}
+      onRetry={status === 'cancelled' ? onRetry : undefined}
+      textRef={setTarget}
+    />
   );
   const quiet = status === 'done' && !entries.length && snapshots.length > 0;
   return (
     <article className="sheet" aria-labelledby="live-label" data-live={status} ref={article}>
       <div className="stage live-stage">
         <div className="hero" data-region="hero">
-          <SheetHead id="live-label" title={hostOf(url)} captures={captures.map((c) => c.ts)} changes={entries.length} trivial={trivialCaptures.length}>
-            {statusLine}
-          </SheetHead>
+          <SheetHead
+            id="live-label"
+            title={hostOf(url)}
+            captures={captures.map((c) => c.ts)}
+            changes={entries.length}
+            trivial={trivialCaptures.length}
+            failed={failed.length}
+            status={error ? undefined : statusLine}
+            statusShown={statusShown}
+            metaRef={status === 'done' ? setTarget : undefined}
+          />
           {error?.code === 'no_captures' ? (
             <EmptyState url={url} onSample={onSample} headingRef={setTarget} />
           ) : (
@@ -239,17 +259,21 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
               />
             ) : (
               running && (
+                // Until the first change: the newest capture read so far as a text outline, in the stage's place, and
+                // the controls row's height kept, so nothing moves when the change arrives.
                 <>
                   <section className="vpane vpane-wait" aria-labelledby="vpane-heading">
                     <h3 id="vpane-heading" className="sr-only">
                       How it looked
                     </h3>
-                    <figure className="vp-mat">
-                      <p className="vp-shot live-wait">The page as the Internet Archive kept it shows here once the first change is found.</p>
-                      <figcaption className="vp-cap mono">&nbsp;</figcaption>
+                    <figure className="vp-fig">
+                      <div className="vp-mat">
+                        <div className="vp-shot lf">{snapshots.at(-1) && <Silhouette page={snapshots.at(-1)!} />}</div>
+                      </div>
+                      <div className="vp-cap" aria-hidden="true" />
                     </figure>
                   </section>
-                  <p className="live-wait">The first change shows here as soon as two captures have been compared.</p>
+                  <div className="controls controls-wait" aria-hidden="true" />
                 </>
               )
             ))}

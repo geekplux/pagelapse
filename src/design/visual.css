@@ -202,17 +202,28 @@
 .lf { position: relative; overflow: hidden; }
 .lf iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; background: var(--replay-bg); transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
 .lf iframe:not([data-loaded]), .lf iframe[data-hidden] { visibility: hidden; }
+/* Text outlines (target/V1Live.html): on the stage, sand-6 lines and sand-9 headings on sand-2; in the ribbon, sand-7
+   lines and sand-11 headings on the frame. */
 .sil { display: block; width: 100%; height: 100%; background: var(--frame); }
-.sil rect { fill: var(--sand-4); }
-.sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--sand-6); }
-/* While a run fetches, the pane's outline is quieter than the strip filling in below it. */
-:is([data-live="captures"], [data-live="snapshots"]) .vpane .sil { opacity: 0.6; }
-.lf-tag, .lf-note p { position: absolute; left: var(--space-2); bottom: var(--space-2); padding: var(--space-1) var(--space-2); border-radius: var(--radius-6); background: var(--bg); color: var(--sand-12); box-shadow: var(--shadow); font-size: var(--fs-12); line-height: var(--lh-12); }
+.sil rect { fill: var(--sand-7); }
+.sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--sand-11); }
+.lf, .lf .sil { background: var(--sand-2); }
+.lf .sil rect { fill: var(--sand-6); }
+.lf .sil [data-kind="title"], .lf .sil [data-kind="heading"] { fill: var(--sand-9); }
+/* Arrive (a live run): an outline fades in, a change's bar grows from the axis once it is scored. */
+[data-live] .sil { animation: fade var(--dur) var(--ease); }
+[data-live] .rb-bar { transform-box: fill-box; transform-origin: bottom; animation: rb-grow var(--dur) var(--ease); }
+@keyframes rb-grow { from { transform: scaleY(0); } }
+/* "Loading the archived page": a tag centred at the stage's foot, on the page ground with a hairline. */
+.lf-tag { position: absolute; left: 50%; bottom: var(--space-4); transform: translateX(-50%); display: inline-flex; align-items: center; height: 1.75rem; padding: 0 calc(2.5 * var(--space-1)); border-radius: var(--radius-6); background: var(--bg); color: var(--sand-11); box-shadow: 0 0 0 var(--line) var(--sand-7); white-space: nowrap; }
 /* The tag stays inside the picture at any width; on phones it keeps to one line (the full text stays readable to
    assistive tech), so it never covers more than a sliver of the outline. */
-.lf-tag { max-width: calc(100% - 2 * var(--space-2)); }
-@media (max-width: 39.99rem) { .lf-tag { max-width: 60%; padding-block: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
+.lf-tag { max-width: calc(100% - 2 * var(--space-2)); overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 39.99rem) { .lf-tag { bottom: var(--space-2); height: 1.25rem; padding: 0 var(--space-2); font-size: var(--fs-12); line-height: var(--lh-12); } }
 /* The pane's one "still loading" note sits below the picture(s) in normal flow, so nothing covers or clips it. */
-.lf-note p { position: static; margin-top: var(--space-2); padding: 0; box-shadow: none; color: var(--sand-11); font: var(--fs-14) / var(--lh-14) var(--font-ui); background: none; }
-.vpane .live-wait { display: grid; place-content: center; padding: var(--space-3); text-align: center; }
+.lf-note p { margin-top: var(--space-2); color: var(--sand-11); }
+/* Before the first change: the controls row's place, kept (one 40 px row; three rows on phones in Single). */
+.controls-wait { min-height: 2.5rem; }
+@media (max-width: 39.99rem) { .controls-wait { min-height: 9rem; } }
+.vpane-wait .vp-cap { min-height: 2.25rem; }
 @media (forced-colors: active) { .sil rect, .sil [data-kind] { fill: CanvasText; } .sil { background: Canvas; } }

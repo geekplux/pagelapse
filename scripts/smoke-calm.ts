@@ -78,7 +78,7 @@ function measure() {
   const controls = document.querySelector('.controls') ?? document.querySelector('.diff-nav');
   const order = [document.querySelector('.sheet h2'), mat, controls, document.querySelector('.change-section')];
   const inOrder = order.every(Boolean) && order.every((el, i) => i === 0 || !!(order[i - 1]!.compareDocumentPosition(el!) & Node.DOCUMENT_POSITION_FOLLOWING));
-  const status = document.querySelector('.live-status');
+  const status = document.querySelector('.live-status:not([aria-hidden="true"])');
   const frames = [...document.querySelectorAll('.rb-strip .rb-th')].map((f) => f.getBoundingClientRect()).filter((r) => r.right > 0 && r.left < vw);
   // Every change's rows: left edge and top, in DOM order.
   const rows = [...document.querySelectorAll('.changes .change')].filter((el) => el.checkVisibility()).map((el) => el.getBoundingClientRect()).map((r) => [Math.round(r.left), Math.round(r.top)] as const);
@@ -122,7 +122,7 @@ const VIEWS: View[] = [
     async setup(page, baseUrl) {
       await mockApi(page, { snapshot: (i) => (i < 6 ? {} : { delay: null }) });
       await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
-      await page.waitForFunction(() => document.querySelector('.live-status p')?.textContent?.includes('capture 7 of 14'), null, { timeout: 10_000 });
+      await page.waitForFunction(() => document.querySelector('.live-status .live-count')?.textContent === '6 of 14', null, { timeout: 10_000 });
     },
   },
   {
@@ -174,7 +174,7 @@ async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
   const problems = counts.flatMap((n, i) => (n > caps[i]! || Number.isNaN(n) ? [`${labels[i]} ${Number.isNaN(n) ? 'n/a' : n} > ${caps[i]}`] : []));
   if (HEROES.has(view.name) && m.picture) {
     // target/V3Work.html: the stage spans the column, 40 + 48 + 4 + 20 + 24 px under the header (phones: 28 and a
-    // two-line title); a live run's status line adds its row until it joins the meta line (redesign phase 6).
+    // two-line title); a live run's status takes the meta line's place.
     if (wide ? m.picture.width < 0.58 * w || m.picture.top > 250 : m.picture.width < w - 32 || m.picture.top > 400) problems.push(`picture ${m.picture.width} px wide at top ${m.picture.top}`);
     if (!m.inOrder) problems.push('hero DOM order is not title → picture → controls → change section');
     if (m.align !== 16) problems.push(`controls row starts ${m.align} px under the picture, expected 16`);
