@@ -12,7 +12,8 @@ describe('a live run\'s status in the meta line\'s place (target/V1Live.html)', 
   it('running: the status shows (text, n of N, the bar, Cancel); the meta line is laid out but hidden', () => {
     const out = head(run);
     expect(out).toContain('<div class="sheet-meta-box"><p class="sheet-meta" aria-hidden="true">');
-    expect(out).toContain('<span class="live-text" tabindex="-1">Reading captures from the Internet Archive</span>');
+    // The slow text shares the reading text's cell, hidden, so the count after them keeps its place when it switches.
+    expect(out).toContain('<span class="live-text" tabindex="-1"><span>Reading captures from the Internet Archive</span><span aria-hidden="true">The Internet Archive is slow right now</span></span>');
     expect(out).toContain('<span class="live-count mono"><b class="num">9</b> of 14</span>');
     expect(out).toContain('style="transform:scaleX(0.6428571428571429)"');
     expect(out).toContain('<button type="button" class="btn-link live-act">Cancel</button>');

@@ -31,7 +31,17 @@ export function LoadingStatus({ running, shown, progress: [done, total], stopped
     return () => clearTimeout(t);
   }, [done, running]);
   const live = shown && (running || !!onRetry);
-  const text = stopped && shown ? stopped : running && stuck === done ? 'The Internet Archive is slow right now' : 'Reading captures from the Internet Archive';
+  const slow = running && stuck === done;
+  // Both running texts share one grid cell (live.css), the one not said hidden, so the count after them stays put.
+  const text =
+    stopped && shown ? (
+      stopped
+    ) : (
+      <>
+        <span aria-hidden={slow || undefined}>Reading captures from the Internet Archive</span>
+        <span aria-hidden={!slow || undefined}>The Internet Archive is slow right now</span>
+      </>
+    );
   return (
     <div className="live-status" data-running={running || undefined} aria-hidden={!shown || undefined}>
       <span className="live-text" tabIndex={shown ? -1 : undefined} ref={shown ? textRef : undefined}>

@@ -330,7 +330,7 @@ export const liveFlows: readonly Flow[] = [
   },
   {
     name: 'live-loading-reduced',
-    description: 'Mid-run under prefers-reduced-motion: the progress bar, outlines and bars arrive without motion',
+    description: 'Mid-run under prefers-reduced-motion: the progress bar, outlines and bars arrive without motion; a stalled run says the Archive is slow without moving the count',
     shot: 'live-loading',
     suffix: '-reduced',
     viewports: ['desktop'],
@@ -343,7 +343,14 @@ export const liveFlows: readonly Flow[] = [
         rb: getComputedStyle(document.querySelector('[data-live] .rb-bar')!).animationDuration,
       }));
       if (Object.values(m).some((d) => d !== '0s')) throw new Error(`motion under reduce: ${JSON.stringify(m)}`);
-      return { notes: [...notes, `progress, outline and bar durations under reduce: ${JSON.stringify(m)}`] };
+      // The run then stalls (the mock never answers): after 8 s the line says the Archive is slow, and the count, the
+      // bar and Cancel after it stay where they were.
+      const countLeft = () => page.locator('.live-status .live-count').evaluate((el) => el.getBoundingClientRect().left);
+      const left = await countLeft();
+      await page.waitForFunction(() => (document.querySelector('.live-status .live-text') as HTMLElement | null)?.innerText === 'The Internet Archive is slow right now', null, { timeout: 12_000 });
+      const shift = Math.abs((await countLeft()) - left);
+      if (shift > 0.5) throw new Error(`the count moved ${shift}px when the line said the Archive is slow`);
+      return { notes: [...notes, `progress, outline and bar durations under reduce: ${JSON.stringify(m)}`, `slow line: the count moved ${shift}px`] };
     },
   },
   {

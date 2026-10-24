@@ -12,6 +12,10 @@
 .live-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-height: var(--lh-14); color: var(--sand-11); }
 @media (min-width: 40rem) { .live-status { gap: 0 calc(5 * var(--space-1)); } }
 .live-text:focus { outline: none; }
+/* Its two running texts (reading, slow) share one cell, so the count and bar after it do not move when it switches. */
+.live-text { display: grid; }
+.live-text > * { grid-area: 1 / 1; }
+.live-text > [aria-hidden="true"] { visibility: hidden; }
 .live-count { color: var(--sand-11); }
 .live-count b { color: var(--sand-12); font-weight: 500; }
 .live-count[data-empty] { visibility: hidden; }
