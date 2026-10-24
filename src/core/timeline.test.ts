@@ -85,6 +85,18 @@ describe('ruleSummary', () => {
     }
   });
 
+  it('counts bare-year headings as sections added or removed, and a year heading changing as one gone and one new', () => {
+    const h = (text: string) => ({ kind: 'heading' as const, text, level: 2 as const });
+    const base = snap(1, BASE);
+    const added = { ...snap(2, BASE), blocks: [h('2025'), ...base.blocks] };
+    expect(toChangeRecord(diffPages(base, added), base, added).headingsAdded).toEqual(['2025']);
+    expect(ruleSummary(toChangeRecord(diffPages(added, base), added, base))).toMatch(/^Removed section "2025"/);
+    const [c, d] = [{ ...snap(1, BASE), blocks: [h('2023'), ...base.blocks] }, { ...snap(2, BASE), blocks: [h('2024'), ...base.blocks] }];
+    const r = toChangeRecord(diffPages(c, d), c, d);
+    expect([r.headingsRenamed ?? [], r.headingsAdded, r.headingsRemoved]).toEqual([[], ['2024'], ['2023']]);
+    expect(ruleSummary(r)).toBe('Added section "2024"; removed section "2023" (+1 / −1 words)');
+  });
+
   it('stays within budget for long names, and falls back for moves only', () => {
     const stats = { wordsAdded: 12345, wordsRemoved: 6789, blocksAdded: 3, blocksRemoved: 1, blocksModified: 0 };
     const r: ChangeRecord = { pair: 'p', title: 'x'.repeat(100), titleChanged: true, headingsAdded: ['y'.repeat(80), 'z'], headingsRemoved: ['w'.repeat(80)], added: [], removed: [], modified: [], stats };

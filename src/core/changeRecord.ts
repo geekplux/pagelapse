@@ -63,22 +63,24 @@ export function toChangeRecord(diff: PageDiff, a: SnapshotPage, b: SnapshotPage)
       const size = countWords(block.text);
       stats[`words${side}` as const] += size;
       stats[`blocks${side}` as const]++;
-      if (block.kind === 'heading') {
-        if (looksLikeTitle(block.text)) (side === 'Added' ? headingsAdded : headingsRemoved).push(clip(block.text, 80));
-      } else (side === 'Added' ? added : removed).push({ v: clip(block.text), size });
+      if (block.kind === 'heading') (side === 'Added' ? headingsAdded : headingsRemoved).push(clip(block.text, 80));
+      else (side === 'Added' ? added : removed).push({ v: clip(block.text), size });
     } else if (op.type === 'modified' && !op.normalizedEqual) {
       const side = (t: WordOp['type']) => countWords(op.words.filter((w) => w.type === t).map((w) => w.text).join(''));
       const [ins, del] = [side('ins'), side('del')];
       stats.wordsAdded += ins;
       stats.wordsRemoved += del;
       stats.blocksModified++;
-      // A rename needs a section name on both sides: pairing folds digits and ignores kind, so a paragraph "40" can
-      // pair with the heading "2024 cyberattacks". A name on one side only is a section added or removed.
+      // A rename needs two headings that read as section names: pairing folds digits and ignores kind, so a paragraph
+      // "40" can pair with the heading "2024 cyberattacks", and a heading "2023" with "2024". Otherwise each heading
+      // side is a section removed or added.
       const [x, y] = [a.blocks[op.a]!, b.blocks[op.b]!];
-      const [was, now] = [x.kind === 'heading' && looksLikeTitle(x.text), y.kind === 'heading' && looksLikeTitle(y.text)];
-      if (was && now) renamed.push([clip(x.text, 80), clip(y.text, 80)]);
-      else if (was || now) (was ? headingsRemoved : headingsAdded).push(clip((was ? x : y).text, 80));
-      else if (op.kind !== 'heading') modified.push({ v: { before: excerpt(op.words, 'del'), after: excerpt(op.words, 'ins') }, size: ins + del });
+      const [was, now] = [x.kind === 'heading', y.kind === 'heading'];
+      if (was && now && looksLikeTitle(x.text) && looksLikeTitle(y.text)) renamed.push([clip(x.text, 80), clip(y.text, 80)]);
+      else if (was || now) {
+        if (was) headingsRemoved.push(clip(x.text, 80));
+        if (now) headingsAdded.push(clip(y.text, 80));
+      } else modified.push({ v: { before: excerpt(op.words, 'del'), after: excerpt(op.words, 'ins') }, size: ins + del });
     }
   }
   const record: ChangeRecord = {
