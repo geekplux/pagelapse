@@ -65,6 +65,26 @@ describe('ruleSummary', () => {
     expect(ruleSummary(toChangeRecord(diffPages(snap(1, BASE), e), snap(1, BASE), e))).toMatch(/^Title changed to .*; added 2 sections incl\. "Why Rust\?"/);
   });
 
+  it('names a rename only between two headings that read as titles (Wikipedia, first capture to the latest)', () => {
+    // Real fixture data: the 2018 page's paragraph "40" pairs with the 2026 heading "2024 cyberattacks" (their word
+    // sets match once digits fold), which read as `Renamed section "40" to "2024 cyberattacks"`.
+    const s = fixtureToSnapshots(samples[0]!);
+    const [a, b] = [s.find((x) => x.ts === '20180425033645')!, s.find((x) => x.ts === '20260210204802')!];
+    const r = toChangeRecord(diffPages(a, b), a, b);
+    expect(r.headingsRenamed ?? []).toEqual([]);
+    expect(r.headingsAdded).toContain('2024 cyberattacks');
+    expect(ruleSummary(r)).toBe('Added section "2024 cyberattacks"; removed 3 sections incl. "Web archiving" (+913 / −963 words)');
+    // Minimal: a bare number, a date or a count on either side of a reworded heading is not a section name.
+    const h = (text: string) => ({ kind: 'heading' as const, text, level: 2 as const });
+    const page = (n: number, head: string) => ({ ...snap(n, BASE), blocks: [h(head), ...snap(n, BASE).blocks] });
+    for (const [x, y] of [['40', '2024 cyberattacks'], ['12 May 2024', 'May 2024 news'], ['1,204', '1,204 downloads']]) {
+      const [c, d] = [page(1, x), page(2, y)];
+      const rec = toChangeRecord(diffPages(c, d), c, d);
+      expect(rec.headingsRenamed ?? []).toEqual([]);
+      expect(ruleSummary(rec)).toMatch(new RegExp(`^Added section "${y}"`));
+    }
+  });
+
   it('stays within budget for long names, and falls back for moves only', () => {
     const stats = { wordsAdded: 12345, wordsRemoved: 6789, blocksAdded: 3, blocksRemoved: 1, blocksModified: 0 };
     const r: ChangeRecord = { pair: 'p', title: 'x'.repeat(100), titleChanged: true, headingsAdded: ['y'.repeat(80), 'z'], headingsRemoved: ['w'.repeat(80)], added: [], removed: [], modified: [], stats };
