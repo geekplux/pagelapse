@@ -83,7 +83,7 @@ export const splitText = (v: number, e: Pair) => `${Math.round(v)}% before (${mo
 export const shotSrc = (sampleId: string, file: string, thumb = false) => `/samples/${sampleId}/${file}${thumb ? '.thumb' : ''}.webp`;
 
 /**
- * One capture as the pane and filmstrip show it: a recorded picture (`shot`, samples), the archive's live replay in a
+ * One capture as the pane and the ribbon show it: a recorded picture (`shot`, samples), the archive's live replay in a
  * frame (`frame`, live runs, with the extracted text for its silhouette), or no picture (`none`).
  */
 export interface CaptureView {
@@ -109,7 +109,7 @@ export function sampleView(f: SampleFixture, ts: string): CaptureView {
 export const liveView = (url: string, ts: string, page?: ExtractedPage): CaptureView =>
   page ? { ts, source: 'frame', src: replayFrameUrl('internet-archive', ts, url), page } : { ts, source: 'none', src: '', reason: 'This capture could not be fetched.' };
 
-/** Frame number as shown on the filmstrip, `#01`. */
+/** Capture number, `#01`. */
 export const frameNo = (i: number) => `#${String(i + 1).padStart(2, '0')}`;
 
 const SIDE_WORD: Record<Side, string> = { before: 'Before', after: 'After' };

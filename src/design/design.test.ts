@@ -45,9 +45,9 @@ describe('type', () => {
 });
 
 describe('lines and radii', () => {
-  it('borders are 0.5px hairlines (graphic marks: dots, ticks and pending / failed marks excepted)', () => {
+  it('borders are 0.5px hairlines (graphic marks: magnitude dots and the live dot excepted)', () => {
     const borders = designed.filter((d) => /^border(-(top|right|bottom|left))?(-width)?$/.test(d.prop) && /[1-9]/.test(d.value));
-    const bad = borders.filter((d) => !/var\(--line\)/.test(d.value) && !/\.(mag-|change-mag|live-dot|mark-(pending|failed)|tl-marker)/.test(d.selector));
+    const bad = borders.filter((d) => !/var\(--line\)/.test(d.value) && !/\.(change-mag|live-dot)/.test(d.selector));
     expect(show(bad)).toEqual([]);
     expect(tokens).toMatch(/--line: 0\.5px;/);
   });

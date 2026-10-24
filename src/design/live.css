@@ -21,11 +21,6 @@
 .state-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
 .state-actions a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 
-/* Legend swatches for captures not fetched yet (dotted) and failed (dashed), as drawn on the strip. */
-.mark-pending, .mark-failed { display: inline-block; width: 0; height: 15px; margin: 0 var(--space-1); vertical-align: middle; border-left: 1px solid var(--sand-9); }
-.mark-pending { border-left: 1.5px dotted var(--sand-9); height: 9px; }
-.mark-failed { height: 20px; border-left: 1.5px dashed var(--sand-11); }
 @media (forced-colors: active) {
-  .tl-pending, .tl-failed { stroke: CanvasText; }
   .btn-go { forced-color-adjust: none; background: ButtonText; color: ButtonFace; }
 }

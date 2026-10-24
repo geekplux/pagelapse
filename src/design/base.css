@@ -82,54 +82,17 @@ main { flex: 1; min-height: 100vh; }
 .fold > summary:hover { text-decoration: underline; text-decoration-thickness: var(--line); text-decoration-color: var(--sand-8); }
 .fold[open] > summary { margin-bottom: var(--space-2); }
 
-/* Magnitude: size, the sand ramp and the word, shared by markers, legend and list. */
-/* Legend dots use the marker diameters (2 x MARKER_R in timeline/scale.ts). */
+/* Magnitude: size, the sand ramp and the word, in the changes list and the change card. */
 [data-magnitude="minor"] { --d: 12px; --c: var(--sand-9); }
 [data-magnitude="moderate"] { --d: 19px; --c: var(--sand-11); }
 [data-magnitude="major"] { --d: 27px; --c: var(--sand-12); }
 [data-magnitude="trivial"] { --d: 12px; --c: var(--sand-9); }
-.mag-dot, .change-mag::before { content: ""; display: inline-block; width: var(--d); height: var(--d); margin: 0 var(--space-1) 0 var(--space-2); border-radius: 50%; background: var(--c); vertical-align: middle; }
+.change-mag::before { content: ""; display: inline-block; width: var(--d); height: var(--d); margin: 0 var(--space-1) 0 var(--space-2); border-radius: 50%; background: var(--c); vertical-align: middle; }
 .change-mag::before { margin-left: 0; }
-.change-mag[data-magnitude="trivial"]::before, .tl-marker[data-magnitude="trivial"] { background: none; fill: var(--bg); border: 1.5px solid var(--c); stroke: var(--c); stroke-width: 1.5; }
-/* The major dot repeats the marker's inner ring (r 9 of 13.5) as a shape cue. */
-.mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px var(--c), inset 0 0 0 5.25px var(--bg); }
-.mag-tick { display: inline-block; width: 6px; height: 15px; margin-right: var(--space-1); border: 1.5px solid var(--sand-9); border-radius: var(--radius-4); vertical-align: middle; }
+.change-mag[data-magnitude="trivial"]::before { background: none; border: 1.5px solid var(--c); }
+/* The major dot carries an inner ring as a shape cue. */
+.change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px var(--c), inset 0 0 0 5.25px var(--bg); }
 .change-mag, .change-span { color: var(--sand-11); font-size: var(--fs-12); }
-.tl-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); }
-
-/* The seismograph strip. Only the strip scrolls sideways, inside its own container. */
-.tl { position: relative; }
-.tl-strip { overflow-x: auto; overflow-y: hidden; padding: var(--space-1); }
-.tl-trace { fill: none; stroke: var(--sand-9); stroke-width: 1; stroke-linejoin: round; }
-.nowrap { white-space: nowrap; }
-.tl-slider { cursor: pointer; touch-action: pan-y; user-select: none; }
-.tl-strip svg { display: block; }
-.tl-grid { stroke: var(--sand-6); stroke-width: var(--line); stroke-dasharray: 2 3; }
-.tl-axis { stroke: var(--sand-8); stroke-width: var(--line); }
-.tl-cap { stroke: var(--sand-11); }
-.tl-trivial { fill: var(--bg); stroke: var(--sand-9); stroke-width: 1.5; }
-/* Live runs: a capture not fetched yet is a short dotted mark below the baseline; one that failed is a taller dashed one. */
-.tl-pending { stroke: var(--sand-9); stroke-width: 1.5; stroke-dasharray: 1 2; stroke-linecap: round; }
-.tl-failed { stroke: var(--sand-11); stroke-width: 1.5; stroke-dasharray: 3 2; }
-.tl-stem { stroke: var(--sand-8); stroke-width: var(--line); }
-.tl-stem.is-sel { stroke: var(--amber-11); stroke-width: 1.5; }
-.tl-marker { fill: var(--c); stroke: var(--bg); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: tl-in var(--dur) var(--ease) both; }
-.tl-marker-ring { fill: none; stroke: var(--bg); stroke-width: 1.5; transform-box: fill-box; transform-origin: center; animation: tl-in var(--dur) var(--ease) both; pointer-events: none; }
-/* The selected change: an amber-11 ring and stem, with the date under it in sand-12 bold (never colour alone). */
-.tl-ring { fill: none; stroke: var(--amber-11); stroke-width: 2; }
-.tl-move { transition: transform var(--dur) var(--ease); }
-.tl-caret { fill: var(--amber-11); }
-.tl-year, .tl-sel-date { font: var(--fs-12) var(--font-mono); fill: var(--sand-11); }
-.tl-sel-date { fill: var(--sand-12); font-weight: 500; }
-.tl-tip {
-  position: absolute; z-index: 2; transform: translate(-50%, -100%); width: max-content; max-width: min(17rem, 85vw);
-  display: grid; gap: var(--space-1); padding: var(--space-2); border-radius: var(--radius-6); background: var(--sand-12); color: var(--sand-1);
-  font-size: var(--fs-12); line-height: var(--lh-12); pointer-events: auto; box-shadow: var(--shadow);
-}
-.tl-tip .mono { color: var(--sand-1); }
-.tl-tip b { font-weight: 600; }
-@keyframes tl-in { from { opacity: 0; transform: scale(0.3); } }
-
 /* The selected change, after the timeline: the change line, then "Change details". */
 /* Never a scroll anchor: its text changes on every selection, and anchoring to it would jump the page while scrubbing. */
 .change-panel { display: flex; flex-direction: column; gap: var(--space-3); overflow-anchor: none; }
@@ -156,8 +119,6 @@ main { flex: 1; min-height: 100vh; }
 .btn[aria-disabled="true"] { border-style: dashed; color: var(--sand-11); font-weight: 400; cursor: not-allowed; }
 .btn[aria-disabled="true"]:hover { background: var(--bg); }
 .btn-link { min-height: 24px; padding: var(--space-1) 0; border: 0; background: none; color: var(--sand-12); font: 500 var(--fs-14) / var(--lh-14) var(--font-ui); text-decoration: underline; text-decoration-thickness: var(--line); text-underline-offset: 3px; cursor: pointer; }
-.toggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 2.5rem; cursor: pointer; }
-.toggle input { width: 1rem; height: 1rem; margin: 0; accent-color: var(--sand-12); }
 .diff-structure { list-style: none; padding: 0; margin: 0; }
 .diff-legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); color: var(--sand-11); }
 .diff-legend b { font-family: var(--font-mono); }
@@ -244,15 +205,8 @@ kbd { padding: 0 var(--space-1); border-radius: var(--radius-4); background: var
 }
 @media (forced-colors: active) {
   :focus-visible { outline-color: Highlight; }
-  .tl-marker, .tl-caret { fill: CanvasText; stroke: Canvas; }
-  .tl-ring, .tl-stem.is-sel { stroke: Highlight; }
-  .tl-trace { stroke: CanvasText; }
-  .tl-marker-ring { stroke: Canvas; }
-  .tl-year, .tl-sel-date { fill: CanvasText; }
-  .tl-axis, .tl-cap, .tl-stem { stroke: CanvasText; }
-  .tl-trivial { fill: Canvas; stroke: CanvasText; }
-  .mag-dot, .change-mag::before { forced-color-adjust: none; background: CanvasText; }
-  .mag-dot[data-magnitude="major"], .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px CanvasText, inset 0 0 0 5.25px Canvas; }
+  .change-mag::before { forced-color-adjust: none; background: CanvasText; }
+  .change-mag[data-magnitude="major"]::before { box-shadow: inset 0 0 0 3.75px CanvasText, inset 0 0 0 5.25px Canvas; }
   .change[aria-current="true"] { outline: 2px solid Highlight; }
   ins, del, .w-ins, .w-del, .db[data-op] .db-t { text-decoration-color: CanvasText; }
   .btn[aria-disabled="true"] { color: GrayText; }

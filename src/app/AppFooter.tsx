@@ -4,7 +4,7 @@ import { Logo } from '../design/Logo.tsx';
 
 const KEYS: [string, string][] = [
   ['Timeline', 'Left / Right: previous or next change. Home / End: first or last. Page Up / Page Down: about a year later or earlier. Escape hides the tooltip.'],
-  ['Filmstrip', 'Left / Right, Home / End move along the strip; Enter or Space shows that capture.'],
+  ['Thumbnails', 'Left / Right, Home / End move along the thumbnails; Enter or Space shows that capture.'],
   ['Slider divider', 'Left / Right: 5%. Page Up / Page Down: 25%. Home / End: either edge. Enter: back to 50%.'],
   ['Before / After (Single)', 'Left / Right switches between the Before and After capture.'],
   ['Compare', 'Left / Right moves between the compare modes.'],
@@ -94,7 +94,7 @@ export function AppFooter({ sample, hero = false }: { sample?: SampleFixture | u
         ) : (
           <p>
             A live run shows each capture as the Internet Archive replays it, top of page; archived copies may lack some styles or images. The
-            filmstrip draws text outlines of each capture, not pictures. We fetch slowly and cache everything to be kind to the archive.
+            thumbnails on the timeline are text outlines of each capture, not pictures. We fetch slowly and cache everything to be kind to the archive.
           </p>
         )}
       </details>

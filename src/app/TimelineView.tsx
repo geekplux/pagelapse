@@ -8,15 +8,13 @@ import { changePictures, decodePicture } from '../samples/index.ts';
 import { ChangesList } from './ChangesList.tsx';
 import { SheetHead } from './SheetHead.tsx';
 import { ChangeCard, DiffView } from './diff/DiffView.tsx';
-import { Legend } from './timeline/Legend.tsx';
-import { Timeline } from './timeline/Timeline.tsx';
+import { Ribbon, TrivialToggle } from './timeline/Ribbon.tsx';
 import { Ts } from './Ts.tsx';
 import { type UrlState, changeIndex } from './urlState.ts';
 import { StepNav } from './visual/Controls.tsx';
-import { Filmstrip } from './visual/Filmstrip.tsx';
 import { usePlay } from './visual/usePlay.ts';
 import { VisualPane } from './visual/VisualPane.tsx';
-import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, overviewPair, pairOf, parseMode, sampleView, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
+import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, overviewPair, pairOf, parseMode, sampleView, showingText, sideOf, viewQuery } from './visual/visualState.ts';
 
 interface Props {
   fixture: SampleFixture;
@@ -31,7 +29,7 @@ interface Props {
   onChange: (q: Pick<UrlState, 'change' | 'at' | 'view'>) => void;
 }
 
-/** The sample: the title block, the stage and its controls, the scrub strip (filmstrip over timeline), the selected change, the folded lists, then the diff. */
+/** The sample: the title block, the stage and its controls, the time ribbon, the selected change, the folded lists, then the diff. */
 export function TimelineView({ fixture, initialChange, initialAt, initialMode, overview = false, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
@@ -88,7 +86,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     if (!on && !entries.some((e) => pairOf(e) === view.key)) showCapture(view.at, entries);
   };
   // Play steps through every capture in Single mode, from the first when the last is shown; it stops at the last.
-  const captures = snapshots.map((s) => s.ts);
+  const captures = useMemo(() => snapshots.map((s) => s.ts), [snapshots]);
   const play = usePlay(() => {
     const next = captures[captures.indexOf(view.at) + 1];
     if (next) showCapture(next);
@@ -102,10 +100,6 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
       else if (entry) onChange(viewQuery(entry, view.at, 'single'));
     }
     play.toggle();
-  };
-  const thumbOf = (ts: string) => {
-    const file = snapshots.find((s) => s.ts === ts)?.shot?.file;
-    return file && shotSrc(fixture.id, file, true);
   };
   const viewOf = (ts: string) => sampleView(fixture, ts);
   const items = useMemo(() => snapshots.map((s) => sampleView(fixture, s.ts)), [fixture, snapshots]);
@@ -161,20 +155,26 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
           )}
         </div>
         <div className="scrub" data-region="scrub">
-          <Filmstrip items={items} at={view.at} trivial={trivial} onSelect={(ts) => showCapture(ts)} />
-          <div className="tl-area">
-            <h3 id="timeline-heading" className="sr-only">
-              Timeline
-            </h3>
-            {entry ? (
-              <Timeline timeline={shown} selected={selected} onSelect={select} labelledBy="timeline-heading" describedBy="timeline-legend" thumbOf={thumbOf} />
-            ) : (
-              <p className="panel-summary" id="diff" tabIndex={-1}>
-                Nothing meaningful changed across {snapshots.length} captures.
-              </p>
-            )}
-            <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={toggleTrivial} />
-          </div>
+          <h3 id="timeline-heading" className="sr-only">
+            Timeline
+          </h3>
+          <Ribbon
+            items={items}
+            times={captures}
+            timeline={shown}
+            selected={selected}
+            pair={shownEntry}
+            at={view.at}
+            onSelect={select}
+            onCapture={(ts) => showCapture(ts)}
+            labelledBy="timeline-heading"
+          />
+          {!entry && (
+            <p className="panel-summary" id="diff" tabIndex={-1}>
+              Nothing meaningful changed across {snapshots.length} captures.
+            </p>
+          )}
+          <TrivialToggle count={trivialCaptures.length} on={showTrivial} onToggle={toggleTrivial} />
         </div>
         {entry && shownEntry && <ChangeCard entry={shownEntry} index={selected} count={all.length} captureUrl={capUrl} overview={wide ? ends : undefined} />}
         <div className="lists" data-region="changes">

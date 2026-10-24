@@ -11,11 +11,9 @@ import { EmptyState } from '../states/EmptyState.tsx';
 import { ErrorCard } from '../states/ErrorCard.tsx';
 import { LoadingStatus } from '../states/LoadingStatus.tsx';
 import { stepIndex, tsToMs } from '../timeline/scale.ts';
-import { Legend } from '../timeline/Legend.tsx';
-import { Timeline } from '../timeline/Timeline.tsx';
+import { Ribbon, TrivialToggle } from '../timeline/Ribbon.tsx';
 import { type UrlState, changeIndex } from '../urlState.ts';
 import { StepNav } from '../visual/Controls.tsx';
-import { Filmstrip } from '../visual/Filmstrip.tsx';
 import { VisualPane } from '../visual/VisualPane.tsx';
 import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pairOf, parseMode, showingText, sideOf, viewQuery } from '../visual/visualState.ts';
 import { announced, progressText } from './liveState.ts';
@@ -38,12 +36,18 @@ interface Props {
   onSample: () => void;
 }
 
+/** What the ribbon's description adds during a run: captures still coming, and those that failed. */
+const liveNote = (marks: readonly { failed: boolean }[]) => {
+  const failedN = marks.filter((m) => m.failed).length;
+  const waiting = marks.length - failedN;
+  return [waiting > 0 && `${waiting} not fetched yet.`, failedN > 0 && `${failedN} could not be fetched.`].filter(Boolean).join(' ') || undefined;
+};
 const years = (a?: string, b?: string) => (a && b ? `${a.slice(0, 4)}–${b.slice(0, 4)}` : '');
 const IA = ARCHIVES['internet-archive'];
 
 /**
  * A live run: the title block with the run's status line, then the empty or error card, or the replay stage and its
- * controls; the scrub strip (filmstrip and timeline growing capture by capture), the selected change, the folded
+ * controls; the time ribbon (growing capture by capture), the selected change, the folded
  * changes list and the diff.
  */
 export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
@@ -53,7 +57,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const timeline = useMemo(() => withAiSummaries(state.timeline, ai), [state.timeline, ai]);
   const { entries, trivialCaptures, snapshots } = timeline;
   const [pick, setPick] = useState(initialChange);
-  /** The user has picked a change or capture here (timeline, filmstrip, list, Previous / Next, Before / After). */
+  /** The user has picked a change or capture here (ribbon, list, Previous / Next, Before / After). */
   const [picked, setPicked] = useState(false);
   const [showTrivial, setShowTrivial] = useState(false);
   const all = useMemo(
@@ -61,11 +65,13 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     [showTrivial, entries, timeline],
   );
   const shown = useMemo(() => ({ ...timeline, entries: all, trivialCaptures: showTrivial ? [] : trivialCaptures }), [timeline, all, showTrivial, trivialCaptures]);
-  // Captures not on the timeline yet: still coming (dotted) or failed (dashed).
+  // Captures not on the timeline yet: still coming, or failed.
   const marks = useMemo(() => {
     const done = new Set(snapshots.map((s) => s.ts));
     return captures.filter((c) => !done.has(c.ts)).map((c) => ({ ts: c.ts, failed: failed.includes(c.ts) }));
   }, [captures, snapshots, failed]);
+  const failedSet = useMemo(() => new Set(failed), [failed]);
+  const captureTimes = useMemo(() => captures.map((c) => c.ts), [captures]);
   const selected = changeIndex(all, pick);
   const entry = all[selected];
   // The capture shown in Single mode, while its change is selected; else the change's After.
@@ -85,7 +91,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const page = (ts: string) => snapshots.find((s) => s.ts === ts)!;
   const pages = useMemo(() => new Map(snapshots.map((s) => [s.ts, s])), [snapshots]);
   const view = (ts: string) => liveView(url, ts, pages.get(ts));
-  // The filmstrip: every capture that has joined the timeline or failed, as a text silhouette (no image requests).
+  // The ribbon's thumbnails: every capture that has joined the timeline or failed, as a text outline (no image requests).
   const items = useMemo(() => captures.slice(0, state.next).map((c) => liveView(url, c.ts, pages.get(c.ts))), [captures, state.next, url, pages]);
   const trivialSet = useMemo(() => new Set(trivialCaptures), [trivialCaptures]);
   const side = entry && shownAt && sideOf(entry, shownAt) === 'before' ? 'before' : 'after';
@@ -144,7 +150,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const [frozen, setFrozen] = useState<{ timeline: typeof shown; marks: typeof marks } | null>(null);
   const strip = frozen ?? { timeline: shown, marks };
   const stripSelected = changeIndex(strip.timeline.entries, pick);
-  const isSlider = (e: FocusEvent | KeyboardEvent) => e.target instanceof Element && e.target.matches('.tl-slider');
+  const isSlider = (e: FocusEvent | KeyboardEvent) => e.target instanceof Element && e.target.matches('.rb-slider');
   const onSliderFocus = (e: FocusEvent) => {
     if (!isSlider(e) || !running || !entry) return;
     setPick(pairOf(entry));
@@ -251,8 +257,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
         </div>
         {captures.length > 0 && (
           <div className="scrub" data-region="scrub">
-            <Filmstrip items={items} pending={captures.length - items.length} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
-            <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
+            <div className="rb-live" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
               <h3 id="timeline-heading" className="sr-only">
                 Timeline
               </h3>
@@ -260,27 +265,21 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
               <span className="sr-only" role="status">
                 {news}
               </span>
-              <Timeline
+              <Ribbon
+                items={items}
+                pending={captures.length - items.length}
+                times={captureTimes}
                 timeline={strip.timeline}
-                marks={strip.marks}
                 selected={stripSelected}
+                at={shownAt ?? ''}
+                failed={failedSet}
                 onSelect={selectOnStrip}
+                onCapture={(ts) => choose(all[changeForCapture(all, ts)], ts)}
                 labelledBy="timeline-heading"
-                describedBy="timeline-legend"
+                note={liveNote(strip.marks)}
               />
-              <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial}>
-                {marks.length > failed.length && (
-                  <span>
-                    <i className="mark-pending" /> not fetched yet
-                  </span>
-                )}
-                {failed.length > 0 && (
-                  <span>
-                    <i className="mark-failed" /> {failed.length} could not be fetched
-                  </span>
-                )}
-              </Legend>
             </div>
+            <TrivialToggle count={trivialCaptures.length} on={showTrivial} onToggle={setShowTrivial} />
           </div>
         )}
         {entry && <ChangeCard entry={entry} index={selected} count={all.length} captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)} />}

@@ -158,7 +158,7 @@ export function VisualPane({ label, captures, link, view, entry, at, trivial, mo
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         <div className="vp-sides" role="radiogroup" aria-label="Show the change's capture">
           {SIDES.map(([s, word]) => (
-            // One tab stop for the pair (arrow keys move and select), like the filmstrip.
+            // One tab stop for the pair (arrow keys move and select), like the ribbon thumbnails.
             // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
             <button key={s} type="button" role="radio" className="vp-side" aria-checked={side === s} tabIndex={(side ?? 'after') === s ? 0 : -1} onClick={() => onSide(s)} onKeyDown={sideKey}>
               <i className="vp-dot" data-side={s} aria-hidden="true" />
