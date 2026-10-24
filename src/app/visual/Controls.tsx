@@ -81,33 +81,54 @@ export function StepNav({ entry, index, count, onSelect, showing, quiet, overvie
   );
 }
 
-/** Copies the address bar (the shareable link) and says so politely; the confirmation clears when the view changes. */
+/** How long "Link copied" stays on the button; a failure, with where the link is, stays longer to be read. */
+const SAID_MS = { ok: 2000, failed: 6000 };
+
+/**
+ * Copies the address bar (the shareable link). The button itself says "Link copied" (2 s) or "Copy failed" (6 s); on
+ * phones, where it is an icon, the word shows for that time. A failure also says, visibly, where the link is, and a
+ * polite status region announces the outcome. The confirmation belongs to the view it was given for.
+ */
 function CopyLink({ view }: { view: string }) {
-  const [copied, setCopied] = useState({ view: '', text: '' });
+  const [said, setSaid] = useState<{ view: string; ok: boolean } | null>(null);
+  const shown = said?.view === view ? said : null;
+  useEffect(() => {
+    if (!said) return;
+    const t = setTimeout(() => setSaid(null), SAID_MS[said.ok ? 'ok' : 'failed']);
+    return () => clearTimeout(t);
+  }, [said]);
   // Clear first, then set on the next frame, so pressing again re-announces the same text.
-  const announce = (text: string) => {
-    setCopied({ view: '', text: '' });
-    requestAnimationFrame(() => setCopied({ view, text }));
+  const done = (ok: boolean) => {
+    setSaid(null);
+    requestAnimationFrame(() => setSaid({ view, ok }));
   };
   const copy = () =>
     Promise.resolve()
       .then(() => navigator.clipboard.writeText(location.href))
       .then(
-        () => announce('Link copied'),
-        () => announce('Could not copy: the link is in the address bar'),
+        () => done(true),
+        () => done(false),
       );
   return (
     <>
-      <button type="button" className="btn btn-quiet vp-copy" onClick={copy}>
+      <button type="button" className="btn btn-quiet vp-copy" data-said={shown ? (shown.ok ? 'ok' : 'failed') : undefined} onClick={copy}>
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-          <path d="M7 9a2.5 2.5 0 0 0 3.5 0l2-2A2.5 2.5 0 0 0 9 3.5l-.7.7M9 7a2.5 2.5 0 0 0-3.5 0l-2 2A2.5 2.5 0 0 0 7 12.5l.7-.7" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          {shown?.ok ? (
+            <path d="m3.5 8.5 3 3 6-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          ) : (
+            <path d="M7 9a2.5 2.5 0 0 0 3.5 0l2-2A2.5 2.5 0 0 0 9 3.5l-.7.7M9 7a2.5 2.5 0 0 0-3.5 0l-2 2A2.5 2.5 0 0 0 7 12.5l.7-.7" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          )}
         </svg>
-        <span className="vp-copy-text">Copy link</span>
+        {/* The button keeps its name; what happened is said by the status region below. */}
+        <span className="vp-copy-text" aria-hidden={shown ? true : undefined}>
+          {shown ? (shown.ok ? 'Link copied' : 'Copy failed') : 'Copy link'}
+        </span>
+        {shown && <span className="sr-only">Copy link</span>}
       </button>
       {/* An explicit status role is the most widely announced live region; <output> support varies. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-      <span className="sr-only" role="status">
-        {copied.view === view ? copied.text : ''}
+      <span className="vp-copy-note" role="status">
+        {shown && (shown.ok ? <span className="sr-only">Link copied</span> : 'Could not copy: the link is in the address bar.')}
       </span>
     </>
   );
