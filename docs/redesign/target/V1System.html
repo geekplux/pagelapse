@@ -1,0 +1,192 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Pagelapse V1System</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap"><style>body{margin:0;background:#888}
+.pl{font-family:'Schibsted Grotesk',system-ui,sans-serif;font-size:14px;line-height:20px;color:var(--sand-12);background:var(--bg);-webkit-font-smoothing:antialiased;font-feature-settings:'ss01'}
+.pl.light{--sand-1:#fdfdfc;--sand-2:#f9f9f8;--sand-3:#f1f0ef;--sand-4:#e9e8e6;--sand-5:#e2e1de;--sand-6:#dad9d6;--sand-7:#cfceca;--sand-8:#bcbbb5;--sand-9:#8d8d86;--sand-10:#82827c;--sand-11:#63635e;--sand-12:#21201c;--cyan-1:#fafdfe;--cyan-2:#f2fafb;--cyan-3:#def7f9;--cyan-4:#caf1f6;--cyan-5:#b5e9f0;--cyan-6:#9ddde7;--cyan-7:#7dcedc;--cyan-8:#3db9cf;--cyan-9:#00a2c7;--cyan-10:#0797b9;--cyan-11:#107d98;--cyan-12:#0d3c48;--amber-1:#fefdfb;--amber-2:#fefbe9;--amber-3:#fff7c2;--amber-4:#ffee9c;--amber-5:#fbe577;--amber-6:#f3d673;--amber-7:#e9c162;--amber-8:#e2a336;--amber-9:#ffc53d;--amber-10:#ffba18;--amber-11:#ab6400;--amber-12:#4f3422;--bg:#fff;--logo-ground:#fff;--logo-ink:#21201c;--frame:#fff}
+.pl.dark{--sand-1:#111110;--sand-2:#191918;--sand-3:#222221;--sand-4:#2a2a28;--sand-5:#31312e;--sand-6:#3b3a37;--sand-7:#494844;--sand-8:#62605b;--sand-9:#6f6d66;--sand-10:#7c7b74;--sand-11:#b5b3ad;--sand-12:#eeeeec;--cyan-1:#0b161a;--cyan-2:#101b20;--cyan-3:#082c36;--cyan-4:#003848;--cyan-5:#004558;--cyan-6:#045468;--cyan-7:#12677e;--cyan-8:#11809c;--cyan-9:#00a2c7;--cyan-10:#23afd0;--cyan-11:#4ccce6;--cyan-12:#b6ecf7;--amber-1:#16120c;--amber-2:#1d180f;--amber-3:#302008;--amber-4:#3f2700;--amber-5:#4d3000;--amber-6:#5c3d05;--amber-7:#714f19;--amber-8:#8f6424;--amber-9:#ffc53d;--amber-10:#ffd60a;--amber-11:#ffca16;--amber-12:#ffe7b3;--bg:var(--sand-1);--logo-ground:#191918;--logo-ink:#eeeeec;--frame:var(--sand-2)}
+.pl *{box-sizing:border-box}
+:where(.pl) a{color:inherit;text-decoration:none}
+:where(.pl) button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-feature-settings:'zero' 0}
+.wrap{width:1200px;margin:0 auto}
+.s12{font-size:12px;line-height:16px}.s14{font-size:14px;line-height:20px}.s20{font-size:20px;line-height:28px;letter-spacing:-.005em}.s32{font-size:32px;line-height:40px;letter-spacing:-.02em}
+.dim{color:var(--sand-11)}.w5{font-weight:500}.w6{font-weight:600}.w7{font-weight:700}
+.hair{border:0;border-top:.5px solid var(--sand-6);margin:0}
+/* header */
+.top{height:72px;display:flex;align-items:center;gap:32px;border-bottom:.5px solid var(--sand-6)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand b{font-size:20px;line-height:28px;font-weight:700;letter-spacing:-.02em}
+.find{flex:0 0 520px;margin-left:auto;display:flex;gap:8px}
+.field{flex:1;height:40px;display:flex;align-items:center;gap:8px;padding:0 12px;border:.5px solid var(--sand-8);border-radius:8px;background:var(--bg);color:var(--sand-11)}
+.field input{all:unset;flex:1;color:var(--sand-12);font-size:14px}
+.field input::placeholder{color:var(--sand-10)}
+.btn{height:40px;padding:0 16px;border-radius:8px;display:inline-flex;align-items:center;gap:8px;font-weight:500;white-space:nowrap}
+.btn.solid{background:var(--sand-12);color:var(--sand-1)}
+.btn.line{border:.5px solid var(--sand-8);background:var(--bg)}
+.btn.icon{width:40px;padding:0;justify-content:center}
+.btn.quiet{padding:0 8px;color:var(--sand-11)}
+.ghl{display:inline-flex;width:40px;height:40px;align-items:center;justify-content:center;color:var(--sand-11)}
+/* title */
+.head{padding-top:40px;display:flex;align-items:flex-end;justify-content:space-between;gap:32px}
+.head h1{margin:0;font-weight:700}
+.meta{display:flex;gap:20px;margin-top:4px;color:var(--sand-11);align-items:center}
+.meta b{color:var(--sand-12);font-weight:500}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 6px;border-radius:4px;background:var(--sand-3);color:var(--sand-11);font-size:12px;line-height:16px}
+.samples{display:flex;gap:4px}
+.samples a{height:32px;display:inline-flex;align-items:center;padding:0 10px;border-radius:6px;color:var(--sand-11)}
+.samples a[aria-current]{background:var(--sand-3);color:var(--sand-12);font-weight:500}
+/* stage */
+.stage{margin-top:24px;position:relative;border-radius:8px;overflow:hidden;border:.5px solid var(--sand-7);background:var(--frame)}
+.stage img{display:block;width:100%;height:100%;object-fit:cover;object-position:top}
+.layer{position:absolute;inset:0}
+.divider{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;background:#fff;box-shadow:0 0 0 .5px rgba(0,0,0,.35)}
+.knob{position:absolute;top:50%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:20px;background:#fff;color:#21201c;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 .5px rgba(0,0,0,.3),0 2px 6px rgba(0,0,0,.18)}
+.ptag{position:absolute;top:12px;height:28px;display:inline-flex;align-items:center;gap:8px;padding:0 10px;border-radius:6px;background:var(--bg);box-shadow:0 0 0 .5px var(--sand-7);font-size:14px}
+.ptag .k{font-weight:600}
+.before{color:var(--cyan-11)}.after{color:var(--amber-11)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:4px}
+.dot.b{box-shadow:inset 0 0 0 1.5px var(--cyan-11)}.dot.a{background:var(--amber-11)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.pair .cap{display:flex;align-items:center;gap:8px;height:28px;margin-bottom:8px}
+.pair .stage{margin-top:0}
+/* controls */
+.ctrl{margin-top:16px;display:flex;align-items:center;justify-content:space-between}
+.grp{display:flex;align-items:center;gap:8px}
+.step{display:flex;align-items:center;gap:4px}
+.step .lab{min-width:132px;text-align:center}
+.seg{display:inline-flex;padding:2px;gap:2px;border-radius:8px;background:var(--sand-3);height:40px}
+.seg button{height:36px;padding:0 14px;border-radius:6px;color:var(--sand-11)}
+.seg button[aria-pressed=true]{background:var(--bg);color:var(--sand-12);font-weight:500;box-shadow:0 0 0 .5px var(--sand-7)}
+/* ribbon */
+.ribbon{margin-top:40px;position:relative}
+.strip{display:flex;gap:8px}
+.th{flex:1;aspect-ratio:16/10;border-radius:4px;overflow:hidden;position:relative;background:var(--sand-3);box-shadow:0 0 0 .5px var(--sand-7)}
+.th img{display:block;width:100%;height:100%;object-fit:cover;object-position:top}
+.th.triv img{opacity:.45}
+.th.b{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--cyan-11)}
+.th.a{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--amber-11)}
+.th.hov{box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--sand-12)}
+.ribbon svg{display:block;overflow:visible}
+.cv{fill:none;stroke:var(--sand-8);stroke-width:.5}
+.cv.b{stroke:var(--cyan-11);stroke-width:1}.cv.a{stroke:var(--amber-11);stroke-width:1}
+.bar{fill:var(--sand-9)}.bar.a{fill:var(--amber-11)}
+.ax{stroke:var(--sand-8);stroke-width:.5}
+.yr{font:12px/1 'IBM Plex Mono',monospace;fill:var(--sand-11)}
+.span{fill:var(--sand-3)}
+.tip{position:absolute;transform:translate(-50%,-100%);padding:6px 10px;border-radius:6px;background:var(--sand-12);color:var(--sand-1);white-space:nowrap;font-size:12px;line-height:16px}
+/* change */
+.change{margin-top:56px;padding-top:40px;border-top:.5px solid var(--sand-6);display:grid;grid-template-columns:376px 1fr;gap:64px}
+.when{display:flex;flex-direction:column;gap:4px}
+.when div{display:flex;align-items:center;gap:8px}
+.summary{margin:20px 0 10px;font-weight:600}
+.facts{margin:32px 0 0;display:grid;grid-template-columns:128px 1fr;row-gap:12px;column-gap:16px}
+.facts dt{color:var(--sand-11)}.facts dd{margin:0}
+.num{font-family:'IBM Plex Mono',monospace;font-weight:500}
+.links{margin-top:32px;display:flex;flex-direction:column;gap:8px}
+.links a{display:inline-flex;align-items:center;gap:6px;color:var(--sand-11);text-decoration:underline;text-decoration-thickness:.5px;text-underline-offset:3px}
+.diff{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:28px 1fr;padding:7px 12px 7px 0;font-size:14px;line-height:22px}
+.row .m{font-family:'IBM Plex Mono',monospace;text-align:center;color:var(--sand-9)}
+.row.r-add{background:var(--amber-2)}.row.r-add .m{color:var(--amber-11)}
+.row.r-del{background:var(--cyan-2)}.row.r-del .m{color:var(--cyan-11)}.row.r-del .tx{color:var(--sand-11)}
+.row.r-mod .m{color:var(--sand-12)}
+.row.r-eq .tx{color:var(--sand-11)}
+.row.h .tx{font-weight:600}
+.row.h.r-eq .tx{color:var(--sand-12)}
+.ins{background:var(--amber-4);text-decoration:underline;text-decoration-color:var(--amber-11);text-underline-offset:3px;border-radius:2px}
+.del{background:var(--cyan-3);text-decoration:line-through;text-decoration-color:var(--cyan-11);color:var(--sand-11);border-radius:2px}
+.gap{display:flex;align-items:center;gap:8px;height:36px;padding-left:28px;color:var(--sand-11)}
+.gap:before{content:'';position:absolute}
+.more{margin-top:16px;padding-left:28px}
+/* list of changes */
+.every{margin-top:72px}
+.every h2,.change h2{margin:0}
+.tbl{margin-top:16px}
+.tr{display:grid;grid-template-columns:200px 140px 1fr;gap:24px;align-items:center;min-height:48px;padding:10px 12px;border-top:.5px solid var(--sand-6)}
+.tr.on{background:var(--sand-2)}
+.mag{display:flex;align-items:center;gap:8px}
+.mag i{display:block;height:4px;border-radius:2px;background:var(--sand-9)}
+.tr.on .mag i{background:var(--amber-11)}
+.tfoot{border-top:.5px solid var(--sand-6);padding:14px 12px;display:flex;gap:8px;color:var(--sand-11)}
+.tfoot button{white-space:nowrap;text-decoration:underline;text-decoration-thickness:.5px;text-underline-offset:3px;color:var(--sand-12)}
+/* footer */
+.foot{margin-top:96px;border-top:.5px solid var(--sand-6);padding:40px 0 48px}
+.fgrid{display:grid;grid-template-columns:1fr auto;gap:48px}
+.fl{display:flex;flex-direction:column;gap:12px}
+.more-by{display:flex;flex-direction:column;gap:12px;align-items:flex-end}
+.more-by nav{display:flex;gap:24px}
+.more-by a{color:var(--sand-11)}.more-by a:first-child{color:var(--sand-12);font-weight:500}
+.keys{display:flex;gap:20px;color:var(--sand-11)}
+kbd{font:12px/16px 'IBM Plex Mono',monospace;padding:1px 5px;border-radius:4px;background:var(--sand-3);color:var(--sand-12);margin-right:6px}
+.prog{height:2px;background:var(--sand-4);border-radius:1px;overflow:hidden;width:240px}
+.prog i{display:block;height:100%;background:var(--sand-12)}
+/* phone */
+.ph .wrap{width:auto;margin:0 16px}
+</style></head><body><div class="pl light" style="width:1200px"><div style="padding:64px;display:flex;flex-direction:column;gap:56px">
+  <div><h1 class="s32 w7" style="margin:0">Pagelapse v1 system</h1><p class="s14 dim" style="margin:8px 0 0">Radix sand, cyan and amber. Schibsted Grotesk and IBM Plex Mono. Four sizes.</p></div>
+  <section style="display:flex;flex-direction:column;gap:16px"><h2 class="s20 w6" style="margin:0">Logo</h2><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px"><div style="display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:12px;box-shadow:0 0 0 .5px var(--sand-6) inset;background:var(--sand-2)"><div style="display:flex;align-items:flex-end;gap:20px"><svg width="96" height="96" viewBox="0 0 24 24" role="img" aria-label="Pagelapse"><defs><linearGradient id="gLA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d3c48"/><stop offset=".7" stop-color="#2d3a3c"/><stop offset="1" stop-color="#5a3a1e"/></linearGradient></defs>
+  <rect x="1" y="1" width="22" height="22" rx="5.5" fill="url(#gLA)"/>
+  <circle cx="5.4" cy="16.2" r="1.25" fill="#3db9cf"/><circle cx="7.6" cy="10.9" r="1.5" fill="#7dcedc"/><circle cx="12" cy="8.2" r="1.8" fill="#f3d673"/><circle cx="16.4" cy="10.9" r="2.1" fill="#ffc53d"/><circle cx="18.6" cy="16.2" r="2.45" fill="#ff9d2e"/>
+  <path d="M1 18.6h22" stroke="#fefdfb" stroke-width="1" opacity=".9"/><path d="M1 18.6h22V17.5a5.5 5.5 0 0 1 0 0" fill="none"/>
+  <rect x="1" y="18.6" width="22" height="4.4" fill="#21201c" opacity=".55" clip-path="inset(0 round 0 0 5.5 5.5)"/></svg><svg width="32" height="32" viewBox="0 0 24 24" role="img" aria-label="Pagelapse"><defs><linearGradient id="gMA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d3c48"/><stop offset=".7" stop-color="#2d3a3c"/><stop offset="1" stop-color="#5a3a1e"/></linearGradient></defs>
+  <rect x="1" y="1" width="22" height="22" rx="5.5" fill="url(#gMA)"/>
+  <circle cx="5.4" cy="16.2" r="1.25" fill="#3db9cf"/><circle cx="7.6" cy="10.9" r="1.5" fill="#7dcedc"/><circle cx="12" cy="8.2" r="1.8" fill="#f3d673"/><circle cx="16.4" cy="10.9" r="2.1" fill="#ffc53d"/><circle cx="18.6" cy="16.2" r="2.45" fill="#ff9d2e"/>
+  <path d="M1 18.6h22" stroke="#fefdfb" stroke-width="1" opacity=".9"/><path d="M1 18.6h22V17.5a5.5 5.5 0 0 1 0 0" fill="none"/>
+  <rect x="1" y="18.6" width="22" height="4.4" fill="#21201c" opacity=".55" clip-path="inset(0 round 0 0 5.5 5.5)"/></svg><svg width="16" height="16" viewBox="0 0 24 24" role="img" aria-label="Pagelapse"><defs><linearGradient id="gSA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d3c48"/><stop offset=".7" stop-color="#2d3a3c"/><stop offset="1" stop-color="#5a3a1e"/></linearGradient></defs>
+  <rect x="1" y="1" width="22" height="22" rx="5.5" fill="url(#gSA)"/>
+  <circle cx="5.4" cy="16.2" r="1.25" fill="#3db9cf"/><circle cx="7.6" cy="10.9" r="1.5" fill="#7dcedc"/><circle cx="12" cy="8.2" r="1.8" fill="#f3d673"/><circle cx="16.4" cy="10.9" r="2.1" fill="#ffc53d"/><circle cx="18.6" cy="16.2" r="2.45" fill="#ff9d2e"/>
+  <path d="M1 18.6h22" stroke="#fefdfb" stroke-width="1" opacity=".9"/><path d="M1 18.6h22V17.5a5.5 5.5 0 0 1 0 0" fill="none"/>
+  <rect x="1" y="18.6" width="22" height="4.4" fill="#21201c" opacity=".55" clip-path="inset(0 round 0 0 5.5 5.5)"/></svg></div><div><div class="s14 w6">A Sun path<span class="tag" style="margin-left:8px">Recommended</span></div><div class="s14 dim" style="margin-top:4px">The sun crossing a page, dawn cyan to dusk amber: the time-lapse frame.</div></div><div class="pl dark" style="padding:16px;border-radius:8px;display:flex;gap:16px;align-items:center;background:#111110"><svg width="32" height="32" viewBox="0 0 24 24" role="img" aria-label="Pagelapse"><defs><linearGradient id="gDA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d3c48"/><stop offset=".7" stop-color="#2d3a3c"/><stop offset="1" stop-color="#5a3a1e"/></linearGradient></defs>
+  <rect x="1" y="1" width="22" height="22" rx="5.5" fill="url(#gDA)"/>
+  <circle cx="5.4" cy="16.2" r="1.25" fill="#3db9cf"/><circle cx="7.6" cy="10.9" r="1.5" fill="#7dcedc"/><circle cx="12" cy="8.2" r="1.8" fill="#f3d673"/><circle cx="16.4" cy="10.9" r="2.1" fill="#ffc53d"/><circle cx="18.6" cy="16.2" r="2.45" fill="#ff9d2e"/>
+  <path d="M1 18.6h22" stroke="#fefdfb" stroke-width="1" opacity=".9"/><path d="M1 18.6h22V17.5a5.5 5.5 0 0 1 0 0" fill="none"/>
+  <rect x="1" y="18.6" width="22" height="4.4" fill="#21201c" opacity=".55" clip-path="inset(0 round 0 0 5.5 5.5)"/></svg><b style="font-size:20px;font-weight:700;color:#eeeeec;letter-spacing:-.02em">Pagelapse</b></div></div><div style="display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:12px;box-shadow:0 0 0 .5px var(--sand-6) inset"><div style="display:flex;align-items:flex-end;gap:20px"><svg width="96" height="96" viewBox="0 0 24 24" role="img" aria-label="Pagelapse">
+  <rect x="2" y="2" width="13" height="16" rx="2.5" fill="#00a2c7"/>
+  <rect x="5.5" y="4" width="13" height="16" rx="2.5" fill="#7dcedc" style="mix-blend-mode:multiply" opacity="0.9"/>
+  <rect x="9" y="6" width="13" height="16" rx="2.5" fill="#ffc53d" style="mix-blend-mode:multiply"/>
+  <path d="M11.5 11h8M11.5 14h6M11.5 17h7" stroke="#4f3422" stroke-width="1.3" stroke-linecap="round"/></svg><svg width="32" height="32" viewBox="0 0 24 24" role="img" aria-label="Pagelapse">
+  <rect x="2" y="2" width="13" height="16" rx="2.5" fill="#00a2c7"/>
+  <rect x="5.5" y="4" width="13" height="16" rx="2.5" fill="#7dcedc" style="mix-blend-mode:multiply" opacity="0.9"/>
+  <rect x="9" y="6" width="13" height="16" rx="2.5" fill="#ffc53d" style="mix-blend-mode:multiply"/>
+  <path d="M11.5 11h8M11.5 14h6M11.5 17h7" stroke="#4f3422" stroke-width="1.3" stroke-linecap="round"/></svg><svg width="16" height="16" viewBox="0 0 24 24" role="img" aria-label="Pagelapse">
+  <rect x="2" y="2" width="13" height="16" rx="2.5" fill="#00a2c7"/>
+  <rect x="5.5" y="4" width="13" height="16" rx="2.5" fill="#7dcedc" style="mix-blend-mode:multiply" opacity="0.9"/>
+  <rect x="9" y="6" width="13" height="16" rx="2.5" fill="#ffc53d" style="mix-blend-mode:multiply"/>
+  <path d="M11.5 11h8M11.5 14h6M11.5 17h7" stroke="#4f3422" stroke-width="1.3" stroke-linecap="round"/></svg></div><div><div class="s14 w6">B Stack</div><div class="s14 dim" style="margin-top:4px">Three captures of one page, offset in time.</div></div><div class="pl dark" style="padding:16px;border-radius:8px;display:flex;gap:16px;align-items:center;background:#111110"><svg width="32" height="32" viewBox="0 0 24 24" role="img" aria-label="Pagelapse">
+  <rect x="2" y="2" width="13" height="16" rx="2.5" fill="#00a2c7"/>
+  <rect x="5.5" y="4" width="13" height="16" rx="2.5" fill="#7dcedc" style="mix-blend-mode:multiply" opacity="0.9"/>
+  <rect x="9" y="6" width="13" height="16" rx="2.5" fill="#ffc53d" style="mix-blend-mode:multiply"/>
+  <path d="M11.5 11h8M11.5 14h6M11.5 17h7" stroke="#4f3422" stroke-width="1.3" stroke-linecap="round"/></svg><b style="font-size:20px;font-weight:700;color:#eeeeec;letter-spacing:-.02em">Pagelapse</b></div></div><div style="display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:12px;box-shadow:0 0 0 .5px var(--sand-6) inset"><div style="display:flex;align-items:flex-end;gap:20px"><svg width="96" height="96" viewBox="0 0 24 24" role="img" aria-label="Pagelapse">
+  <path d="M7 2h5v20H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z" fill="#00a2c7"/>
+  <path d="M12 2h5a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5h-5z" fill="#ffc53d"/>
+  <path d="M5 8h4M5 11h4M5 14h3" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity="0.85"/>
+  <path d="M15 8h4M15 11h3M15 14h4" stroke="#4f3422" stroke-width="1.3" stroke-linecap="round" opacity="0.8"/>
+  <path d="M12 1v22" stroke="var(--logo-ink)" stroke-width="1.4"/>
+  <circle cx="12" cy="12" r="3.2" fill="var(--logo-ground)" stroke="var(--logo-ink)" stroke-width="1.2"/></svg><svg width="32" height="32" viewBox="0 0 24 24" role="img" aria-label="Pagelapse">
+  <path d="M7 2h5v20H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z" fill="#00a2c7"/>
+  <path d="M12 2h5a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5h-5z" fill="#ffc53d"/>
+  <path d="M5 8h4M5 11h4M5 14h3" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity="0.85"/>
+  <path d="M15 8h4M15 11h3M15 14h4" stroke="#4f3422" stroke-width="1.3" stroke-linecap="round" opacity="0.8"/>
+  <path d="M12 1v22" stroke="var(--logo-ink)" stroke-width="1.4"/>
+  <circle cx="12" cy="12" r="3.2" fill="var(--logo-ground)" stroke="var(--logo-ink)" stroke-width="1.2"/></svg><svg width="16" height="16" viewBox="0 0 24 24" role="img" aria-label="Pagelapse">
+  <path d="M7 2h5v20H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z" fill="#00a2c7"/>
+  <path d="M12 2h5a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5h-5z" fill="#ffc53d"/>
+  <path d="M5 8h4M5 11h4M5 14h3" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity="0.85"/>
+  <path d="M15 8h4M15 11h3M15 14h4" stroke="#4f3422" stroke-width="1.3" stroke-linecap="round" opacity="0.8"/>
+  <path d="M12 1v22" stroke="var(--logo-ink)" stroke-width="1.4"/>
+  <circle cx="12" cy="12" r="3.2" fill="var(--logo-ground)" stroke="var(--logo-ink)" stroke-width="1.2"/></svg></div><div><div class="s14 w6">C Split</div><div class="s14 dim" style="margin-top:4px">One page cut by the compare divider.</div></div><div class="pl dark" style="padding:16px;border-radius:8px;display:flex;gap:16px;align-items:center;background:#111110"><svg width="32" height="32" viewBox="0 0 24 24" role="img" aria-label="Pagelapse">
+  <path d="M7 2h5v20H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z" fill="#00a2c7"/>
+  <path d="M12 2h5a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5h-5z" fill="#ffc53d"/>
+  <path d="M5 8h4M5 11h4M5 14h3" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity="0.85"/>
+  <path d="M15 8h4M15 11h3M15 14h4" stroke="#4f3422" stroke-width="1.3" stroke-linecap="round" opacity="0.8"/>
+  <path d="M12 1v22" stroke="var(--logo-ink)" stroke-width="1.4"/>
+  <circle cx="12" cy="12" r="3.2" fill="var(--logo-ground)" stroke="var(--logo-ink)" stroke-width="1.2"/></svg><b style="font-size:20px;font-weight:700;color:#eeeeec;letter-spacing:-.02em">Pagelapse</b></div></div></div></section>
+  <section style="display:flex;flex-direction:column;gap:16px"><h2 class="s20 w6" style="margin:0">Colour</h2><div style="display:flex;flex-direction:column;gap:20px">
+    <div class="s14"><b class="w6">sand</b> <span class="dim">ground, text, hairlines</span></div><div style="display:flex;gap:4px"><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#fdfdfc;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-1</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#f9f9f8;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-2</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#f1f0ef;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-3</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#dad9d6;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-6</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#cfceca;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-7</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#bcbbb5;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-8</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#8d8d86;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-9</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#63635e;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-11</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#21201c;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">sand-12</span></div></div>
+    <div class="s14"><b class="w6 before">cyan</b> <span class="dim">before: the older capture, removed words</span></div><div style="display:flex;gap:4px"><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#f2fafb;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">cyan-2</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#def7f9;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">cyan-3</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#caf1f6;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">cyan-4</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#00a2c7;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">cyan-9</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#107d98;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">cyan-11</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#0d3c48;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">cyan-12</span></div></div>
+    <div class="s14"><b class="w6 after">amber</b> <span class="dim">after: the newer capture, added words, the selected change</span></div><div style="display:flex;gap:4px"><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#fefbe9;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">amber-2</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#ffee9c;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">amber-4</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#ffc53d;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">amber-9</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#ab6400;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">amber-11</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="height:40px;border-radius:6px;background:#4f3422;box-shadow:0 0 0 .5px rgba(0,0,0,.12) inset"></div><span class="s12 mono dim">amber-12</span></div></div>
+    <p class="s14 dim" style="margin:0">Before and after never rely on colour: a ring or a dot, the words Before and After, and − or + always come with it. Cyan and amber stay apart under red-green colour blindness.</p></div></section>
+  <section style="display:flex;flex-direction:column;gap:16px"><h2 class="s20 w6" style="margin:0">Type</h2><div style="display:flex;flex-direction:column;gap:12px">
+    <div style="display:grid;grid-template-columns:140px 1fr;align-items:baseline"><span class="s12 mono dim">32 / 700</span><span class="s32 w7">git-scm.com</span></div>
+    <div style="display:grid;grid-template-columns:140px 1fr;align-items:baseline"><span class="s12 mono dim">20 / 600</span><span class="s20 w6">Added 4 sections incl. “Learn”</span></div>
+    <div style="display:grid;grid-template-columns:140px 1fr;align-items:baseline"><span class="s12 mono dim">14 / 400, 500</span><span class="s14">Git is lightning fast and has a huge ecosystem.</span></div>
+    <div style="display:grid;grid-template-columns:140px 1fr;align-items:baseline"><span class="s12 mono dim">14, 12 mono</span><span class="s14 mono">6 Nov 2013 &nbsp;+62 −119</span></div></div></section>
+  </div></div></body></html>
