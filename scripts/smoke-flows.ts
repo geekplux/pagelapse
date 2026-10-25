@@ -1055,6 +1055,35 @@ export const flows: readonly Flow[] = [
     },
   },
   {
+    name: 'footer',
+    description: 'The footer\'s capped-AI line: 12 px, the footer\'s muted colour, inside the source line (no extra row), no sideways scroll; workspace and hero',
+    clip: '.site-footer',
+    async run({ page, baseUrl, viewport }) {
+      const notes: string[] = [];
+      for (const open of [() => openReady(page, baseUrl), () => openHero(page, baseUrl)]) {
+        await open();
+        const m = await page.evaluate(() => {
+          const cap = document.querySelector<HTMLElement>('.site-footer .foot-cap')!;
+          const cs = getComputedStyle(cap);
+          return {
+            text: cap.textContent,
+            size: cs.fontSize,
+            colour: cs.color,
+            footer: getComputedStyle(document.querySelector('.site-footer')!).color,
+            inLine: cap.parentElement!.matches('.foot-about > p.foot-line'),
+            rows: [...document.querySelector('.foot-about')!.children].filter((el) => el.checkVisibility()).length,
+          };
+        });
+        if (m.text !== 'Live AI summaries are capped per day; samples always work.' || m.size !== '12px' || m.colour !== m.footer || !m.inLine) throw new Error(`footer cap line ${JSON.stringify(m)}`);
+        await noPageOverflow(page);
+        notes.push(`${page.url().includes('sample=') ? 'workspace' : 'hero'} ${viewport}: "${m.text}" ${m.size}, ${m.colour}, in the source line, ${m.rows} rows in the about column`);
+      }
+      await openReady(page, baseUrl);
+      await page.locator('.site-footer').scrollIntoViewIfNeeded();
+      return { notes };
+    },
+  },
+  {
     name: 'brand',
     description: 'favicon.svg at 16, 32 and 64 px on the light and the dark ground',
     shot: 'brand-favicon',

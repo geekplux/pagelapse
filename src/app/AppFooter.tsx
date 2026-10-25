@@ -46,7 +46,10 @@ export function AppFooter({ sample, hero = false }: { sample?: SampleFixture | u
           </span>
           <p className="foot-line">
             Captures come from the Internet Archive. No accounts, cookies or tracking.{' '}
-            <a href="https://github.com/geekplux/pagelapse">Source on GitHub</a>
+            <a href="https://github.com/geekplux/pagelapse">Source on GitHub</a>{' '}
+            {/* The cap is DAILY_CAP in worker/summarise.ts (model calls per UTC day, a KV counter; not a wrangler.jsonc var).
+                Past it, live runs show auto summaries; the samples never call the model. */}
+            <span className="foot-cap">Live AI summaries are capped per day; samples always work.</span>
           </p>
           {!hero && (
             <ul className="foot-keys" aria-label="Timeline keys">

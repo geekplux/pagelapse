@@ -195,6 +195,8 @@ ins::after, del::after { content: "] "; }
 @media (min-width: 48rem) { .foot-grid { grid-template-columns: 1fr auto; } }
 .foot-about { display: grid; gap: var(--space-3); align-content: start; }
 .foot-brand { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--sand-12); font-weight: 700; }
+/* Its own line inside the source paragraph (no extra grid row): run on after the link, it broke mid-sentence. */
+.foot-cap { display: block; margin-top: var(--space-1); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); }
 .foot-line a { color: var(--sand-12); text-decoration: underline; text-decoration-thickness: var(--line); text-underline-offset: 3px; }
 .foot-by { display: grid; gap: var(--space-3); align-content: start; }
 @media (min-width: 48rem) { .foot-by { justify-items: end; } }
