@@ -6,6 +6,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { writeFixture } from './lib/fixtureFile.ts';
+import { recordedSamples } from './lib/sampleConfig.ts';
 import { fixtureToSnapshots, parseSampleFixture } from '../src/core/fixture.ts';
 import { buildTimeline } from '../src/core/timeline.ts';
 import { MODEL, batches, messages, parseSummaries } from '../worker/prompt.ts';
@@ -21,8 +22,7 @@ To bake AI summaries, copy .dev.vars.example to .dev.vars and set CLOUDFLARE_ACC
   process.exit(0);
 }
 
-const config = JSON.parse(readFileSync(resolve(root, 'src/samples/samples.config.json'), 'utf8')) as { id: string }[];
-for (const { id } of config) {
+for (const { id } of recordedSamples(root)) {
   const file = resolve(root, `src/samples/${id}.json`);
   const fixture = parseSampleFixture(JSON.parse(readFileSync(file, 'utf8')));
   const summaries = { ...fixture.summaries };

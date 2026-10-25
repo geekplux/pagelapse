@@ -45,7 +45,7 @@ try {
     await Promise.all([...document.fonts].map((f) => f.load().catch(() => undefined)));
   });
   const fonts = await page.evaluate(() => [...document.fonts].filter((f) => f.status === 'loaded').length);
-  if (fonts < 2) throw new Error(`render-social: Fraunces did not load (${fonts} faces)`);
+  if (fonts < 2) throw new Error(`render-social: Schibsted Grotesk and IBM Plex Mono did not load (${fonts} faces)`);
   const png = await page.screenshot({ clip: { x: 0, y: 0, ...SIZE } });
   writeFileSync(PNG, png);
   writeFileSync(OG_PNG, png);

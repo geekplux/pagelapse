@@ -1,3 +1,4 @@
+import { ruleSummary } from '../core/ruleSummary.ts';
 import { formatTimestampLong } from '../core/timestamp.ts';
 import type { TimelineEntry } from '../core/types.ts';
 
@@ -8,11 +9,10 @@ export function describeChange(e: TimelineEntry, i: number, n: number): string {
   return `Change ${i + 1} of ${n}: ${formatTimestampLong(e.from)} to ${formatTimestampLong(e.to)}, ${e.significance.magnitude}: ${e.ruleSummary}`;
 }
 
-/** Compact stats line, e.g. "+142 / −37 words · 2 passages added · 1 reworded". */
-export function statsLine({ stats: s }: TimelineEntry['record']): string {
-  const parts = [`+${s.wordsAdded} / −${s.wordsRemoved} words`];
-  if (s.blocksAdded) parts.push(`${s.blocksAdded} added`);
-  if (s.blocksRemoved) parts.push(`${s.blocksRemoved} removed`);
-  if (s.blocksModified) parts.push(`${s.blocksModified} reworded`);
-  return parts.join(' · ');
+/**
+ * The summary as the page shows it: the AI line as written, or the rule summary with curly quotes around the names it
+ * quotes and without its word counts (the change section lists those), e.g. `Added section “Downloads”`.
+ */
+export function shownSummary(e: Pick<TimelineEntry, 'record' | 'aiSummary'>): string {
+  return e.aiSummary ?? ruleSummary(e.record, { quotes: ['“', '”'], words: false });
 }

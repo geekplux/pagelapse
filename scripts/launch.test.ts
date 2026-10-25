@@ -62,13 +62,19 @@ describe('social preview', () => {
     expect(read('index.html')).toContain('<meta property="og:image" content="https://pagelapse.geekplux.com/social-preview.png" />');
   });
 
-  it('sets its text in colours that pass AA on the paper and the label chips', () => {
-    const { paper, card, ink, removed, added } = palette.light;
-    expect(svg).toContain(`fill="${paper}"`);
-    for (const fg of [ink, palette.light['ink-2'], removed, added]) {
-      expect(svg).toContain(fg);
-      expect(contrast(fg, paper)).toBeGreaterThanOrEqual(4.5);
-      expect(contrast(fg, card)).toBeGreaterThanOrEqual(4.5);
+  it('sets its text in the light theme\'s colours, each passing AA on the ground and on the picture tags', () => {
+    const p = palette.light;
+    expect(svg).toContain(`fill="${p.bg}"`);
+    for (const fg of [p['sand-12'], p['sand-11'], p['cyan-11'], p['amber-11']]) {
+      expect(svg).toContain(`fill="${fg}"`);
+      expect(contrast(fg, p.bg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(fg, p.frame)).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  it('uses the self-hosted fonts and no middle dot', () => {
+    expect(svg).toContain('../public/fonts/SchibstedGrotesk-Variable-latin.woff2');
+    expect(svg).toContain('../public/fonts/IBMPlexMono-Regular-latin.woff2');
+    expect(svg).not.toContain('\u00B7');
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import git from '../samples/git-scm.json';
-import rust from '../samples/rust-lang.json';
+import cc from '../samples/creative-commons.json';
+import nasa from '../samples/nasa.json';
 import wiki from '../samples/wikipedia-internet-archive.json';
 import { applyDiff, diffPages, diffWords, tokenizeWords } from './diff.ts';
 import { fixtureToSnapshots, parseSampleFixture } from './fixture.ts';
@@ -62,8 +62,8 @@ describe('tokenizeWords', () => {
 });
 
 describe('diffPages', () => {
-  const samples = [wiki, git, rust].map((f) => fixtureToSnapshots(parseSampleFixture(f)));
-  it.each(samples.map((s, i) => [['wikipedia', 'git-scm', 'rust-lang'][i], s] as const))('%s: every consecutive pair round-trips', (_, snaps) => {
+  const samples = [wiki, nasa, cc].map((f) => fixtureToSnapshots(parseSampleFixture(f)));
+  it.each(samples.map((s, i) => [['wikipedia', 'nasa', 'creative-commons'][i], s] as const))('%s: every consecutive pair round-trips', (_, snaps) => {
     for (let i = 1; i < snaps.length; i++) expect(expectRoundTrip(snaps[i - 1]!, snaps[i]!).cutoff).toBe(false);
   });
 

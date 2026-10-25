@@ -1,8 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import type { Block, BlockOp } from '../../core/types.ts';
+import type { Block, BlockOp, SnapshotPage, TimelineEntry } from '../../core/types.ts';
 import { CLAMP_CHARS, DiffBlock } from './DiffBlock.tsx';
-import { collapseUnchanged, unchangedLabel } from './rows.ts';
+import { DiffView } from './DiffView.tsx';
+import { collapseUnchanged, firstChanges, unchangedLabel } from './rows.ts';
 
 const eq = (n: number): BlockOp => ({ type: 'equal', a: n, b: n });
 const add: BlockOp = { type: 'added', b: 0, block: { kind: 'paragraph', text: 'new' } };
@@ -23,10 +24,16 @@ describe('collapseUnchanged', () => {
     expect(collapseUnchanged(ops).flatMap((r) => ('gap' in r ? r.gap : [r.op]))).toEqual(ops);
   });
 
-  it('labels a run by its kind, or "blocks" when kinds mix', () => {
-    expect(unchangedLabel(['paragraph', 'paragraph'])).toBe('Show 2 unchanged paragraphs');
-    expect(unchangedLabel(['list-item'])).toBe('Show 1 unchanged list item');
-    expect(unchangedLabel(['heading', 'paragraph', 'code'])).toBe('Show 3 unchanged blocks');
+  it('labels a run "Show n unchanged blocks"', () => {
+    expect(unchangedLabel(2)).toBe('Show 2 unchanged blocks');
+    expect(unchangedLabel(1)).toBe('Show 1 unchanged block');
+  });
+
+  it('cuts a long diff after its first changes and the unchanged block after the last of them', () => {
+    const rows = collapseUnchanged([add, eq(1), add, add, eq(4), eq(5), eq(6), eq(7), add]);
+    expect(firstChanges(rows, 3)).toEqual({ cut: 5, more: 1 });
+    expect(firstChanges(rows, 2)).toEqual({ cut: 3, more: 2 });
+    expect(firstChanges(rows, 4)).toEqual({ cut: rows.length, more: 0 });
   });
 });
 
@@ -50,5 +57,18 @@ describe('DiffBlock', () => {
     const long = (n: number) => html({ type: 'added', b: 0, block: { kind: 'code', text: 'x'.repeat(n) } });
     expect(long(CLAMP_CHARS + 1)).toMatch(/<pre class="db-t is-clamped">.*aria-expanded="false">Show full block</);
     expect(long(CLAMP_CHARS)).not.toContain('Show full block');
+  });
+});
+
+describe('DiffView', () => {
+  const page = (texts: string[]): SnapshotPage => ({ ts: '20200101000000', digest: 'd', title: 't', blocks: texts.map((text) => ({ kind: 'paragraph', text })) });
+  const [a, b] = [page(['Kept.', 'Old one.', 'Old two.']), page(['Kept.', 'New one.'])];
+  const ops: BlockOp[] = [{ type: 'equal', a: 0, b: 0 }, { type: 'removed', a: 1 }, { type: 'removed', a: 2 }, { type: 'added', b: 1, block: b.blocks[1]! }];
+  const html = renderToStaticMarkup(<DiffView entry={{ diff: { ops, titleChanged: false, cutoff: false } } as unknown as TimelineEntry} from={a} to={b} />);
+
+  it('draws a run of removed or added blocks as one band, each block keeping its own spoken prefix', () => {
+    expect(html.match(/class="db-run" data-op="\w+"/g)).toEqual(['class="db-run" data-op="removed"', 'class="db-run" data-op="added"']);
+    expect(html.match(/<span class="sr-only">(\w+): <\/span>/g)?.length).toBe(3);
+    expect(html).not.toContain('Show');
   });
 });

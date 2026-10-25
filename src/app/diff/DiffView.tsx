@@ -1,235 +1,113 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import type { Block, SnapshotPage, TimelineEntry } from '../../core/types.ts';
-import { formatTimestampLong } from '../../core/timestamp.ts';
-import { statsLine } from '../describe.ts';
-import { Ts } from '../Ts.tsx';
+import type { Block, BlockOp, SnapshotPage, TimelineEntry } from '../../core/types.ts';
+import { useMedia } from '../useMedia.ts';
 import { DiffBlock } from './DiffBlock.tsx';
-import { type EqualOp, collapseUnchanged, unchangedLabel } from './rows.ts';
+import { type EqualOp, FIRST_CHANGES, type Row, collapseUnchanged, firstChanges, unchangedLabel } from './rows.ts';
 
 interface Props {
   entry: TimelineEntry;
-  index: number;
-  count: number;
   /** The earlier and the later capture of `entry`. */
   from: SnapshotPage;
   to: SnapshotPage;
-  captureUrl: (ts: string) => string;
-  onSelect: (i: number) => void;
 }
 
-/** A collapsed run of unchanged blocks; expanding it moves focus to the revealed blocks. */
-function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
-  const [open, setOpen] = useState(false);
+/** Blocks revealed by a button: a named group that takes focus when it opens, so the keyboard lands on them. */
+function Revealed({ label, children }: { label: string; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (open) ref.current?.focus();
-  }, [open]);
-  if (!open) {
-    return (
-      <button type="button" className="db-gap" onClick={() => setOpen(true)}>
-        {unchangedLabel(ops.map((o) => b[o.b]?.kind ?? 'paragraph'))}
-      </button>
-    );
-  }
+  useEffect(() => ref.current?.focus(), []);
   return (
     // A named group, not a <fieldset>: these are revealed text blocks, not form controls.
     // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-    <div className="db-open" role="group" aria-label={`${ops.length} unchanged blocks`} tabIndex={-1} ref={ref}>
-      {ops.map((op) => (
-        <DiffBlock key={op.b} op={op} a={[]} b={b} />
-      ))}
+    <div className="db-open" role="group" aria-label={label} tabIndex={-1} ref={ref}>
+      {children}
     </div>
   );
 }
 
-/**
- * The selected change in the stage's side column: the change line (dates, magnitude, summary and its source), then one
- * controls row: Play (`lead`), Previous / Next, the pane's `tools`, and "Change details" (stats, capture links, Copy
- * link). Previous / Next's live region also says which capture the pane shows (`showing`); `quiet` silences it during
- * Play. On phones Previous / Next sticks to the bottom of the screen once the row has scrolled away above.
- */
-export function ChangeCard({ entry, index, count, captureUrl, onSelect, showing, quiet, lead, tools, overview }: Omit<Props, 'from' | 'to'> & { showing?: string | undefined; quiet?: boolean; lead?: ReactNode; tools?: ReactNode; overview?: readonly [string, string] | undefined }) {
-  const pair = `${entry.from}-${entry.to}`;
-  // The confirmation belongs to the change it was given for.
-  const [copied, setCopied] = useState({ pair: '', text: '' });
-  // Clear first, then set on the next frame, so pressing again re-announces the same text.
-  const announce = (text: string) => {
-    setCopied({ pair: '', text: '' });
-    requestAnimationFrame(() => setCopied({ pair, text }));
-  };
-  const copy = () =>
-    Promise.resolve()
-      .then(() => navigator.clipboard.writeText(location.href))
-      .then(
-        () => announce('Link copied'),
-        () => announce('Could not copy: the link is in the address bar'),
-      );
+const Chevron = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
 
-  // What Previous / Next's live region says: kept until the change, its place or the shown capture changes, so a live
-  // run's growing total does not re-announce it with every change that arrives.
-  const key = `${pair} ${index} ${showing ?? ''} ${overview ?? ''}`;
-  const [said, setSaid] = useState({ key: '', text: '' });
-  if (said.key !== key) {
-    const dates = `${formatTimestampLong(entry.from)} to ${formatTimestampLong(entry.to)}`;
-    const text = overview ? `${overview[0].charAt(0).toUpperCase()}${overview[0].slice(1)} capture to ${overview[1]}: ${dates}, across all ${count} changes` : `Change ${index + 1} of ${count}: ${dates}, ${entry.significance.magnitude}`;
-    setSaid({ key, text: showing ? `${text}, showing ${showing}` : text });
+/** A collapsed run of unchanged blocks; expanding it moves focus to the revealed blocks. */
+function Gap({ ops, b }: { ops: EqualOp[]; b: readonly Block[] }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button type="button" className="db-gap" onClick={() => setOpen(true)}>
+        <Chevron />
+        {unchangedLabel(ops.length)}
+      </button>
+    );
   }
-
-  // Stuck once its in-flow slot has scrolled out above the viewport (CSS fixes it to the bottom on phones only).
-  const slot = useRef<HTMLDivElement>(null);
-  const [stuck, setStuck] = useState(false);
-  useEffect(() => {
-    const el = slot.current;
-    if (!el || typeof IntersectionObserver !== 'function') return;
-    const io = new IntersectionObserver(([e]) => {
-      if (!e) return;
-      const out = !e.isIntersecting && e.boundingClientRect.top < 0;
-      // The slot keeps the bar's in-flow width while the bar is fixed, so the row does not reflow.
-      el.style.minWidth = out ? `${e.boundingClientRect.width}px` : '';
-      setStuck(out);
-    });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  // "Change details" opens downward: the hero gets its open height (`--details-h`), which desktop CSS adds below the
-  // picture, so the row grows by it and the bottom-aligned controls row (with the summary) stays where it was.
-  const details = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
-    const el = details.current;
-    const hero = el?.closest<HTMLElement>('.hero');
-    if (!el || !hero || typeof ResizeObserver !== 'function') return;
-    const ro = new ResizeObserver(() => {
-      const summary = el.querySelector('summary');
-      const extra = el.open && summary ? el.getBoundingClientRect().height - summary.getBoundingClientRect().height : 0;
-      hero.style.setProperty('--details-h', `${Math.max(0, Math.round(extra))}px`);
-    });
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-      hero.style.removeProperty('--details-h');
-    };
-  }, []);
-
   return (
-    <section className="change-panel" aria-labelledby="change-heading">
-      <h3 id="change-heading">
-        <span className="panel-kicker mono">
-          {overview ? (
-            // The decade compare: the first (complete) capture against the latest, not one change.
-            <span className="change-span">
-              {overview[0]} <span aria-hidden="true">→</span>
-              <span className="sr-only"> capture to</span> {overview[1]}
-              <span className="sr-only">,</span>
-            </span>
-          ) : (
-            <>
-              <span className="sr-only">Change {index + 1} of {count}, </span>
-              <span className="change-mag" data-magnitude={entry.significance.magnitude}>
-                {entry.significance.magnitude}
-              </span>
-            </>
-          )}
-        </span>{' '}
-        <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
-        <span className="sr-only"> to </span> <Ts ts={entry.to} />
-      </h3>
-      <p className="panel-summary">
-        {entry.aiSummary ?? entry.ruleSummary} <span className="source-label mono">{entry.aiSummary ? 'AI summary' : 'auto summary'}</span>
-      </p>
-      <div className="controls">
-        {lead}
-        <div className="nav-slot" ref={slot}>
-          <nav className="diff-nav" aria-label="Previous and next change" data-stuck={stuck || undefined}>
-            {/* From the decade compare, Previous narrows to the selected (latest) change; there is nothing after it. */}
-            <button type="button" className="btn" aria-disabled={!overview && index === 0} onClick={() => (overview ? onSelect(index) : index > 0 && onSelect(index - 1))}>
-              <span aria-hidden="true">‹ </span>Previous
-            </button>
-            {/* Quiet while Play steps, so the time-lapse does not chatter. */}
-            <span className="mono" aria-live={quiet ? 'off' : 'polite'}>
-              <span aria-hidden="true">{overview ? `all ${count}` : `${index + 1} / ${count}`}</span>
-              <span className="sr-only">{said.text}</span>
-            </span>
-            <button type="button" className="btn" aria-disabled={!!overview || index === count - 1} onClick={() => !overview && index < count - 1 && onSelect(index + 1)}>
-              Next<span aria-hidden="true"> ›</span>
-            </button>
-          </nav>
-        </div>
-        {tools}
-        <details className="fold change-details" ref={details}>
-          <summary>Change details</summary>
-          <p className="panel-stats mono">{statsLine(entry.record)}</p>
-          <p className="panel-links">
-            {[entry.from, entry.to].map((ts) => (
-              <a key={ts} className="cap-out" href={captureUrl(ts)} target="_blank" rel="noopener noreferrer">
-                View capture <Ts ts={ts} />
-                <span className="sr-only"> (opens in a new tab)</span>
-              </a>
-            ))}
-            <button type="button" className="btn" onClick={copy}>
-              Copy link
-            </button>
-            {/* An explicit status role is the most widely announced live region; <output> support varies. */}
-            {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
-            <span role="status">{copied.pair === pair ? copied.text : ''}</span>
-          </p>
-        </details>
-      </div>
-    </section>
+    <Revealed label={`${ops.length} unchanged blocks`}>
+      {ops.map((op) => (
+        <DiffBlock key={op.b} op={op} a={[]} b={b} />
+      ))}
+    </Revealed>
   );
 }
 
-/** "title changed; headings: 4 added, 3 removed, 1 renamed": what the folded Structure list holds. */
-function structureCounts({ diff, record: r }: TimelineEntry): string {
-  const n = [[r.headingsAdded.length, 'added'], [r.headingsRemoved.length, 'removed'], [r.headingsRenamed?.length ?? 0, 'renamed']] as const;
-  const headings = n.filter(([k]) => k > 0).map(([k, w]) => `${k} ${w}`).join(', ');
-  return [diff.titleChanged && 'title changed', headings && `headings: ${headings}`].filter(Boolean).join('; ');
+const key = (op: BlockOp) => `${op.type}${'a' in op ? op.a : ''}:${'b' in op ? op.b : ''}`;
+
+type Band = { op: 'added' | 'removed'; ops: BlockOp[] };
+const tinted = (op: BlockOp): op is Extract<BlockOp, { type: 'added' | 'removed' }> => op.type === 'added' || op.type === 'removed';
+
+/** Rows of the diff: blocks, collapsed runs of unchanged blocks, and runs of added or removed blocks as one tinted band. */
+function Rows({ rows, from, to }: { rows: readonly Row[]; from: SnapshotPage; to: SnapshotPage }) {
+  const items: (Row | Band)[] = [];
+  for (const row of rows) {
+    const last = items.at(-1);
+    if ('op' in row && tinted(row.op)) {
+      if (last && 'ops' in last && last.op === row.op.type) last.ops.push(row.op);
+      else items.push({ op: row.op.type, ops: [row.op] });
+    } else items.push(row);
+  }
+  const block = (op: BlockOp) => <DiffBlock key={key(op)} op={op} a={from.blocks} b={to.blocks} />;
+  return items.map((it) =>
+    'ops' in it ? (
+      <div key={`r${key(it.ops[0]!)}`} className="db-run" data-op={it.op}>
+        {it.ops.map(block)}
+      </div>
+    ) : 'gap' in it ? (
+      <Gap key={`g${it.gap[0]!.b}`} ops={it.gap} b={to.blocks} />
+    ) : (
+      block(it.op)
+    ),
+  );
 }
 
-/** The selected change's text, marked up like a proofreader's galley: Structure and Key (folded), then the diff. */
-export function DiffView({ entry, from, to }: Pick<Props, 'entry' | 'from' | 'to'>) {
-  const pair = `${entry.from}-${entry.to}`;
+/**
+ * The selected change's text, marked up like a proofreader's galley: + − ~ hang in the margin, added blocks sit on
+ * amber, removed ones on cyan, words are underlined or struck through. A long diff shows its first changes, then
+ * "Show n more changes".
+ */
+export function DiffView({ entry, from, to }: Props) {
   const rows = useMemo(() => collapseUnchanged(entry.diff.ops), [entry]);
-  const r = entry.record;
-  const structure: [string, string][] = [
-    ...(entry.diff.titleChanged ? [['modified', `Title “${from.title}” became “${to.title}”`] as [string, string]] : []),
-    ...r.headingsRemoved.map((h): [string, string] => ['removed', `Removed heading “${h}”`]),
-    ...r.headingsAdded.map((h): [string, string] => ['added', `Added heading “${h}”`]),
-    ...(r.headingsRenamed ?? []).map(([x, y]): [string, string] => ['modified', `Renamed heading “${x}” to “${y}”`]),
-  ];
-
+  // Phones show half as many first (target/V3WorkPhone.html).
+  const phone = useMedia('(max-width: 39.99rem)');
+  const { cut, more } = useMemo(() => firstChanges(rows, phone ? FIRST_CHANGES / 2 : FIRST_CHANGES), [rows, phone]);
+  const [all, setAll] = useState(false);
   return (
-    <section className="diff-panel" id="diff" tabIndex={-1} aria-labelledby="diff-heading" data-region="text">
-      <h3 id="diff-heading">
-        What the text says, <Ts ts={entry.from} /> <span aria-hidden="true">→</span>
-        <span className="sr-only"> to </span> <Ts ts={entry.to} />
-      </h3>
-      {structure.length > 0 && (
-        <details className="fold">
-          <summary>Structure · {structureCounts(entry)}</summary>
-          <ul className="diff-structure">
-            {structure.map(([op, text]) => (
-              <li key={text} data-op={op}>
-                {text}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-      <details className="fold">
-        <summary>Diff key</summary>
-        <p className="diff-legend">
-          <span><b aria-hidden="true" data-op="added">+</b> added, <span className="w-ins">underlined</span></span>
-          <span><b aria-hidden="true" data-op="removed">−</b> removed, <span className="w-del">struck through</span></span>
-          <span><b aria-hidden="true" data-op="modified">~</b> changed</span>
-          <span><b aria-hidden="true" data-op="moved">↕</b> moved</span>
-        </p>
-      </details>
-      <div className="diff-body" key={pair}>
-        {rows.map((row, i) =>
-          'gap' in row ? <Gap key={i} ops={row.gap} b={to.blocks} /> : <DiffBlock key={i} op={row.op} a={from.blocks} b={to.blocks} />,
-        )}
+    <div className="cs-diff" data-region="text">
+      <h4 className="sr-only">Text changes</h4>
+      <div className="diff-body">
+        <Rows rows={rows.slice(0, cut)} from={from} to={to} />
+        {more > 0 &&
+          (all ? (
+            <Revealed label={`${more} more changes`}>
+              <Rows rows={rows.slice(cut)} from={from} to={to} />
+            </Revealed>
+          ) : (
+            <p className="db-more">
+              <button type="button" className="btn" onClick={() => setAll(true)}>
+                Show {more} more {more === 1 ? 'change' : 'changes'}
+              </button>
+            </p>
+          ))}
       </div>
-    </section>
+    </div>
   );
 }

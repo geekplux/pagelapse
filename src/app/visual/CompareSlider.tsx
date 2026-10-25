@@ -9,16 +9,21 @@ interface Props {
 
 /**
  * After drawn over Before and clipped at a divider (`--split`). The divider is a `role="slider"`: arrows ±5,
- * PageUp/PageDown ±25, Home/End, Enter or double-click back to 50%, and a 32 px wide pointer-captured drag strip. A
- * single click or tap anywhere on the pictures moves the divider there (no drag needed, WCAG 2.5.7).
+ * PageUp/PageDown ±25, Home/End, Enter or double-click back to 50%, and a 40 px wide pointer-captured drag strip that
+ * follows the pointer 1:1. Keys and clicks glide (250 ms ease-out); a drag does not. A single click or tap anywhere on
+ * the pictures moves the divider there (no drag needed, WCAG 2.5.7). A new change starts at 50%.
  */
 export function CompareSlider({ entry, before, after }: Props) {
-  const [split, setSplit] = useState(50);
+  const pair = `${entry.from}-${entry.to}`;
+  const [state, setState] = useState({ pair, split: 50, glide: false });
+  if (state.pair !== pair) setState({ pair, split: 50, glide: false });
+  const { split, glide } = state.pair === pair ? state : { split: 50, glide: false };
+  const set = (v: number, g: boolean) => setState({ pair, split: v, glide: g });
   const box = useRef<HTMLDivElement>(null);
   const hint = useId();
-  const drag = (e: { clientX: number }) => {
+  const at = (e: { clientX: number }) => {
     const r = box.current!.getBoundingClientRect();
-    setSplit(splitFromPointer(e.clientX, r.left, r.width));
+    return splitFromPointer(e.clientX, r.left, r.width);
   };
   return (
     // The click is a pointer shortcut; the divider below is the keyboard-operable slider.
@@ -26,8 +31,9 @@ export function CompareSlider({ entry, before, after }: Props) {
     <div
       className="vp-cmp"
       ref={box}
+      data-glide={glide || undefined}
       style={{ '--split': `${split}%` } as CSSProperties}
-      onClick={(e) => !(e.target as Element).closest('.vp-split') && drag(e)}
+      onClick={(e) => !(e.target as Element).closest('.vp-split') && set(at(e), true)}
     >
       {before}
       <div className="vp-clip">{after}</div>
@@ -40,7 +46,7 @@ export function CompareSlider({ entry, before, after }: Props) {
         aria-label="Divider between Before and After"
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={split}
+        aria-valuenow={Math.round(split)}
         aria-valuetext={splitText(split, entry)}
         aria-keyshortcuts="Enter"
         aria-describedby={hint}
@@ -48,17 +54,19 @@ export function CompareSlider({ entry, before, after }: Props) {
           const v = splitFromKey(e.key, split);
           if (v === null) return;
           e.preventDefault();
-          setSplit(v);
+          set(v, true);
         }}
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
-          drag(e);
+          set(at(e), false);
         }}
-        onPointerMove={(e) => e.currentTarget.hasPointerCapture(e.pointerId) && drag(e)}
-        onDoubleClick={() => setSplit(50)}
+        onPointerMove={(e) => e.currentTarget.hasPointerCapture(e.pointerId) && set(at(e), false)}
+        onDoubleClick={() => set(50, true)}
       >
         <span className="vp-knob" aria-hidden="true">
-          ‹ ›
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <path d="M8 6 4 10l4 4M12 6l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </span>
       </div>
       <span id={hint} hidden>

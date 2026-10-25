@@ -1,51 +1,68 @@
 import { describe, expect, it } from 'vitest';
-import { MARKER_R, markerRadius, nearestPoint, stackLevels, stepIndex, timeScale, tsToMs, yearLabels, yearTicks } from './scale.ts';
+import { barHeight, hairline, nearestX, stepIndex, tsToMs, yearLabels, yearScale } from './scale.ts';
 
-const y = (year: number, m = 0) => Date.UTC(year, m, 1);
+const y = (year: number, m = 0, d = 1) => Date.UTC(year, m, d);
 
-describe('timeScale and ticks', () => {
-  it('maps the padded domain onto the range, in order', () => {
-    const s = timeScale([y(2014), y(2024)], 0, 1000);
-    expect(s.x(y(2014))).toBeGreaterThan(0);
-    expect(s.x(y(2024))).toBeLessThan(1000);
-    expect(s.x(y(2019))).toBeCloseTo(500, 0);
-    expect(timeScale([y(2020)], 0, 100).x(y(2020))).toBeCloseTo(50);
-  });
-  it('lists 1 January of each inner year', () => {
-    expect(yearTicks(y(2014, 5), y(2017, 2)).map((t) => t.year)).toEqual([2015, 2016, 2017]);
+describe('yearScale', () => {
+  it('spans 1 January of the first year to 1 January after the last, ticks at both ends', () => {
+    // The Wikipedia sample on the 1200 px board: Sep 2014 to Feb 2026 is 2014 to 2027.
+    const s = yearScale([y(2014, 8, 10), y(2026, 1, 10)], 1200);
+    expect(s.ticks.map((t) => t.year)).toEqual([2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027]);
+    expect(s.ticks[0]!.x).toBe(0);
+    expect(s.ticks.at(-1)!.x).toBe(1200);
+    expect(s.x(y(2014, 8, 10))).toBeCloseTo(63.8, 0);
     expect(tsToMs('20150101000000')).toBe(y(2015));
-  });
-  it('labels with a wider stride when dense and skips labels colliding with the selection or edges', () => {
-    const ticks = [2014, 2015, 2016, 2017, 2018].map((year, i) => ({ year, x: 20 + i * 30 }));
-    const opts = { minGap: 44, half: 16, width: 200 };
-    expect(yearLabels(ticks, 30, opts).map((t) => t.year)).toEqual([2014, 2016, 2018]);
-    expect(yearLabels(ticks, 60, { ...opts, avoid: [60, 90] }).map((t) => t.year)).toEqual([2014, 2017, 2018]);
-    expect(yearLabels(ticks, 60, { ...opts, width: 150 }).map((t) => t.year)).toEqual([2014, 2015, 2016, 2017]);
   });
 });
 
-describe('markers', () => {
-  it('radius is one step per magnitude, each step at least twice the area of the one below', () => {
-    expect([markerRadius('minor'), markerRadius('moderate'), markerRadius('major')]).toEqual([6, 9.5, 13.5]);
-    expect(markerRadius('trivial')).toBe(MARKER_R.minor);
-    const area = (r: number) => r ** 2;
-    expect(area(MARKER_R.moderate) / area(MARKER_R.minor)).toBeGreaterThan(2);
-    expect(area(MARKER_R.major) / area(MARKER_R.moderate)).toBeGreaterThan(2);
+describe('marks', () => {
+  it('a bar is 6 + sqrt(score) x 38 px tall, clamped to the 0..1 score range', () => {
+    expect(barHeight(0)).toBe(6);
+    expect(barHeight(1)).toBe(44);
+    expect(barHeight(0.25)).toBe(25);
+    expect(barHeight(2)).toBe(44);
   });
-  it('stacks colliding markers upward and keeps 24 px between neighbours on a level', () => {
-    expect(stackLevels([0, 2, 4, 100], [6, 6, 6, 6])).toEqual([0, 1, 2, 0]);
-    expect(stackLevels([0, 20], [5, 5])).toEqual([0, 1]);
-    expect(stackLevels([0, 2, 4, 6], [6, 6, 6, 6])).toEqual([0, 1, 2, 2]);
-    // Two majors need 13.5 + 13.5 + 3 px between centres; minors still keep the 24 px pointer spacing.
-    const { major, minor } = MARKER_R;
-    expect(stackLevels([0, 29], [major, major])).toEqual([0, 1]);
-    expect(stackLevels([0, 30], [major, major])).toEqual([0, 0]);
-    expect(stackLevels([0, 23], [minor, minor])).toEqual([0, 1]);
-    expect(stackLevels([0, 24], [minor, minor])).toEqual([0, 0]);
+  it('a hairline drops 6 px, then bends to its date like the board', () => {
+    expect(hairline(39.1, 63.8, 96)).toBe('M39.1 0V6C39.1 52.8 63.8 43.2 63.8 96');
+    expect(hairline(902, 942.3, 74.8)).toBe('M902 0V6C902 41.1 942.3 33.7 942.3 74.8');
   });
-  it('finds the nearest point', () => {
-    expect(nearestPoint([{ x: 0, y: 0 }, { x: 10, y: 0 }], 7, 1).index).toBe(1);
-    expect(nearestPoint([], 0, 0).index).toBe(-1);
+});
+
+describe('yearLabels', () => {
+  it('labels every year when there is room, the ends anchored to the edges', () => {
+    const { ticks } = yearScale([y(2014, 8), y(2026, 1)], 1200);
+    const labels = yearLabels(ticks, 1200);
+    expect(labels).toHaveLength(14);
+    expect(labels[0]).toMatchObject({ year: 2014, anchor: 'start' });
+    expect(labels[1]).toMatchObject({ year: 2015, anchor: 'middle' });
+    expect(labels.at(-1)).toMatchObject({ year: 2027, anchor: 'end' });
+  });
+  it('thins the labels on a phone so none overlaps', () => {
+    const { ticks } = yearScale([y(2014, 8), y(2026, 1)], 358);
+    const labels = yearLabels(ticks, 358);
+    expect(labels.map((l) => l.year)).toEqual([2014, 2016, 2018, 2020, 2022, 2024, 2026]);
+    const box = (l: (typeof labels)[number]) => (l.anchor === 'start' ? [l.x, l.x + 29] : l.anchor === 'end' ? [l.x - 29, l.x] : [l.x - 14.5, l.x + 14.5]);
+    labels.slice(1).forEach((l, i) => expect(box(l)[0]!).toBeGreaterThanOrEqual(box(labels[i]!)[1]! + 8));
+    // 320 px (a 288 px column): the start label would crowd 2016, so the stride widens evenly instead of dropping one.
+    expect(yearLabels(yearScale([y(2014, 8), y(2026, 1)], 288).ticks, 288).map((l) => l.year)).toEqual([2014, 2019, 2024]);
+    // 30 years in 358 px: a five-year stride.
+    expect(yearLabels(yearScale([y(1996), y(2025)], 358).ticks, 358).map((l) => l.year)).toEqual([1996, 2001, 2006, 2011, 2016, 2021, 2026]);
+  });
+});
+
+describe('nearestX', () => {
+  it('snaps on x only: a horizontal drag across bars of different heights never picks a neighbour', () => {
+    // Two bars 10 px apart; the pointer moves along y = 60, near the tall bar's top (y 56) and far below the short one's (y 94).
+    const xs = [100, 110];
+    const tops = [56, 94];
+    const nearest2d = (x: number, py: number) => [0, 1].reduce((b, i) => (Math.hypot(xs[i]! - x, tops[i]! - py) < Math.hypot(xs[b]! - x, tops[b]! - py) ? i : b));
+    // At x = 108 a 2D snap still says the tall bar (the old behaviour); on x the pointer is over the short one.
+    expect(nearest2d(108, 60)).toBe(0);
+    expect(nearestX(xs, 108)).toBe(1);
+    // Dragging left to right selects each bar in turn, never flipping back.
+    const picks = [96, 100, 104, 106, 110, 114].map((x) => nearestX(xs, x));
+    expect(picks).toEqual([0, 0, 0, 1, 1, 1]);
+    expect(nearestX([], 5)).toBe(-1);
   });
 });
 

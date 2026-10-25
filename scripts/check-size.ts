@@ -4,6 +4,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { PICTURE_BUDGET, checkPictures } from './lib/pictures.ts';
+import { recordedSamples } from './lib/sampleConfig.ts';
 
 const root = resolve(import.meta.dirname, '..');
 const dist = join(root, 'dist', 'client');
@@ -29,15 +30,18 @@ const initialJs = [
 const cssFiles = readdirSync(join(dist, 'assets')).filter((f) => f.endsWith('.css'));
 const fontDir = join(dist, 'fonts');
 const fonts = existsSync(fontDir) ? readdirSync(fontDir).filter((f) => f.endsWith('.woff2')) : [];
-// The default sample is the first in samples.config.json (registry order).
-const defaultId = (JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as { id: string }[])[0]!.id;
+// The default sample is the first recorded entry of samples.config.json (src/samples/index.ts, registry order).
+const defaultId = recordedSamples(root)[0]!.id;
 const sample = JSON.stringify(JSON.parse(readFileSync(join(root, `src/samples/${defaultId}.json`), 'utf8')));
 const pictures = checkPictures(root);
 
 const rows: [string, number, number][] = [
+  // Includes public/theme.js, the blocking pre-paint script (a plain <script src>), which also has its own row.
   ['initial JS (gzip)', initialJs.reduce((n, f) => n + gz(read(f)), 0), 100 * KB],
+  ['theme.js (gzip)', initialJs.includes('/theme.js') ? gz(read('/theme.js')) : Infinity, 1 * KB],
   ['CSS (gzip, all files)', cssFiles.reduce((n, f) => n + gz(read(`assets/${f}`)), 0), 15 * KB],
-  [`fonts (${fonts.length} woff2)`, fonts.reduce((n, f) => n + read(`fonts/${f}`).length, 0), 60 * KB],
+  // Schibsted Grotesk (variable, 400 to 700) and IBM Plex Mono 400 + 500, latin subsets: about 76 KB.
+  [`fonts (${fonts.length} woff2)`, fonts.reduce((n, f) => n + read(`fonts/${f}`).length, 0), 80 * KB],
   ['default sample (gzip)', gz(sample), 40 * KB],
   [`pictures (${pictures.count} webp)`, pictures.total, PICTURE_BUDGET.total],
   ['largest full picture', pictures.largestFull, PICTURE_BUDGET.full],
@@ -45,7 +49,11 @@ const rows: [string, number, number][] = [
   ['first-view pictures', pictures.firstView, PICTURE_BUDGET.firstView],
 ];
 
-const problems: string[] = [...(initialJs.length ? [] : ['no entry <script> found in dist/client/index.html']), ...pictures.problems];
+const problems: string[] = [
+  ...(initialJs.length ? [] : ['no entry <script> found in dist/client/index.html']),
+  ...(initialJs.includes('/theme.js') ? [] : ['no <script src="/theme.js"> in dist/client/index.html']),
+  ...pictures.problems,
+];
 console.log(`${'budget'.padEnd(24)}${'actual'.padStart(11)}${'limit'.padStart(11)}  status`);
 for (const [name, bytes, limit] of rows) {
   const ok = bytes <= limit;

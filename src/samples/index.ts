@@ -1,29 +1,60 @@
 import { parseSampleFixture } from '../core/fixture.ts';
 import type { SampleFixture } from '../core/types.ts';
-import { overviewPair, shotSrc } from '../app/visual/visualState.ts';
-import gitScm from './git-scm.json';
+import { retryableImport } from '../app/workspace.ts';
+import { shotSrc } from '../app/visual/visualState.ts';
+// Only id, label and url of each samples.config.json entry (vite.config.ts picks them at build time).
+import config from 'virtual:sample-catalog';
 
-/** A built-in sample: metadata for the picker plus a loader for its fixture. */
+/** A built-in sample: its name and page (the hero's options, the address menu) plus a loader for its fixture. */
 export interface SampleEntry {
   id: string;
-  /** Short label for the sample chip. */
-  chip: string;
-  /** Shorter visible label on phones; `chip` (which contains it) stays the accessible name. */
-  short: string;
+  name: string;
+  /** The recorded page, as in samples.config.json. */
+  url: string;
   load: () => Promise<SampleFixture>;
+  /** The fixture once `load` has resolved (a deep link loads it before the first render, main.tsx). */
+  loaded: () => SampleFixture | undefined;
 }
 
-/** The sample shown on first load (git-scm.com, for its clearly visible 2025 redesign; D23); statically bundled so it renders offline, instantly. */
-export const defaultSample: SampleFixture = parseSampleFixture(gitScm);
+/** What the registry needs of a samples.config.json entry. */
+export interface SampleConfig {
+  id: string;
+  label: string;
+  url: string;
+}
 
-const lazy = (load: () => Promise<{ default: unknown }>) => () => load().then((m) => parseSampleFixture(m.default));
+/** The recorded fixtures, as a build-time list of files: a config entry without one is never offered. */
+const FIXTURES = import.meta.glob<{ default: unknown }>(['./*.json', '!./samples.config.json']);
 
-/** Registry of built-in samples (ids match samples.config.json); non-default ones load lazily. */
-export const samples: readonly SampleEntry[] = [
-  { id: defaultSample.id, chip: 'git-scm.com', short: 'git-scm', load: () => Promise.resolve(defaultSample) },
-  { id: 'wikipedia-internet-archive', chip: 'Wikipedia: Internet Archive', short: 'Wikipedia', load: lazy(() => import('./wikipedia-internet-archive.json')) },
-  { id: 'rust-lang', chip: 'rust-lang.org', short: 'Rust', load: lazy(() => import('./rust-lang.json')) },
-];
+/** The config entries that have a recorded fixture (`./<id>.json` in `fixtures`), in config order. */
+export const recorded = <C extends SampleConfig>(entries: readonly C[], fixtures: Record<string, unknown>): C[] =>
+  entries.filter((c) => `./${c.id}.json` in fixtures);
+
+/** The short name an option shows: the label without " home page" (`NASA`, `Wikipedia: Internet Archive`). */
+export const sampleName = (label: string) => label.replace(/ home page$/, '');
+
+/** Registry of the built-in samples that are recorded, in samples.config.json order; each loads lazily, once. */
+export const samples: readonly SampleEntry[] = recorded(config, FIXTURES).map((c) => {
+  const fixture = retryableImport(() => FIXTURES[`./${c.id}.json`]!().then((m) => parseSampleFixture(m.default)));
+  return { id: c.id, name: sampleName(c.label), url: c.url, load: fixture.load, loaded: fixture.loaded };
+});
+
+/** The default sample: the first recorded one (Wikipedia: Internet Archive). An unknown `?sample=` opens it. */
+export const defaultEntry: SampleEntry = samples[0]!;
+
+/** The sample `id` names, or the default when it names none that is recorded (`?sample=nope`, an unrecorded entry). */
+export const sampleFor = (id?: string): SampleEntry => samples.find((s) => s.id === id) ?? defaultEntry;
+
+/** The sample the hero deals as its deck of captures (DESIGN.md: Wikipedia, also the default sample). */
+export const DECK_SAMPLE = 'wikipedia-internet-archive';
+/** Its pictured captures: the deck keeps their height while the sample loads (samples.test.ts keeps it true). */
+export const DECK_CAPTURES = 14;
+
+/** A page address as the field shows it: no scheme, no trailing slash (`en.wikipedia.org/wiki/Internet_Archive`). */
+export const displayAddress = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+/** The host the address menu shows beside a sample's name, without `www.`. */
+export const hostOf = (url: string) => displayAddress(url).split('/')[0]!.replace(/^www\./, '');
 
 const decoded = new Map<string, Promise<void>>();
 
@@ -44,10 +75,3 @@ export function decodePicture(src: string): Promise<void> {
 export function changePictures(f: SampleFixture, pair?: string): string[] {
   return f.snapshots.flatMap((s) => (s.shot?.file && pair?.split('-').includes(s.ts) ? [shotSrc(f.id, s.shot.file)] : []));
 }
-
-/** The default sample's first view: its decade compare (first complete capture ↔ latest), as a `<from>-<to>` pair. */
-const hero = overviewPair(defaultSample.snapshots);
-const heroPair = hero ? `${hero.from}-${hero.to}` : defaultSample.featured;
-
-// The hero pictures start loading before React's first render (D23).
-if (typeof Image === 'function') for (const src of changePictures(defaultSample, heroPair)) void decodePicture(src);

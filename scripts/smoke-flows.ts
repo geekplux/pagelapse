@@ -1,18 +1,22 @@
 // Flow registry for scripts/smoke.ts. Each flow runs once per viewport in a
 // fresh browser context; the runner takes the screenshot after `run` resolves.
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import type { Page } from 'playwright-core';
 import { ARCHIVES } from '../src/archive/archives.ts';
-import { describeChange } from '../src/app/describe.ts';
+import { describeChange, shownSummary } from '../src/app/describe.ts';
 import { collapseUnchanged } from '../src/app/diff/rows.ts';
 import { stepIndex, tsToMs } from '../src/app/timeline/scale.ts';
 import { fixtureToSnapshots, parseSampleFixture } from '../src/core/fixture.ts';
-import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
-import { formatTimestampLong, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
+import { namedSections } from '../src/core/ruleSummary.ts';
+import { buildTimeline } from '../src/core/timeline.ts';
+import { formatTimestampLong, formatTimestampMonth, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
 import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
 import { changeForCapture, overviewPair, shotAlt, shotSrc, splitText } from '../src/app/visual/visualState.ts';
 import { PLAY_MS } from '../src/app/visual/usePlay.ts';
+import { PICTURE_BUDGET } from './lib/pictures.ts';
+import { isRecorded, readSampleConfig, recordedSamples } from './lib/sampleConfig.ts';
 
 export interface FlowContext {
   page: Page;
@@ -55,9 +59,18 @@ export interface Flow {
   run: (ctx: FlowContext) => Promise<FlowResult>;
 }
 
-/** Opens `path` and waits until the app reports ready; returns time-to-ready. */
+const root = fileURLToPath(new URL('..', import.meta.url));
+/** The default sample (the first recorded entry of samples.config.json, Wikipedia): what a workspace flow opens unless it names another. */
+export const DEFAULT_ID = recordedSamples(root)[0]!.id;
+
+/**
+ * Opens the workspace at `path` and waits until the app reports ready; returns time-to-ready. A path that names no
+ * sample and no page would show the hero, so it opens the default sample explicitly (`?sample=<id>` first).
+ */
 export async function openReady(page: Page, baseUrl: string, path = '/'): Promise<number> {
-  await page.goto(new URL(path, baseUrl).href, { waitUntil: 'domcontentloaded' });
+  const url = new URL(path, baseUrl);
+  if (!url.searchParams.has('sample') && !url.searchParams.has('url')) url.search = `?sample=${DEFAULT_ID}${url.search.replace(/^\?/, '&')}`.replace(/&$/, '');
+  await page.goto(url.href, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-ready="true"]', { timeout: 10_000 });
   return page.evaluate(() => {
     const mark = performance.getEntriesByName('wd:ready')[0];
@@ -65,48 +78,98 @@ export async function openReady(page: Page, baseUrl: string, path = '/'): Promis
   });
 }
 
+/** Opens the hero (`/`, no sample, no page) and waits for its deck to be dealt. */
+export async function openHero(page: Page, baseUrl: string): Promise<void> {
+  await page.goto(new URL('/', baseUrl).href, { waitUntil: 'domcontentloaded' });
+  await page.locator('.deck-card').first().waitFor({ timeout: 10_000 });
+}
+
 const readJson = (rel: string) => JSON.parse(readFileSync(new URL(`../src/samples/${rel}`, import.meta.url), 'utf8'));
-/** Committed samples in registry order (samples.config.json); the first is the default. */
-const fixtures = (readJson('samples.config.json') as { id: string }[]).map((c) => parseSampleFixture(readJson(`${c.id}.json`)));
+/** Committed samples in registry order (samples.config.json, recorded entries only: the app offers no other); the first is the default. */
+const fixtures = recordedSamples(root).map((c) => parseSampleFixture(readJson(`${c.id}.json`)));
 const defaultFixture = fixtures[0]!;
 type Fixture = (typeof fixtures)[number];
 const timelineOf = (f: Fixture) => buildTimeline(f.url, fixtureToSnapshots(f));
 const defaultTimeline = timelineOf(defaultFixture);
-const slider = (page: Page) => page.locator('.tl-slider');
+const slider = (page: Page) => page.locator('.rb-slider');
 const settle = (page: Page) => page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
 
-/** The slider value, its valuetext and the list's single `aria-current` all point at change `i` of `f`. */
+/** The slider value, its valuetext and the single `aria-current` row of Every change (newest first) all point at change `i` of `f`. */
 async function expectSelected(page: Page, f: Fixture, i: number): Promise<string> {
   const { entries } = timelineOf(f);
   const want = describeChange(entries[i]!, i, entries.length);
-  await page.locator(`.tl-slider[aria-valuenow="${i + 1}"]`).waitFor({ timeout: 2_000 });
+  await page.locator(`.rb-slider[aria-valuenow="${i + 1}"]`).waitFor({ timeout: 2_000 });
   const text = await slider(page).getAttribute('aria-valuetext');
   if (text !== want) throw new Error(`valuetext "${text}", expected "${want}"`);
-  const current = await page.locator('.change').evaluateAll((bs) => bs.flatMap((b, j) => (b.getAttribute('aria-current') === 'true' ? [j] : [])));
-  if (current.join() !== String(i)) throw new Error(`list aria-current at [${current.join()}], expected ${i}`);
+  const current = await page.locator('.changes .change').evaluateAll((bs) => bs.flatMap((b, j) => (b.getAttribute('aria-current') === 'true' ? [bs.length - 1 - j] : [])));
+  if (current.join() !== String(i)) throw new Error(`list aria-current at change [${current.join()}], expected ${i}`);
   return want;
 }
 
-/** Centre of marker `i`, scrolled into view inside the strip unless `scroll` is false. */
-async function markerAt(page: Page, i: number, scroll = true): Promise<{ x: number; y: number }> {
-  const m = page.locator(`.tl-marker[data-index="${i}"]`);
+/** Centre of change `i`'s bar (or dot), scrolled into view inside the ribbon unless `scroll` is false. */
+async function barAt(page: Page, i: number, scroll = true): Promise<{ x: number; y: number }> {
+  const m = page.locator(`.rb-slider [data-index="${i}"]`);
   if (scroll) await m.scrollIntoViewIfNeeded();
   const b = (await m.boundingBox())!;
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 }
 
-async function noPageOverflow(page: Page): Promise<void> {
+export async function noPageOverflow(page: Page): Promise<void> {
   const wide = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  if (wide > 0) throw new Error(`page scrolls sideways by ${wide}px (only the timeline strip may)`);
+  if (wide <= 0) return;
+  // Name the innermost elements that stick out past the right edge, so a failure says what to fix.
+  const culprits = await page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const out = [...document.body.querySelectorAll<HTMLElement>('*')].filter((el) => el.getBoundingClientRect().right > vw + 0.5 && !el.closest('.rb-strip'));
+    return out.filter((el) => !out.some((o) => o !== el && el.contains(o))).slice(0, 4).map((el) => `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? `.${el.className.split(' ').join('.')}` : ''} "${(el.textContent ?? '').trim().slice(0, 40)}"`);
+  });
+  throw new Error(`page scrolls sideways by ${wide}px (only the ribbon may): ${culprits.join(', ')}`);
 }
 
-/** The pane shows capture `ts` of `f` (its picture, or the "no picture" card), and the filmstrip marks that frame. */
+/** The page shows `theme`: the ground, `data-theme` (only while `stored`), localStorage, color-scheme, theme-color, the button. */
+async function expectTheme(page: Page, theme: Theme, stored: Theme | null, when: string): Promise<void> {
+  const want = {
+    bg: `rgb(${palette[theme].bg.match(/[0-9a-f]{2}/gi)!.map((h) => parseInt(h, 16)).join(', ')})`,
+    token: palette[theme].bg,
+    dataTheme: stored,
+    storage: stored,
+    scheme: theme,
+    metas: stored ? [palette[stored].bg, palette[stored].bg] : [palette.light.bg, palette.dark.bg],
+    label: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`,
+    icon: theme === 'dark' ? 'sun' : 'moon',
+  };
+  // matchMedia's change event fires at the next rendering update, so a system change is polled for (up to 2 s).
+  const read = () => page.evaluate(() => {
+    const root = document.documentElement;
+    const btn = document.querySelector('.theme-btn');
+    // The build minifies #FFFFFF to #FFF.
+    const hex = getComputedStyle(root).getPropertyValue('--bg').trim().toUpperCase();
+    return {
+      bg: getComputedStyle(document.body).backgroundColor,
+      token: hex.length === 4 ? `#${[...hex.slice(1)].map((c) => c + c).join('')}` : hex,
+      dataTheme: root.getAttribute('data-theme'),
+      storage: localStorage.getItem('pagelapse-theme'),
+      scheme: getComputedStyle(root).colorScheme,
+      metas: [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute('content')?.toUpperCase()),
+      label: btn?.getAttribute('aria-label'),
+      icon: btn?.querySelector('svg')?.getAttribute('data-icon'),
+    };
+  });
+  let got = await read();
+  for (let i = 0; i < 20 && JSON.stringify(got) !== JSON.stringify(want); i++) {
+    await page.waitForTimeout(100);
+    got = await read();
+  }
+  if (JSON.stringify(got) !== JSON.stringify(want)) throw new Error(`${when}: got ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);
+}
+
+/** The pane shows capture `ts` of `f` (its picture, or the "no picture" card), and the ribbon marks that thumbnail. */
 async function expectShown(page: Page, f: Fixture, ts: string): Promise<void> {
   const file = f.snapshots.find((s) => s.ts === ts)?.shot?.file;
   const srcs = await page.locator('.vp-shot').evaluateAll((els) => els.map((e) => e.getAttribute('src')));
   if (!srcs.includes(file ? shotSrc(f.id, file) : null)) throw new Error(`pane shows ${srcs.join(', ')}, expected the picture of ${ts}`);
-  const current = await page.locator('.frame[aria-current="true"] time').getAttribute('datetime');
-  if (current !== timestampToIso(ts)) throw new Error(`filmstrip marks ${current}, expected ${ts}`);
+  const current = await page.locator('.rb-th[aria-current="true"]').getAttribute('data-ts');
+  if (current !== ts) throw new Error(`ribbon marks ${current}, expected ${ts}`);
 }
 
 /** The default sample's first view: the decade compare, its first complete capture against its latest (D-phase 19). */
@@ -118,10 +181,12 @@ const picOf = (ts: string) => shotSrc(defaultFixture.id, defaultFixture.snapshot
 const checkedMode = (page: Page) => page.locator('input[name="vp-mode"]:checked').getAttribute('value');
 
 /**
- * Slider mode on the default sample's first view (the decade compare): Before under After, both labelled by symbol, word and date in
+ * Slider mode on the default sample's first view (the decade compare): Before under After, both tagged by dot, word and date in
  * their own corner, After clipped at `v`%, and the divider's value and valuetext say so.
  */
 async function expectSlider(page: Page, v: number): Promise<string> {
+  // Keys and clicks glide the divider for 250 ms; measure where it lands.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   const m = await page.evaluate(() => ({
     srcs: [...document.querySelectorAll('.vp-cmp .vp-shot')].map((i) => [i.getAttribute('src'), i.getAttribute('alt')]),
     labels: [...document.querySelectorAll('.vp-label')].map((l) => [l.getAttribute('data-side'), l.textContent, Math.round(l.getBoundingClientRect().left)]),
@@ -134,36 +199,48 @@ async function expectSlider(page: Page, v: number): Promise<string> {
   const problems = [
     (await checkedMode(page)) !== 'slider' && 'Slider is not the checked mode',
     JSON.stringify(m.srcs) !== JSON.stringify(want) && `pictures ${JSON.stringify(m.srcs)}`,
-    (m.labels[0]?.[0] !== 'before' || !String(m.labels[0][1]).startsWith(`− Before ${formatTimestampShort(from)}`)) && `before label ${m.labels[0]}`,
-    (m.labels[1]?.[0] !== 'after' || !String(m.labels[1][1]).startsWith(`+ After ${formatTimestampShort(to)}`)) && `after label ${m.labels[1]}`,
+    (m.labels[0]?.[0] !== 'before' || m.labels[0][1] !== `Before ${formatTimestampShort(from)}`) && `before tag ${m.labels[0]}`,
+    (m.labels[1]?.[0] !== 'after' || m.labels[1][1] !== `After ${formatTimestampShort(to)}`) && `after tag ${m.labels[1]}`,
     Number(m.labels[0]?.[2]) >= Number(m.labels[1]?.[2]) && 'Before is not left of After',
     m.now !== String(v) && `divider at ${m.now}, expected ${v}`,
     m.text !== splitText(v, hero) && `valuetext "${m.text}"`,
-    !m.clip.endsWith(` ${v}%)`) && `After clipped by "${m.clip}", expected ${v}%`,
+    // The divider follows a pointer 1:1, so a drag may land a fraction of a percent off.
+    !(Math.abs(Number(/ ([\d.]+)%\)$/.exec(m.clip)?.[1]) - v) <= 0.5) && `After clipped by "${m.clip}", expected ${v}%`,
   ].filter(Boolean);
   if (problems.length) throw new Error(problems.join('; '));
   return `${m.text}; clip ${m.clip}`;
 }
 
-/** Index of the capture the filmstrip marks as shown. */
-const shownIndex = (page: Page) => page.locator('.frame').evaluateAll((fs) => fs.findIndex((f) => f.getAttribute('aria-current') === 'true'));
+/** Index of the capture the ribbon marks as shown. */
+const shownIndex = (page: Page) => page.locator('.rb-th').evaluateAll((fs) => fs.findIndex((f) => f.getAttribute('aria-current') === 'true'));
 
-/** Presses a currently non-pressed chip and checks the pressed state, heading and capture links all follow. */
+/**
+ * Picks sample `f` (not the open one) in the address field's menu by keyboard: focus opens it, arrows reach `f`,
+ * Enter picks it; then the checked option, heading and capture links all follow.
+ */
 async function switchTo(page: Page, f: (typeof fixtures)[number]): Promise<string> {
-  const chip = page.locator(`.chip[data-sample="${f.id}"]`);
-  if ((await chip.getAttribute('aria-pressed')) !== 'false') throw new Error(`${f.id}: chip was already pressed`);
-  await chip.click();
+  const option = page.locator(`#addr-menu [data-sample="${f.id}"]`);
+  if ((await option.getAttribute('aria-selected')) !== 'false') throw new Error(`${f.id}: already the checked sample`);
+  // Focus arriving (not focus kept from the last pick) opens the menu.
+  await page.locator('#url-input').evaluate((el) => el.blur());
+  await page.locator('#url-input').focus();
+  if ((await page.locator('#url-input').getAttribute('aria-expanded')) !== 'true') throw new Error('focus did not open the samples menu');
+  const want = await option.getAttribute('id');
+  for (let i = 0; i < fixtures.length && (await page.locator('#url-input').getAttribute('aria-activedescendant')) !== want; i++) await page.keyboard.press('ArrowDown');
+  if ((await page.locator('#url-input').getAttribute('aria-activedescendant')) !== want) throw new Error(`arrows never reached ${f.id}`);
+  await page.keyboard.press('Enter');
   await page.locator('#sample-label', { hasText: f.label }).waitFor({ timeout: 2_000 });
   await page.waitForSelector('[data-ready="true"]');
-  if ((await chip.getAttribute('aria-pressed')) !== 'true') throw new Error(`${f.id}: chip not pressed after click`);
-  // Let the sheet's entry fade finish so axe measures settled colours.
+  if ((await option.getAttribute('aria-selected')) !== 'true') throw new Error(`${f.id}: not checked after Enter`);
+  // Let any picture fade finish so axe measures settled colours.
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   return checkSample(page, f);
 }
 
 /** The shown sample's heading, capture count, archive links and provenance match its fixture. */
 async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<string> {
-  if ((await page.locator('.chip[aria-pressed="true"]').count()) !== 1) throw new Error('not exactly one pressed chip');
+  const checked = await page.locator('#addr-menu [aria-selected="true"]').evaluateAll((os) => os.map((o) => o.getAttribute('data-sample')));
+  if (checked.join() !== f.id) throw new Error(`checked samples in the menu: [${checked.join()}], expected ${f.id}`);
   const heading = (await page.locator('#sample-label').textContent())?.trim();
   if (heading !== f.label) throw new Error(`heading "${heading}", expected "${f.label}"`);
   const links = await page.locator('.cap-link').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
@@ -178,18 +255,17 @@ async function checkSample(page: Page, f: (typeof fixtures)[number]): Promise<st
 }
 
 /**
- * The list's `aria-current` change sits in the open, full-width changes list after the timeline, which never scrolls
+ * The list's `aria-current` change sits in Every change, after the timeline and the change, which never scrolls
  * inside a box of its own (so no change is clipped there); the page itself has not scrolled from `pageY`.
  */
 async function currentInList(page: Page, pageY = 0): Promise<string> {
   const m = await page.evaluate((y) => {
-    const pane = document.querySelector<HTMLDetailsElement>('.stage .changes-pane')!;
+    const pane = document.querySelector<HTMLElement>('.stage .every')!;
     const item = document.querySelector('.changes .change[aria-current="true"]')!.getBoundingClientRect();
     const box = pane.getBoundingClientRect();
-    const tl = document.querySelector('.stage .tl-area')!.getBoundingClientRect();
+    const tl = document.querySelector('.stage .rb')!.getBoundingClientRect();
     const boxes = [pane, ...pane.querySelectorAll('*')].filter((el) => el.scrollHeight > el.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(el).overflowY));
     const problems = [
-      !pane.open && 'the list is closed',
       boxes.length > 0 && `${boxes.length} scroll boxes inside the list`,
       box.top < tl.bottom - 0.5 && 'the list is not below the timeline',
       (item.top < box.top - 0.5 || item.bottom > box.bottom + 0.5) && 'the selected change is outside the list box',
@@ -201,53 +277,37 @@ async function currentInList(page: Page, pageY = 0): Promise<string> {
   return m.text;
 }
 
-/**
- * Opens a folded part (phase 17): the `<details>` whose summary starts with `name`, or the `aria-expanded` button
- * named so (the compare picker). Set in script, so the page does not scroll to it.
- */
-export async function openDisclosure(page: Page, name: string): Promise<void> {
-  await page.evaluate((n) => {
-    const summary = [...document.querySelectorAll('summary')].find((x) => x.textContent?.trim().startsWith(n));
-    if (summary) (summary.parentElement as HTMLDetailsElement).open = true;
-    const button = [...document.querySelectorAll<HTMLButtonElement>('button[aria-expanded="false"]')].find((b) => b.textContent?.trim().startsWith(n));
-    button?.click();
-    if (!summary && !button && !document.querySelector(`button[aria-expanded="true"]`)) throw new Error(`no disclosure "${n}"`);
-  }, name);
-}
-
-/** Opens the timeline's key ("Key · N trivial hidden", or "Timeline key" with no trivial edits). */
-export async function openTimelineKey(page: Page): Promise<void> {
-  await page.locator('.tl-key').evaluate((d) => ((d as HTMLDetailsElement).open = true));
-}
-
-/** Opens the "All changes (N)" disclosure (folded at every width). */
-const openChanges = (page: Page) => openDisclosure(page, 'All changes');
-
 const SPOKEN: Record<string, string> = { added: 'Added:', removed: 'Removed:', modified: 'Changed:', moved: 'Moved:' };
 
-/** The diff of change `i` reads "Added: …" / "Removed: …" / "Changed: …" in document order, every mark styled by line, not hue. */
+/**
+ * The diff of change `i` reads "Added: …" / "Removed: …" / "Changed: …" in document order (after "Show n more changes"),
+ * every block marked by its symbol and every word by its line, not hue.
+ */
 async function checkDiff(page: Page, f: Fixture, i: number): Promise<string[]> {
   const e = timelineOf(f).entries[i]!;
+  const more = page.locator('.db-more .btn');
+  const shownFirst = await page.locator('.diff-body .sr-only').count();
+  if (await more.count()) await more.click();
   const want = collapseUnchanged(e.diff.ops).flatMap((r) => ('op' in r && r.op.type !== 'equal' ? [SPOKEN[r.op.type] ?? r.op.type] : []));
   const got = await page.locator('.diff-body .sr-only').allTextContents();
   if (got.map((t) => t.trim()).join() !== want.join()) throw new Error(`diff prefixes ${got.join()} != ${want.join()}`);
   const bad = await page.evaluate(() => {
     const line = (sel: string, want: string) => [...document.querySelectorAll(sel)].filter((el) => !getComputedStyle(el).textDecorationLine.includes(want)).map(() => sel);
     const sym = [...document.querySelectorAll('.diff-body .db:not([data-op="equal"])')].filter((el) => getComputedStyle(el, '::before').content === 'none');
-    return [...line('.diff-body ins', 'underline'), ...line('.diff-body del', 'line-through'), ...line('.db[data-op="added"] .db-t', 'underline'), ...line('.db[data-op="removed"] .db-t', 'line-through'), ...sym.map(() => 'gutter')];
+    return [...line('.diff-body ins', 'underline'), ...line('.diff-body del', 'line-through'), ...sym.map(() => 'gutter')];
   });
   if (bad.length) throw new Error(`marks without symbol/line style: ${bad.join(', ')}`);
-  const links = await page.locator('.change-panel a.cap-out').evaluateAll((as) => as.map((a) => [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel'), a.textContent]));
+  const links = await page.locator('.cs-links a').evaluateAll((as) => as.map((a) => [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel'), a.textContent]));
   const hrefs = [e.from, e.to].map((ts) => viewCaptureUrl(f.source.archive, ts, f.url));
   links.forEach(([href, target, rel, text], k) => {
     if (href !== hrefs[k] || target !== '_blank' || rel !== 'noopener noreferrer' || !text?.includes(formatTimestampLong(k ? e.to : e.from))) throw new Error(`capture link ${k}: ${href} ${target} ${rel} "${text}"`);
   });
-  if (links.length !== 2) throw new Error(`${links.length} capture links in the diff header`);
+  if (links.length !== 2) throw new Error(`${links.length} capture links in the change section`);
   // What a screen reader gets: the accessibility tree of the diff, in document order.
   const tree = (await page.locator('.diff-body').ariaSnapshot()).split('\n').map((l) => l.replace(/^[\s-]*(?:(?:paragraph|blockquote|code|text):)?\s*"?/, '').replace(/"$/, ''));
   const spoken = tree.filter((l) => /^(Added|Removed|Changed|Moved):/.test(l));
   if (spoken.map((l) => l.split(':')[0]).join() !== want.map((w) => w.slice(0, -1)).join()) throw new Error(`a11y tree reads ${spoken.join(' | ')}`);
-  return [`${want.length} marked blocks in order; a11y dump: ${spoken.map((l) => l.slice(0, 60)).join(' | ')}`];
+  return [`${want.length} marked blocks in order (${shownFirst} before "Show more changes"); a11y dump: ${spoken.map((l) => l.slice(0, 60)).join(' | ')}`];
 }
 
 export const flows: readonly Flow[] = [
@@ -258,13 +318,12 @@ export const flows: readonly Flow[] = [
     cvd: true,
     async run({ page, baseUrl, scheme }) {
       const timeToReadyMs = await openReady(page, baseUrl);
-      await openChanges(page);
       for (const { to: ts } of defaultTimeline.entries) {
-        const time = page.locator(`.changes time[datetime="${timestampToIso(ts)}"]`);
+        const time = page.locator(`.changes time[datetime="${timestampToIso(ts)}"]`).first();
         await time.waitFor({ state: 'visible', timeout: 2_000 });
         const shown = (await time.locator('[aria-hidden="true"]').textContent())?.trim();
         const spoken = (await time.locator('.sr-only').textContent())?.trim();
-        if (shown !== formatTimestampShort(ts) || spoken !== formatTimestampLong(ts)) {
+        if (shown !== formatTimestampMonth(ts) || spoken !== formatTimestampLong(ts)) {
           throw new Error(`change ${ts}: got "${shown}" / "${spoken}"`);
         }
       }
@@ -273,19 +332,20 @@ export const flows: readonly Flow[] = [
         const loaded = [...document.fonts].filter((f) => f.status === 'loaded');
         return { bg: getComputedStyle(document.body).backgroundColor, fonts: loaded.map((f) => `${f.family} ${f.style}`) };
       });
-      const paper = palette[scheme].paper.match(/[0-9a-f]{2}/gi)!.map((h) => parseInt(h, 16));
-      if (bg !== `rgb(${paper.join(', ')})`) throw new Error(`${scheme}: body background ${bg}, expected ${palette[scheme].paper}`);
-      if (fonts.length < 2) throw new Error(`self-hosted Fraunces not loaded (loaded: ${fonts.join(', ') || 'none'})`);
-      return { timeToReadyMs, notes: [`${defaultTimeline.entries.length} change dates visible`, `${scheme} paper ${bg}`, `fonts: ${fonts.join(', ')}`] };
+      const ground = palette[scheme].bg.match(/[0-9a-f]{2}/gi)!.map((h) => parseInt(h, 16));
+      if (bg !== `rgb(${ground.join(', ')})`) throw new Error(`${scheme}: body background ${bg}, expected ${palette[scheme].bg}`);
+      const families = new Set(fonts.map((f) => f.replace(/ (normal|italic)$/, '')));
+      if (!families.has('Schibsted Grotesk') || !families.has('IBM Plex Mono')) throw new Error(`self-hosted fonts not loaded (loaded: ${fonts.join(', ') || 'none'})`);
+      return { timeToReadyMs, notes: [`${defaultTimeline.entries.length} change dates visible`, `${scheme} ground ${bg}`, `fonts: ${fonts.join(', ')}`] };
     },
   },
   {
     name: 'samples-switch',
-    description: 'Each chip, pressed while not pressed, switches the pressed state, heading, capture links and footer',
+    description: 'Each sample, picked from the address menu by keyboard, switches the checked option, heading, capture links and footer',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
       const notes = [await checkSample(page, defaultFixture)];
-      // Visit every other sample, then come back to the default: every click is on a non-pressed chip.
+      // Visit every other sample, then come back to the default: every pick is of a sample not open yet.
       for (const f of [...fixtures.slice(1), defaultFixture]) notes.push(await switchTo(page, f));
       return { notes };
     },
@@ -295,11 +355,55 @@ export const flows: readonly Flow[] = [
       name: `sample-${f.id}`,
       description: `The ${f.id} sample renders from its bundled fixture`,
       async run({ page, baseUrl }) {
-        const timeToReadyMs = await openReady(page, baseUrl);
-        return { timeToReadyMs, notes: [f === defaultFixture ? await checkSample(page, f) : await switchTo(page, f)] };
+        const timeToReadyMs = await openReady(page, baseUrl, `/?sample=${f.id}`);
+        return { timeToReadyMs, notes: [await checkSample(page, f)] };
       },
     }),
   ),
+  {
+    name: 'samples-narrow',
+    description: 'Every sample at 390, 360 and 320 px: no sideways page scroll (a long host name such as creativecommons.org wraps in the title)',
+    viewports: ['mobile'],
+    async run({ page, baseUrl }) {
+      const notes: string[] = [];
+      for (const width of [390, 360, 320]) {
+        await page.setViewportSize({ width, height: 800 });
+        for (const f of fixtures) {
+          await openReady(page, baseUrl, `/?sample=${f.id}`);
+          await noPageOverflow(page).catch((e: Error) => {
+            throw new Error(`${f.id} at ${width} px: ${e.message}`);
+          });
+          const lines = await page.locator('#sample-label').evaluate((h) => Math.round(h.getBoundingClientRect().height / parseFloat(getComputedStyle(h).lineHeight)));
+          notes.push(`${f.id} at ${width}: no overflow, title on ${lines} line(s)`);
+        }
+      }
+      return { notes };
+    },
+  },
+  {
+    name: 'sample-unrecorded',
+    description: 'A config entry without a recorded fixture, or a retired sample (git-scm, rust-lang), is never offered: not a hero option, not in the address menu, and its deep link opens the default sample',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      // Config entries waiting for their recording (none today), and the samples retired on 2026-10-25 (old links exist).
+      const unrecorded = [...readSampleConfig(root).flatMap((c) => (isRecorded(root, c.id) ? [] : [c.id])), 'git-scm', 'rust-lang'];
+      const ids = fixtures.map((f) => f.id).join();
+      await openHero(page, baseUrl);
+      const options = await page.locator('.sample-opt').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-sample')));
+      if (options.join() !== ids) throw new Error(`hero options ${options.join()}, expected ${ids}`);
+      const notes = [`hero options: ${options.join(', ')}`];
+      for (const id of unrecorded) {
+        await openReady(page, baseUrl, `/?sample=${id}`);
+        const label = (await page.locator('#sample-label').textContent())?.trim();
+        if (label !== defaultFixture.label) throw new Error(`?sample=${id} opened "${label}", expected the default "${defaultFixture.label}"`);
+        if (new URL(page.url()).search !== `?sample=${DEFAULT_ID}`) throw new Error(`?sample=${id} not replaced by the default: ${page.url()}`);
+        const menu = await page.locator('#addr-menu [data-sample]').evaluateAll((os) => os.map((o) => o.getAttribute('data-sample')));
+        if (menu.join() !== ids) throw new Error(`address menu ${menu.join()}, expected ${ids}`);
+        notes.push(`?sample=${id} -> ${page.url().split('/').at(-1)}; menu ${menu.join(', ')}`);
+      }
+      return { notes };
+    },
+  },
   {
     name: 'reduced-motion',
     description: 'Under prefers-reduced-motion: reduce, every transition and animation computes to 0s',
@@ -327,73 +431,351 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'keyboard-tab-order',
-    description: 'Tab order header -> sample chips -> content -> footer, a visible ring on every stop, chips toggle by key',
+    description: 'Workspace Tab order header (address field, button, theme, GitHub) -> content -> footer, a visible ring on every stop',
     suffix: '-kbd',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
-      const regions = ['header', 'chips', 'main', 'footer'];
+      const regions = ['header', 'main', 'footer'];
       const stops: { region: string; name: string; ring: boolean }[] = [];
       for (let i = 0; i < 100; i++) {
         await page.keyboard.press('Tab');
         const stop = await page.evaluate(() => {
           const el = document.activeElement as HTMLElement | null;
           if (!el || el === document.body) return null;
-          const cs = getComputedStyle(el);
-          const region = el.classList.contains('chip') ? 'chips' : (el.closest('header, main, footer')?.tagName.toLowerCase() ?? 'other');
-          const ring = cs.outlineStyle === 'solid' && parseFloat(cs.outlineWidth) >= 2 && cs.boxShadow !== 'none';
-          return { region, name: (el.textContent ?? '').trim().slice(0, 40), ring };
+          // The address field draws its ring on the field around the input, the slider divider on its knob, the ribbon's
+          // slider on the ribbon's ring overlay (`.rb:has(.rb-slider:focus-visible) > .rb-ring`).
+          const overlay = el.matches('.rb-slider') ? el.closest('.rb')?.querySelector(':scope > .rb-ring') : null;
+          const ringed = el.id === 'url-input' ? el.closest('.addr-field')! : (overlay ?? el.querySelector(':scope.vp-split > .vp-knob') ?? el);
+          const cs = getComputedStyle(ringed);
+          const box = ringed.getBoundingClientRect();
+          const region = el.closest('header, main, footer')?.tagName.toLowerCase() ?? 'other';
+          const ring = cs.outlineStyle === 'solid' && parseFloat(cs.outlineWidth) >= 2 && box.width > 0 && box.height > 0;
+          return { region, name: (el.getAttribute('aria-label') ?? el.textContent ?? '').trim().slice(0, 40), ring };
         });
         if (!stop) break;
         stops.push(stop);
+        // The samples menu opened on focus closes when Tab leaves the field.
+        if (stop.name === 'Show its history' && (await page.locator('#url-input').getAttribute('aria-expanded')) !== 'false') throw new Error('the samples menu stayed open after Tab left the field');
       }
       const order = stops.map((s) => regions.indexOf(s.region));
       if (order.some((r, i) => r < 0 || (i > 0 && r < order[i - 1]!)) || new Set(order).size !== regions.length) {
         throw new Error(`tab order: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`);
       }
+      const head = stops.filter((s) => s.region === 'header').map((s) => s.name);
+      if (head.join('|') !== 'Skip to content|Skip to diff|Pagelapse|Page address|Show its history|Switch to dark theme|Source on GitHub') throw new Error(`header stops: ${head.join(' | ')}`);
       const ringless = stops.filter((s) => !s.ring);
       if (ringless.length) throw new Error(`no focus ring on: ${ringless.map((s) => s.name).join(', ')}`);
-      // The chip toggles from the keyboard and stays the single pressed one.
-      const chip = page.locator('.chip').first();
-      await chip.focus();
-      for (const key of ['Space', 'Enter']) {
-        await page.keyboard.press(key);
-        await page.waitForSelector('[data-ready="true"]');
-        if ((await chip.getAttribute('aria-pressed')) !== 'true') throw new Error(`${key} did not press the chip`);
+      return { notes: [`${stops.length} stops: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`] };
+    },
+  },
+  {
+    name: 'address-menu',
+    description: 'The address field is a combobox: focus opens the samples (current one aria-selected), arrows move aria-activedescendant, Escape closes, Enter picks, Tab leaves',
+    async run({ page, baseUrl }) {
+      await openReady(page, baseUrl);
+      const input = page.locator('#url-input');
+      const state = () =>
+        page.evaluate(() => {
+          const i = document.querySelector('#url-input')!;
+          return {
+            role: i.getAttribute('role'),
+            expanded: i.getAttribute('aria-expanded'),
+            active: i.getAttribute('aria-activedescendant'),
+            hidden: document.querySelector<HTMLElement>('.addr-menu')!.hidden === true,
+            value: (i as HTMLInputElement).value,
+            checked: [...document.querySelectorAll('#addr-menu [aria-selected="true"]')].map((o) => o.getAttribute('data-sample')),
+          };
+        });
+      const want = (ok: boolean, what: string, got: unknown) => {
+        if (!ok) throw new Error(`${what}: ${JSON.stringify(got)}`);
+      };
+      await noPageOverflow(page);
+      const closed = await state();
+      want(closed.role === 'combobox' && closed.expanded === 'false' && closed.hidden && closed.value === defaultFixture.url.replace(/^https?:\/\//, '').replace(/\/$/, ''), 'before focus', closed);
+      await input.focus();
+      const open = await state();
+      want(open.expanded === 'true' && !open.hidden && open.active === null && open.checked.join() === defaultFixture.id, 'focus opens the menu, current sample checked', open);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      const moved = await state();
+      want(moved.active === 'addr-opt-1', 'two ArrowDowns reach the second option', moved);
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('ArrowUp');
+      want((await state()).active === `addr-opt-${fixtures.length - 1}`, 'ArrowUp wraps to the last option', await state());
+      await page.keyboard.press('Escape');
+      const esc = await state();
+      want(esc.expanded === 'false' && esc.hidden && (await input.evaluate((el) => el === document.activeElement)), 'Escape closes, focus stays in the field', esc);
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+      const f = fixtures[1]!;
+      await page.locator('#sample-label', { hasText: f.label }).waitFor({ timeout: 3_000 });
+      const picked = await state();
+      want(picked.expanded === 'false' && picked.checked.join() === f.id && page.url().includes(`sample=${f.id}`), 'Enter picks the option', { ...picked, url: page.url() });
+      await input.focus();
+      await page.keyboard.press('Tab');
+      const left = await state();
+      want(left.expanded === 'false' && left.hidden, 'Tab leaves and closes the menu', left);
+      return { notes: [`checked ${closed.checked.join()} -> picked ${f.id} by keyboard`, 'focus opens, arrows wrap, Escape closes, Enter picks, Tab leaves'] };
+    },
+  },
+  {
+    name: 'hero',
+    description: 'No sample or page in the address: the hero (headline, field, sample options, deck); options and deck cards open the workspace with a history entry, Back returns to the hero',
+    schemes: ['light', 'dark'],
+    firstView: true,
+    async run({ page, baseUrl, viewport }) {
+      await openHero(page, baseUrl);
+      const notes: string[] = [];
+      // The first view's pictures (the deck's thumbnails and its latest capture) stay within their budget (AC 40).
+      await page.evaluate(() => Promise.all([...document.images].map((img) => img.decode().catch(() => undefined))));
+      const pics = await page.evaluate(() => (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).filter((r) => r.name.includes('/samples/')).map((r) => r.encodedBodySize));
+      const bytes = pics.reduce((n, b) => n + b, 0);
+      if (bytes > PICTURE_BUDGET.firstView) throw new Error(`first-view pictures ${bytes} B > ${PICTURE_BUDGET.firstView} B`);
+      notes.push(`first-view pictures: ${pics.length} files, ${bytes} B`);
+      const h1 = (await page.locator('h1').textContent())?.trim();
+      if (h1 !== 'See how any web page changed over the years') throw new Error(`h1 "${h1}"`);
+      if ((await page.getByRole('textbox', { name: 'Page address' }).count()) !== 1) throw new Error('no "Page address" field');
+      if ((await page.getByRole('button', { name: 'Show its history' }).count()) !== 1) throw new Error('no "Show its history" button');
+      const options = await page.locator('.sample-opt').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-sample')));
+      if (options.join() !== fixtures.map((f) => f.id).join()) throw new Error(`sample options ${options.join()}`);
+      await noPageOverflow(page);
+      // The deck: one button per pictured Wikipedia capture, named by its date.
+      const deck = fixtures.find((f) => f.id === 'wikipedia-internet-archive')!;
+      const shots = deck.snapshots.filter((s) => s.shot?.file);
+      const cards = await page.locator('.deck-card').evaluateAll((bs) => bs.map((b) => [b.tagName, b.getAttribute('aria-label')]));
+      const names = shots.map((s, i) => `${i === shots.length - 1 ? 'Latest, ' : ''}${formatTimestampLong(s.ts)}, open this capture`);
+      if (JSON.stringify(cards) !== JSON.stringify(names.map((n) => ['BUTTON', n]))) throw new Error(`deck cards ${JSON.stringify(cards)}`);
+      notes.push(`${cards.length} deck cards, ${await page.locator('.deck-bar').count()} change bars`);
+      // Tab: field, button, the options, then every card in time order.
+      await page.locator('#url-input').focus();
+      const stops: string[] = [];
+      for (let i = 0; i < 2 + options.length + shots.length; i++) {
+        stops.push(await page.evaluate(() => (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent ?? '').trim()));
+        await page.keyboard.press('Tab');
       }
-      if ((await page.locator('.chip[aria-pressed="true"]').count()) !== 1) throw new Error('not exactly one pressed chip');
-      // The switch is announced politely while focus stays on the chip.
-      const status = (await page.locator('p[role="status"]').textContent())?.trim() ?? '';
-      if (!status.startsWith('Showing: ')) throw new Error(`no sample-switch announcement (status: "${status}")`);
-      if (!(await chip.evaluate((el) => el === document.activeElement))) throw new Error('focus left the chip after switching');
-      return { notes: [`${stops.length} stops: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`, `announced: ${status}`] };
+      const wantStops = ['Page address', 'Show its history', ...fixtures.map((f) => f.label.replace(/ home page$/, '')), ...names];
+      if (stops.join('|') !== wantStops.join('|')) throw new Error(`hero tab stops: ${stops.join(' | ')}`);
+      // A sample option opens the workspace in a new history entry; Back returns to the hero.
+      const before = await page.evaluate(() => history.length);
+      const other = fixtures[2]!;
+      await page.locator(`.sample-opt[data-sample="${other.id}"]`).click();
+      await page.locator('#sample-label', { hasText: other.label }).waitFor({ timeout: 3_000 });
+      const pushed = await page.evaluate(() => history.length);
+      if (!page.url().endsWith(`/?sample=${other.id}`) || pushed !== before + 1) throw new Error(`option: ${page.url()}, history ${before} -> ${pushed}`);
+      await page.goBack();
+      await page.locator('.intro-head').waitFor({ timeout: 3_000 });
+      notes.push(`option ${other.id} pushed ${page.url()} -> Back to the hero`);
+      // A deck card opens Wikipedia on that capture: the change that ends there.
+      const k = 3;
+      // By keyboard: the cards overlap, so a pointer reaches most of them only by their slivers.
+      await page.locator('.deck-card').nth(k).focus();
+      await page.keyboard.press('Enter');
+      await page.locator('#sample-label', { hasText: deck.label }).waitFor({ timeout: 3_000 });
+      await page.waitForSelector('[data-ready="true"]');
+      const e = timelineOf(deck).entries[changeForCapture(timelineOf(deck).entries, shots[k]!.ts)]!;
+      if (!page.url().includes(`sample=${deck.id}&change=${e.from}-${e.to}`)) throw new Error(`card ${k}: ${page.url()}, expected change ${e.from}-${e.to}`);
+      if ((await page.evaluate(() => document.activeElement?.id)) !== 'content') throw new Error('focus is not on the content after opening a card');
+      await page.goBack();
+      await page.locator('.intro-head').waitFor({ timeout: 3_000 });
+      notes.push(`card ${formatTimestampShort(shots[k]!.ts)} opened change ${e.from}-${e.to}, focus on #content, Back to the hero`);
+      await page.evaluate(() => scrollTo(0, 0));
+      if (viewport === 'mobile') await noPageOverflow(page);
+      return { notes };
+    },
+  },
+  {
+    name: 'open-transition',
+    description:
+      'Open: a sample option and a deck card (by pointer and by keyboard) grow into the stage as a 350 ms view transition (the field settles into the header); focus lands on the content; none under reduced motion or without the API; a press mid-transition lands where it was aimed',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      type Vt = { groups: string[]; ms: number[]; focus?: string };
+      type W = { vts: Vt[]; running: boolean; downs: boolean[] };
+      const notes: string[] = [];
+      const cases = [
+        ['option', 'pointer'],
+        ['option', 'keyboard'],
+        ['card', 'pointer'],
+        ['card', 'keyboard'],
+        ['option', 'reduce'],
+        ['option', 'no API'],
+        ['option', 'press the field'],
+        ['option', 'press Play'],
+        ['option', 'press Side by side'],
+        ['option', 'drag from Play'],
+        ['option', 'press the heading'],
+      ] as const;
+      // What each press mid-transition aims at.
+      const AIM = {
+        'press the field': '#url-input',
+        'press Play': '.vp-play',
+        'press Side by side': '.vp-mode[data-mode="side"]',
+        'drag from Play': '.vp-play',
+        'press the heading': '#content h2',
+      } as const;
+      for (const [what, how] of cases) {
+        const name = `${what} (${how})`;
+        await page.emulateMedia({ reducedMotion: how === 'reduce' ? 'reduce' : 'no-preference' });
+        // Play sits below an 800 px viewport's fold; a press can only aim at what is on screen.
+        await page.setViewportSize({ width: 1280, height: /Play|Side/.test(how) ? 1300 : 800 });
+        await openHero(page, baseUrl);
+        // Record each view transition: its named groups, their duration, and where focus is once it has finished; and
+        // whether each press came while one ran.
+        await page.evaluate((none) => {
+          const w = window as unknown as W;
+          w.vts = [];
+          w.running = false;
+          w.downs = [];
+          addEventListener('pointerdown', () => w.downs.push(w.running), true);
+          if (none) return void delete (Document.prototype as Partial<Document>).startViewTransition;
+          const start = document.startViewTransition.bind(document);
+          document.startViewTransition = ((cb: ViewTransitionUpdateCallback) => {
+            const t = start(cb);
+            const rec: Vt = { groups: [], ms: [] };
+            w.vts.push(rec);
+            // Running once its overlay is up (the update has rendered the workspace under it).
+            void t.ready.then(() => {
+              w.running = true;
+              const anims = document.getAnimations().map((a) => a.effect as KeyframeEffect).filter((e) => e.pseudoElement?.startsWith('::view-transition-group'));
+              rec.groups = anims.map((e) => /\((.*)\)/.exec(e.pseudoElement!)![1]!).sort();
+              rec.ms = [...new Set(anims.map((e) => Number(e.getTiming().duration)))];
+            }, () => undefined);
+            void t.finished.then(() => {
+              w.running = false;
+              rec.focus = document.activeElement?.id;
+            });
+            return t;
+          }) as typeof document.startViewTransition;
+        }, how === 'no API');
+        const press = how.startsWith('press') || how.startsWith('drag');
+        // A press mid-transition: the animations run at a tenth of their speed, so the press surely lands inside one.
+        const cdp = press ? await page.context().newCDPSession(page) : undefined;
+        await cdp?.send('Animation.enable');
+        await cdp?.send('Animation.setPlaybackRate', { playbackRate: 0.1 });
+        let hits = { clicks: 0, changes: 0 };
+        if (what === 'option' && how === 'keyboard') {
+          await page.locator('.sample-opt').first().focus();
+          await page.keyboard.press('Enter');
+        } else if (what === 'option') await page.locator('.sample-opt').first().click();
+        else if (how === 'keyboard') {
+          await page.locator('.deck-card').nth(3).focus();
+          await page.keyboard.press('Enter');
+        } else {
+          // The cards overlap: press the first point on screen where a card (the top one first) is the one hit.
+          const at = await page.locator('.deck-card').evaluateAll((cards) => {
+            for (const c of cards.reverse()) {
+              const r = c.getBoundingClientRect();
+              for (let y = r.top + 8; y < Math.min(r.bottom, innerHeight); y += 16) {
+                for (let x = r.left + 8; x < Math.min(r.right, innerWidth); x += 16) {
+                  if (c.contains(document.elementFromPoint(x, y))) return { x, y };
+                }
+              }
+            }
+            return null;
+          });
+          if (!at) throw new Error('no deck card is on top anywhere on screen');
+          await page.mouse.click(at.x, at.y);
+        }
+        if (press) {
+          await page.waitForFunction(() => (window as unknown as W).running, null, { timeout: 10_000 });
+          const aim = AIM[how as keyof typeof AIM];
+          // Count the clicks the aimed element gets (the press's own goes to <html>) and its radio's changes.
+          await page.evaluate((sel) => {
+            const w = window as unknown as { hits: { clicks: number; changes: number } };
+            w.hits = { clicks: 0, changes: 0 };
+            const el = document.querySelector(sel)!;
+            el.addEventListener('click', () => w.hits.clicks++);
+            el.querySelector('input')?.addEventListener('change', () => w.hits.changes++);
+          }, aim);
+          const box = (await page.locator(aim).boundingBox())!;
+          const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+          if (how === 'drag from Play') {
+            await page.mouse.move(x, y);
+            await page.mouse.down();
+            await page.mouse.move(x + 150, y, { steps: 5 });
+            await page.mouse.up();
+          } else await page.mouse.click(x, y);
+          if (how === 'press the field') await page.keyboard.type('example.org');
+          await page.waitForTimeout(300);
+          hits = await page.evaluate(() => (window as unknown as { hits: { clicks: number; changes: number } }).hits);
+          await cdp!.send('Animation.setPlaybackRate', { playbackRate: 1 });
+          await cdp!.detach();
+        }
+        await page.waitForSelector('[data-ready="true"]');
+        await page.waitForTimeout(600);
+        const w = await page.evaluate(() => {
+          const { vts, downs } = window as unknown as W;
+          const input = document.querySelector<HTMLInputElement>('#url-input')!;
+          const mode = document.querySelector<HTMLInputElement>('.vp-modes input:checked')?.value;
+          return { vts, downs, focus: document.activeElement?.id, value: input.value, playing: document.querySelector('.vp-play')?.hasAttribute('data-playing'), mode };
+        });
+        const v = w.vts[0];
+        if (press && !w.downs.at(-1)) throw new Error(`${name}: the press came after the transition (${JSON.stringify(w)})`);
+        if (how === 'press the field') {
+          if (w.focus !== 'url-input' || !w.value.endsWith('example.org')) throw new Error(`${name}: focus on #${w.focus}, field "${w.value}"`);
+          notes.push(`${name} mid-transition: focus on #url-input, typing reached it ("${w.value}")`);
+          continue;
+        }
+        if (how === 'press Play') {
+          if (hits.clicks !== 1 || !w.playing) throw new Error(`${name}: ${hits.clicks} activations, playing ${w.playing}`);
+          await page.keyboard.press('Escape'); // any key stops the time-lapse
+          notes.push(`${name} mid-transition: exactly 1 activation, playing`);
+          continue;
+        }
+        if (how === 'press Side by side') {
+          const view = new URL(page.url()).searchParams.get('view');
+          if (hits.changes !== 1 || w.mode !== 'side' || view !== 'side') throw new Error(`${name}: ${hits.changes} change events, mode ${w.mode}, view=${view}`);
+          notes.push(`${name} mid-transition: checked, exactly 1 change event, view=side`);
+          continue;
+        }
+        if (how === 'drag from Play') {
+          if (hits.clicks !== 0 || w.playing) throw new Error(`${name}: ${hits.clicks} activations, playing ${w.playing}`);
+          notes.push(`${name} 150 px right mid-transition: 0 activations, not playing`);
+          continue;
+        }
+        if (how === 'press the heading') {
+          if (hits.clicks !== 0) throw new Error(`${name}: ${hits.clicks} clicks forwarded to the heading`);
+          notes.push(`${name} mid-transition: 0 clicks forwarded to it`);
+          continue;
+        }
+        if (w.focus !== 'content') throw new Error(`${name}: focus on ${w.focus}, expected #content`);
+        if (how === 'reduce' || how === 'no API') {
+          if (w.vts.length) throw new Error(`${name}: a view transition ran: ${JSON.stringify(w.vts)}`);
+          notes.push(`${name}: no view transition, the workspace at once, focus on #content`);
+          continue;
+        }
+        if (w.vts.length !== 1 || v!.groups.join() !== 'pl-field,pl-stage,root' || v!.ms.join() !== '350' || v!.focus !== 'content') throw new Error(`${name}: ${JSON.stringify(w.vts)}`);
+        notes.push(`${name}: groups ${v!.groups.join(', ')}, ${v!.ms.join()} ms, focus on #${v!.focus}`);
+      }
+      await page.setViewportSize({ width: 1280, height: 800 });
+      return { notes };
     },
   },
   {
     name: 'timeline',
-    description: 'Default sample timeline: a marker per change, one radius step per magnitude (majors ringed), latest change selected, SVG hidden',
+    description: 'Default sample ribbon: a thumbnail and hairline per capture, a bar per change (height from score), the pair ringed, latest change selected, SVG hidden',
     schemes: ['light', 'dark'],
     cvd: true,
-    async run({ page, baseUrl }) {
+    async run({ page, baseUrl, viewport }) {
       const timeToReadyMs = await openReady(page, baseUrl);
-      const { entries } = defaultTimeline;
+      const { entries, snapshots } = defaultTimeline;
       const said = await expectSelected(page, defaultFixture, entries.length - 1);
-      const rs = await page.locator('.tl-marker').evaluateAll((cs) => cs.map((c) => Number(c.getAttribute('r'))));
-      if (rs.length !== entries.length) throw new Error(`${rs.length} markers for ${entries.length} changes`);
-      // Size alone separates the classes: one radius per magnitude, rising with it, and rising with score.
-      const order = ['minor', 'moderate', 'major'];
-      const byMag = new Map<string, Set<number>>();
-      entries.forEach((e, i) => byMag.set(e.significance.magnitude, (byMag.get(e.significance.magnitude) ?? new Set()).add(rs[i]!)));
-      const steps = order.filter((m) => byMag.has(m)).map((m) => [m, [...byMag.get(m)!]] as const);
-      if (steps.some(([, r]) => r.length !== 1)) throw new Error(`marker radius varies within a magnitude: ${JSON.stringify(steps)}`);
-      if (steps.some(([, [r]], i) => i > 0 && r! <= steps[i - 1]![1][0]!)) throw new Error(`marker radius does not rise with magnitude: ${JSON.stringify(steps)}`);
-      const byScore = entries.map((e, i) => [e.significance.score, rs[i]!] as const).sort((a, b) => a[0] - b[0]);
-      if (byScore.some(([, r], i) => i > 0 && r < byScore[i - 1]![1])) throw new Error('marker radius is not monotone in score');
-      const majors = entries.filter((e) => e.significance.magnitude === 'major').length;
-      const rings = await page.locator('.tl-marker-ring').count();
-      if (rings !== majors) throw new Error(`${rings} inner rings for ${majors} major changes`);
-      if ((await page.locator('.tl-slider svg').getAttribute('aria-hidden')) !== 'true') throw new Error('timeline SVG is not aria-hidden');
+      const hs = await page.locator('.rb-bar').evaluateAll((bs) => bs.map((b) => Number(b.getAttribute('height'))));
+      if (hs.length !== entries.length) throw new Error(`${hs.length} bars for ${entries.length} changes`);
+      const bad = entries.filter((e, i) => Math.abs(hs[i]! - (6 + Math.sqrt(e.significance.score) * 38)) > 0.01);
+      if (bad.length) throw new Error(`${bad.length} bars not 6 + sqrt(score) x 38 px tall`);
+      if ((await page.locator('.rb-bar.is-sel').getAttribute('data-index')) !== String(entries.length - 1)) throw new Error('the selected bar is not the latest change');
+      if ((await page.locator('.rb-first').count()) !== 1) throw new Error('no filled dot for the first capture');
+      if ((await page.locator('.rb svg').getAttribute('aria-hidden')) !== 'true') throw new Error('ribbon SVG is not aria-hidden');
+      // Phones show the axis only (target/V3WorkPhone.html); elsewhere a thumbnail and a hairline per capture, the pair ringed.
+      const thumbs = await page.locator('.rb-th').count();
+      const lines = await page.locator('.rb-cv').count();
+      const sides = await page.locator('.rb-th[data-side]').evaluateAll((ts) => ts.map((t) => `${t.getAttribute('data-side')} ${t.getAttribute('aria-label')}`));
+      if (viewport === 'mobile' ? thumbs + lines !== 0 : thumbs !== snapshots.length || lines !== snapshots.length) throw new Error(`${thumbs} thumbnails, ${lines} hairlines on ${viewport}`);
+      if (viewport !== 'mobile' && (sides.length !== 2 || !sides[0]!.startsWith('before') || !sides[0]!.endsWith('Before') || !sides[1]!.endsWith('After'))) throw new Error(`pair rings: ${sides.join('; ')}`);
       await noPageOverflow(page);
-      return { timeToReadyMs, notes: [`${rs.length} markers, r by magnitude ${steps.map(([m, [r]]) => `${m} ${r}`).join(' / ')} px, ${rings} ringed`, said] };
+      return { timeToReadyMs, notes: [`${hs.length} bars ${Math.min(...hs).toFixed(1)}-${Math.max(...hs).toFixed(1)} px, ${thumbs} thumbnails`, said] };
     },
   },
   {
@@ -415,42 +797,58 @@ export const flows: readonly Flow[] = [
         if (new URL(page.url()).searchParams.get('change') !== `${e.from}-${e.to}`) throw new Error(`${key}: URL not updated (${page.url()})`);
       }
       if (said.size < 5) throw new Error('aria-valuetext did not change between steps');
-      const tip = (await page.locator('.tl-tip').textContent()) ?? '';
+      const tip = (await page.locator('.rb-tip').textContent()) ?? '';
       if (!tip.includes(entries[pageUp]!.ruleSummary)) throw new Error(`no focus tooltip for the selected change ("${tip}")`);
       // Escape dismisses the focus tooltip without moving the selection; the next key brings it back.
       await page.keyboard.press('Escape');
-      await page.locator('.tl-tip').waitFor({ state: 'detached', timeout: 2_000 });
+      await page.locator('.rb-tip').waitFor({ state: 'detached', timeout: 2_000 });
       await expectSelected(page, defaultFixture, pageUp);
       await page.keyboard.press('ArrowLeft');
       await page.keyboard.press('ArrowRight');
-      await page.locator('.tl-tip').waitFor({ timeout: 2_000 });
+      await page.locator('.rb-tip').waitFor({ timeout: 2_000 });
       return { notes: [`${steps.map(([k, i]) => `${k}->${i + 1}`).join(', ')}; ${said.size} distinct valuetexts`] };
     },
   },
   {
     name: 'timeline-pointer',
-    description: 'Clicking a marker selects it, dragging snaps to the nearest change, hovering shows the tooltip',
+    description: 'Clicking a bar selects it, a drag across every change follows the pointer on x and never flips, hovering shows the tooltip, a thumbnail click shows its capture',
     shot: 'timeline',
     suffix: '-tooltip',
-    async run({ page, baseUrl }) {
+    async run({ page, baseUrl, viewport }) {
       await openReady(page, baseUrl);
       await settle(page);
-      const a = await markerAt(page, 1);
+      const { entries } = defaultTimeline;
+      const a = await barAt(page, 1);
       await page.mouse.click(a.x, a.y);
       await expectSelected(page, defaultFixture, 1);
       if (!(await slider(page).evaluate((el) => el === document.activeElement))) throw new Error('click did not focus the slider');
-      // The pointer is captured, so the drag may end outside the visible part of the strip.
-      const b = await markerAt(page, 4, false);
-      await page.mouse.move(a.x, a.y);
+      // A captured drag snaps on x only: sweep left to right at one height, across every bar, high in the bend where
+      // short bars are far away in 2D; the selection is always the bar nearest the pointer's x and only ever moves on.
+      // Measure once the page has stopped scrolling.
+      let top = -1;
+      for (let k = 0; k < 30 && top !== (top = await page.evaluate(() => scrollY)); k++) await page.waitForTimeout(100);
+      const xs = await page.locator('.rb-slider [data-index]').evaluateAll((bs) => bs.map((b) => { const r = b.getBoundingClientRect(); return r.x + r.width / 2; }));
+      const box = (await slider(page).boundingBox())!;
+      const y = box.y + box.height * 0.45;
+      await page.mouse.move(xs[0]! - 8, y);
       await page.mouse.down();
-      await page.mouse.move(b.x + 3, b.y - 2, { steps: 8 });
+      const seen: number[] = [];
+      for (let x = xs[0]! - 8; x <= xs.at(-1)! + 8; x += 3) {
+        await page.mouse.move(x, y);
+        const want = xs.reduce((b, c, i) => (Math.abs(c - x) < Math.abs(xs[b]! - x) ? i : b), 0);
+        const ok = await page.locator(`.rb-slider[aria-valuenow="${want + 1}"]`).waitFor({ timeout: 1_000 }).then(() => true, () => false);
+        const v = Number(await slider(page).getAttribute('aria-valuenow')) - 1;
+        if (!ok) throw new Error(`at x ${Math.round(x)} the drag selects change ${v + 1}, the bar under the pointer is ${want + 1}`);
+        if (seen.at(-1) !== v) seen.push(v);
+      }
       await page.mouse.up();
-      await expectSelected(page, defaultFixture, 4);
-      const c = await markerAt(page, 2);
+      if (seen.some((v, i) => i > 0 && v < seen[i - 1]!) || seen.length !== entries.length) throw new Error(`drag order ${seen.map((v) => v + 1).join(',')}`);
+      await expectSelected(page, defaultFixture, entries.length - 1);
+      const c = await barAt(page, 2);
       await page.mouse.move(c.x, c.y);
-      const tip = page.locator('.tl-tip');
+      const tip = page.locator('.rb-tip');
       await tip.waitFor({ timeout: 2_000 });
-      if (!((await tip.textContent()) ?? '').includes(defaultTimeline.entries[2]!.ruleSummary)) throw new Error('hover tooltip shows the wrong change');
+      if (!((await tip.textContent()) ?? '').includes(entries[2]!.ruleSummary)) throw new Error('hover tooltip shows the wrong change');
       // WCAG 1.4.13: the tip is hoverable (moving onto it keeps it) and Escape dismisses it.
       const t = (await tip.boundingBox())!;
       await page.mouse.move(t.x + t.width / 2, t.y + t.height / 2, { steps: 6 });
@@ -460,38 +858,49 @@ export const flows: readonly Flow[] = [
       await tip.waitFor({ state: 'detached', timeout: 2_000 });
       await page.mouse.move(c.x + 1, c.y);
       await tip.waitFor({ timeout: 2_000 });
-      return { notes: ['click -> 2, drag -> 5, hover tooltip on 3, hoverable, Escape hides it'] };
+      // A thumbnail click shows that capture, its change selected (phones show no thumbnails).
+      const ts = defaultFixture.snapshots[3]!.ts;
+      const thumbs = viewport !== 'mobile';
+      if (thumbs) {
+        await page.locator(`.rb-th[data-ts="${ts}"]`).click();
+        await expectShown(page, defaultFixture, ts);
+      }
+      return { notes: [`click -> 2, drag ${seen.map((v) => v + 1).join(',')} on x, hover tooltip on 3, hoverable, Escape hides it${thumbs ? ', thumbnail #04 shown' : ''}`] };
     },
   },
   {
     name: 'timeline-deeplink',
-    description: '?sample=git-scm&change=<from>-<to> selects that change; an unknown change falls back to the latest; reflows at 320 px',
+    description: '?sample=nasa&change=<from>-<to> selects that change; an unknown change falls back to the featured one (what the sample opens on); reflows at 320 px',
     async run({ page, baseUrl }) {
-      const f = fixtures.find((x) => x.id === 'git-scm')!;
+      const f = fixtures.find((x) => x.id === 'nasa')!;
       const t = timelineOf(f);
-      const e = t.entries[2]!;
-      const timeToReadyMs = await openReady(page, baseUrl, `/?sample=git-scm&change=${e.from}-${e.to}`);
-      if ((await page.locator('#sample-label').textContent())?.trim() !== f.label) throw new Error('deep link did not open git-scm');
-      const said = await expectSelected(page, f, 2);
-      const ticks = await page.locator('.tl-trivial').count();
-      if (ticks !== t.trivialCaptures.length) throw new Error(`${ticks} hollow ticks for ${t.trivialCaptures.length} trivial captures`);
-      await openReady(page, baseUrl, '/?sample=git-scm&change=bogus');
-      await expectSelected(page, f, t.entries.length - 1);
+      // Not NASA's featured change (the third), which the sample opens on anyway.
+      const e = t.entries[4]!;
+      const timeToReadyMs = await openReady(page, baseUrl, `/?sample=nasa&change=${e.from}-${e.to}`);
+      if ((await page.locator('#sample-label').textContent())?.trim() !== f.label) throw new Error('deep link did not open nasa');
+      const said = await expectSelected(page, f, 4);
+      // NASA has no trivial captures (live-trivial covers the hollow dots): none drawn.
+      const ticks = await page.locator('.rb-dot').count();
+      if (ticks !== t.trivialCaptures.length) throw new Error(`${ticks} hollow dots for ${t.trivialCaptures.length} trivial captures`);
+      await openReady(page, baseUrl, '/?sample=nasa&change=bogus');
+      // The featured change is not the latest here, so this tells the two fallbacks apart.
+      const featured = t.entries.findIndex((x) => `${x.from}-${x.to}` === f.featured);
+      if (featured < 0 || featured === t.entries.length - 1) throw new Error(`featured change ${f.featured} at ${featured} of ${t.entries.length}`);
+      await expectSelected(page, f, featured);
       // Invalid query values are replaced in the address bar by the state actually shown.
-      const latest = (x: Fixture) => { const l = timelineOf(x).entries.at(-1)!; return `${l.from}-${l.to}`; };
-      if (new URL(page.url()).search !== `?sample=git-scm&change=${latest(f)}`) throw new Error(`bogus change not replaced: ${page.url()}`);
+      if (new URL(page.url()).search !== `?sample=nasa&change=${f.featured}`) throw new Error(`bogus change not replaced: ${page.url()}`);
       await openReady(page, baseUrl, '/?sample=nope');
       if (new URL(page.url()).search !== `?sample=${defaultFixture.id}`) throw new Error(`bogus sample not replaced: ${page.url()}`);
       await page.setViewportSize({ width: 320, height: 800 });
       await noPageOverflow(page);
-      // Let the last load's entry fade finish so axe measures settled colours.
+      // Let any picture fade finish so axe measures settled colours.
       await settle(page);
-      return { timeToReadyMs, notes: [said, `${ticks} hollow ticks; bogus change -> latest; no page overflow at 320 px`] };
+      return { timeToReadyMs, notes: [said, `${ticks} hollow dots; bogus change -> featured ${f.featured}; no page overflow at 320 px`] };
     },
   },
   {
     name: 'diff-default',
-    description: 'The latest change\'s diff: capture links, hidden prefixes in order, symbols and line styles, < 1,500 nodes for the largest change, list collapsed on mobile',
+    description: 'The latest change\'s diff: capture links, hidden prefixes in order, symbols and line styles, < 1,500 nodes for the largest change; Every change lists every change, newest first',
     shot: 'diff',
     schemes: ['light', 'dark'],
     cvd: true,
@@ -506,11 +915,11 @@ export const flows: readonly Flow[] = [
       const last = defaultTimeline.entries.at(-1)!;
       const timeToReadyMs = await openReady(page, baseUrl, `/?change=${last.from}-${last.to}`);
       const notes = await checkDiff(page, defaultFixture, defaultTimeline.entries.length - 1);
-      // Folded at every width since phase 17 (Calm layout); it was open on desktop before.
-      const open = await page.locator('.changes-pane').evaluate((d) => (d as HTMLDetailsElement).open);
-      if (open) throw new Error(`changes list open=${open} on ${viewport}`);
-      const summary = (await page.locator('.changes-pane summary').textContent())?.trim();
-      if (summary !== `All changes (${defaultTimeline.entries.length})`) throw new Error(`summary "${summary}"`);
+      // Every change: open at every width (redesign phase 5), one row per change, newest first.
+      const heading = (await page.locator('#changes-heading').textContent())?.trim();
+      const rows = await page.locator('.changes .change-sum').allTextContents();
+      const want = defaultTimeline.entries.map(shownSummary).reverse();
+      if (heading !== 'Every change' || rows.join('|') !== want.join('|')) throw new Error(`${viewport}: "${heading}" lists ${rows.join(' | ')}`);
       await noPageOverflow(page);
       return { timeToReadyMs, notes: [...notes, `largest change ${lf.id} #${li + 1} (${le.diff.ops.length} ops): ${nodes} nodes`] };
     },
@@ -543,11 +952,13 @@ export const flows: readonly Flow[] = [
       await tabTo('db-gap');
       await page.keyboard.press('Enter');
       if ((await page.locator('.db-gap').count()) !== gaps - 1 || !(await active()).startsWith('db-open')) throw new Error(`expanding: ${await active()}`);
-      // Previous / Next sit beside the picture, before the diff in the tab order.
+      // Previous / Next sit under the picture, before the diff in the tab order.
       await page.locator('.diff-nav .btn').first().focus();
       await page.keyboard.press('Enter');
       await expectSelected(page, f, n - 2);
       await checkDiff(page, f, n - 2);
+      // checkDiff opened "Show more changes", which takes focus: back to Previous, then Tab to Next.
+      await page.locator('.diff-nav .btn').first().focus();
       await page.keyboard.press('Tab');
       await page.keyboard.press('Enter');
       await page.keyboard.press('Enter');
@@ -558,48 +969,66 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'diff-expanded',
-    description: 'A change with structure edits: expanding every unchanged run and long block shows the whole later page',
+    description: 'A change with structure edits: the facts name its sections; Show more changes, every unchanged run and long block show the whole later page',
     async run({ page, baseUrl }) {
       const e = defaultTimeline.entries.at(-2)!;
       await openReady(page, baseUrl, `/?change=${e.from}-${e.to}`);
-      const structure = await page.locator('.diff-structure li').allTextContents();
-      if (structure.length !== e.record.headingsAdded.length + e.record.headingsRemoved.length + (e.diff.titleChanged ? 1 : 0)) throw new Error(`structure list: ${structure.join(' | ')}`);
+      const facts = await page.locator('.cs-facts > div').evaluateAll((ds) => ds.map((d) => `${d.querySelector('dt')?.textContent}: ${d.querySelector('dd')?.textContent}`));
+      const { added, removed, renamed } = namedSections(e.record);
+      const want = [added.length && `New sections: ${added.join(', ')}`, removed.length && `Gone: ${removed.join(', ')}`, renamed.length && 'Renamed'].filter(Boolean) as string[];
+      if (!facts[0]?.startsWith('Words: ') || want.some((w) => !facts.some((x) => x.startsWith(w)))) throw new Error(`facts: ${facts.join(' | ')}`);
+      if (await page.locator('.db-more .btn').count()) await page.locator('.db-more .btn').click();
       while (await page.locator('.db-gap').count()) await page.locator('.db-gap').first().click();
       for (const b of await page.locator('.db .btn-link').all()) await b.click();
       const blocks = await page.locator('.diff-body .db').count();
       if (blocks !== e.diff.ops.length || (await page.locator('.is-clamped').count())) throw new Error(`${blocks} blocks for ${e.diff.ops.length} ops`);
-      return { notes: [`structure: ${structure.join(' | ')}`, `${blocks} blocks shown, none clamped`] };
+      return { notes: [`facts: ${facts.join(' | ')}`, `${blocks} blocks shown, none clamped`] };
+    },
+  },
+  {
+    name: 'decade-first-view',
+    description: "The default sample's first view is the decade compare: Previous narrows to the latest change (Change N of N), and Play starts from the first capture",
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      const { entries } = defaultTimeline;
+      const step = () => page.locator('.step-label [aria-hidden]').textContent().then((t) => t?.replace(/\s+/g, ' ').trim());
+      await openReady(page, baseUrl);
+      if ((await step()) !== 'First and latest') throw new Error(`first view step "${await step()}"`);
+      await page.locator('.diff-nav .btn').first().click();
+      await expectSelected(page, defaultFixture, entries.length - 1);
+      const narrowed = await step();
+      if (narrowed !== `Change ${entries.length} of ${entries.length}`) throw new Error(`Previous from the decade compare: "${narrowed}"`);
+      await openReady(page, baseUrl);
+      await page.locator('.vp-play').click();
+      const first = defaultFixture.snapshots[0]!.ts;
+      await page.locator(`.rb-th[aria-current="true"][data-ts="${first}"]`).waitFor({ timeout: 2_000 });
+      await page.keyboard.press('Shift'); // any key stops Play, so the flow leaves the page still
+      return { notes: [`Previous -> "${narrowed}"`, `Play started at capture #1 (${first})`] };
     },
   },
   {
     name: 'diff-copy-link',
-    description: 'Copy link puts the deep link on the clipboard, confirms politely, and the link restores the view; trivial edits can be shown and selected',
+    description: 'Copy link puts the deep link on the clipboard, confirms politely, and the link restores the view (showing and selecting trivial edits: live-trivial)',
     async run({ page, baseUrl }) {
       await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(baseUrl).origin });
-      const f = fixtures.find((x) => x.id === 'git-scm')!;
+      const f = fixtures.find((x) => x.id === 'nasa')!;
       const t = timelineOf(f);
-      await openReady(page, baseUrl, `/?sample=git-scm`);
+      const featured = t.entries.findIndex((e) => `${e.from}-${e.to}` === f.featured);
+      if (featured < 1) throw new Error(`NASA's featured change ${f.featured} is not a later change of its timeline`);
+      await openReady(page, baseUrl, `/?sample=nasa`);
+      // NASA opens on its featured change (only the default sample opens on the decade compare); Previous steps back.
+      await expectSelected(page, f, featured);
       await page.locator('.diff-nav .btn').first().click();
-      await expectSelected(page, f, t.entries.length - 2);
-      await openDisclosure(page, 'Change details');
-      await page.locator('.change-panel button', { hasText: 'Copy link' }).click();
-      await page.locator('.change-panel [role="status"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
+      await expectSelected(page, f, featured - 1);
+      await page.locator('.controls .vp-copy').click();
+      // Seen on the button, and said by the polite status region (its text is for screen readers on success).
+      await page.locator('.controls .vp-copy[data-said="ok"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
+      await page.waitForFunction(() => document.querySelector('.controls [role="status"]')?.textContent === 'Link copied', null, { timeout: 2_000 });
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       if (copied !== page.url() || !copied.includes('change=')) throw new Error(`copied "${copied}", page at ${page.url()}`);
       await openReady(page, baseUrl, new URL(copied).pathname + new URL(copied).search);
-      await expectSelected(page, f, t.entries.length - 2);
-      // "Show trivial edits" turns the hollow ticks into selectable, labelled entries.
-      const trivial = trivialEntries(t);
-      await openTimelineKey(page);
-      await page.getByLabel('Show trivial edits').check();
-      const marks = await page.locator('.tl-marker[data-magnitude="trivial"]').count();
-      const items = await page.locator('.changes li').count();
-      if (marks !== trivial.length || items !== t.entries.length + trivial.length) throw new Error(`${marks} trivial markers, ${items} list items`);
-      await openChanges(page);
-      await page.locator('.change', { hasText: 'trivial' }).first().click();
-      await page.locator('.panel-kicker', { hasText: 'trivial' }).waitFor({ timeout: 2_000 });
-      if (!page.url().includes(`change=${trivial[0]!.from}-${trivial[0]!.to}`)) throw new Error(`trivial entry not selected: ${page.url()}`);
-      return { notes: [`copied ${new URL(copied).search}, reopened it; ${marks} trivial entries shown and selectable`] };
+      await expectSelected(page, f, featured - 1);
+      return { notes: [`copied ${new URL(copied).search}, reopened it on change ${featured} of ${t.entries.length}`] };
     },
   },
   {
@@ -626,23 +1055,58 @@ export const flows: readonly Flow[] = [
     },
   },
   {
+    name: 'footer',
+    description: 'The footer\'s capped-AI line: 12 px, the footer\'s muted colour, inside the source line (no extra row), no sideways scroll; workspace and hero',
+    clip: '.site-footer',
+    async run({ page, baseUrl, viewport }) {
+      const notes: string[] = [];
+      for (const open of [() => openReady(page, baseUrl), () => openHero(page, baseUrl)]) {
+        await open();
+        const m = await page.evaluate(() => {
+          const cap = document.querySelector<HTMLElement>('.site-footer .foot-cap')!;
+          const cs = getComputedStyle(cap);
+          return {
+            text: cap.textContent,
+            size: cs.fontSize,
+            colour: cs.color,
+            footer: getComputedStyle(document.querySelector('.site-footer')!).color,
+            inLine: cap.parentElement!.matches('.foot-about > p.foot-line'),
+            rows: [...document.querySelector('.foot-about')!.children].filter((el) => el.checkVisibility()).length,
+          };
+        });
+        if (m.text !== 'Live AI summaries are capped per day; samples always work.' || m.size !== '12px' || m.colour !== m.footer || !m.inLine) throw new Error(`footer cap line ${JSON.stringify(m)}`);
+        await noPageOverflow(page);
+        notes.push(`${page.url().includes('sample=') ? 'workspace' : 'hero'} ${viewport}: "${m.text}" ${m.size}, ${m.colour}, in the source line, ${m.rows} rows in the about column`);
+      }
+      await openReady(page, baseUrl);
+      await page.locator('.site-footer').scrollIntoViewIfNeeded();
+      return { notes };
+    },
+  },
+  {
     name: 'brand',
-    description: 'favicon.svg at 16, 32 and 64 px on paper and on ink',
+    description: 'favicon.svg at 16, 32 and 64 px on the light and the dark ground',
     shot: 'brand-favicon',
     viewports: ['desktop'],
     clip: '#brand-sheet',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
       const sizes = [16, 32, 64];
-      const { paper, ink } = palette.light;
+      const [paper, ink] = [palette.light.bg, palette.dark.bg];
       const loaded = await page.evaluate(
         async ({ sizes, paper, ink }) => {
+          // A constructed stylesheet, not style attributes: the deploy CSP (style-src 'self') blocks inline styles.
+          const css = new CSSStyleSheet();
+          css.replaceSync(`#brand-sheet{display:inline-flex;flex-direction:column;align-self:flex-start;margin:16px}
+            #brand-sheet>div{display:flex;gap:24px;align-items:center;padding:24px}
+            #brand-sheet>.paper{background:${paper}}#brand-sheet>.ink{background:${ink}}`);
+          document.adoptedStyleSheets = [...document.adoptedStyleSheets, css];
           const sheet = document.createElement('div');
           sheet.id = 'brand-sheet';
-          sheet.setAttribute('style', 'display:inline-flex;flex-direction:column;align-self:flex-start;margin:16px');
-          for (const bg of [paper, ink]) {
+          for (const [bg, name] of [[paper, 'paper'], [ink, 'ink']] as const) {
             const row = document.createElement('div');
-            row.setAttribute('style', `display:flex;gap:24px;align-items:center;padding:24px;background:${bg}`);
+            row.className = name;
+            row.dataset.bg = bg;
             for (const s of sizes) row.insertAdjacentHTML('beforeend', `<img src="/favicon.svg" width="${s}" height="${s}" alt="Pagelapse icon, ${s} px">`);
             sheet.append(row);
           }
@@ -655,30 +1119,136 @@ export const flows: readonly Flow[] = [
         { sizes, paper, ink },
       );
       if (loaded !== sizes.length * 2) throw new Error(`${loaded} of ${sizes.length * 2} favicons rendered`);
-      return { notes: [`favicon.svg rendered at ${sizes.join(', ')} px on paper and ink`] };
+      return { notes: [`favicon.svg rendered at ${sizes.join(', ')} px on the light and the dark ground`] };
+    },
+  },
+  {
+    name: 'theme-toggle',
+    description: 'The header theme button: flips the ground, its icon and name, persists with no flash (data-theme before the app runs), follows a live system change while nothing is stored, and clears storage when set back to the system',
+    schemes: ['light', 'dark'],
+    async run({ page, baseUrl, scheme }) {
+      const other: Theme = scheme === 'dark' ? 'light' : 'dark';
+      const notes: string[] = [];
+      await openHero(page, baseUrl);
+      await expectTheme(page, scheme, null, 'on load');
+      // A live system change while nothing is stored moves the page, the icon and the name; then back.
+      await page.emulateMedia({ colorScheme: other });
+      await expectTheme(page, other, null, 'after the system changed');
+      await page.emulateMedia({ colorScheme: scheme });
+      await expectTheme(page, scheme, null, 'after the system changed back');
+      notes.push(`system ${scheme} -> ${other} -> ${scheme} followed live`);
+      // The toggle: no view transition (openTransition.ts stays for Open).
+      await page.evaluate(() => {
+        const w = window as unknown as { __vt: number };
+        w.__vt = 0;
+        const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+        if (doc.startViewTransition) {
+          const real = doc.startViewTransition.bind(doc);
+          doc.startViewTransition = (cb) => (w.__vt++, real(cb));
+        }
+      });
+      await page.locator('.theme-btn').click();
+      await expectTheme(page, other, other, 'after the toggle');
+      if ((await page.evaluate(() => (window as unknown as { __vt: number }).__vt)) !== 0) throw new Error('the toggle started a view transition');
+      notes.push(`toggle: ${scheme} -> ${other}, stored "${other}", no view transition`);
+      // Reload: theme.js sets data-theme before the body is parsed (so before the app's module runs and before first
+      // paint) and it is still there at DOMContentLoaded.
+      await page.addInitScript(() => {
+        const w = window as unknown as { __atBody?: string | null; __atDcl?: string | null };
+        document.addEventListener('DOMContentLoaded', () => (w.__atDcl = document.documentElement.getAttribute('data-theme')));
+        // The init script runs before <html> exists: watch the whole document for <body>.
+        new MutationObserver((_, obs) => {
+          if (!document.body) return;
+          w.__atBody = document.documentElement.getAttribute('data-theme');
+          obs.disconnect();
+        }).observe(document, { childList: true, subtree: true });
+      });
+      await openHero(page, baseUrl);
+      const early = await page.evaluate(() => {
+        const w = window as unknown as { __atBody?: string | null; __atDcl?: string | null };
+        return [w.__atBody, w.__atDcl];
+      });
+      if (early.join() !== `${other},${other}`) throw new Error(`after reload data-theme was ${early[0]} when <body> began and ${early[1]} at DOMContentLoaded, expected ${other}`);
+      await expectTheme(page, other, other, 'after reload');
+      notes.push(`reload: data-theme="${other}" when <body> began and at DOMContentLoaded`);
+      // The workspace header has the same button and state; back to the system's theme clears the stored value.
+      await openReady(page, baseUrl);
+      await expectTheme(page, other, other, 'in the workspace');
+      // A second tab shows the choice too, and follows when the first tab clears it (storage events).
+      const tab = await page.context().newPage();
+      await openHero(tab, baseUrl);
+      await expectTheme(tab, other, other, 'in a second tab');
+      await page.locator('.theme-btn').click();
+      await expectTheme(page, scheme, null, 'after toggling back to the system theme');
+      await expectTheme(tab, scheme, null, 'in the second tab after the first cleared the choice');
+      await tab.close();
+      notes.push(`workspace: back to ${scheme}, storage cleared, data-theme removed; a second tab followed`);
+      // On every width the button is the GitHub link's size, in the header row, and the page does not scroll sideways.
+      const boxes = await page.evaluate(() => ['.theme-btn', '.gh-link'].map((sel) => document.querySelector(sel)!.getBoundingClientRect()).map((r) => [Math.round(r.width), Math.round(r.height), Math.round(r.top)]));
+      if (JSON.stringify(boxes[0]) !== JSON.stringify(boxes[1]) || boxes[0]![0] !== 40) throw new Error(`theme button ${boxes[0]} vs GitHub link ${boxes[1]}`);
+      await noPageOverflow(page);
+      notes.push(`button ${boxes[0]![0]}x${boxes[0]![1]} beside the GitHub link`);
+      return { notes };
+    },
+  },
+  {
+    name: 'theme-hero',
+    description: 'The hero at 1440 with a light system and the toggle switched to dark (PR shot)',
+    viewports: ['wide'],
+    widthTag: true,
+    firstView: true,
+    async run({ page, baseUrl }) {
+      await openHero(page, baseUrl);
+      await page.locator('.theme-btn').click();
+      await expectTheme(page, 'dark', 'dark', 'after the toggle');
+      await page.evaluate(() => document.fonts.ready);
+      return { notes: ['light system, dark chosen'] };
+    },
+  },
+  {
+    name: 'theme-header',
+    description: 'The hero header at 390 with the theme button beside the GitHub link (PR shot)',
+    viewports: ['mobile'],
+    widthTag: true,
+    clip: '.site-header',
+    async run({ page, baseUrl }) {
+      await openHero(page, baseUrl);
+      await expectTheme(page, 'light', null, 'on load');
+      const inRow = await page.evaluate(() => {
+        const [t, g, b] = ['.theme-btn', '.gh-link', '.home-link'].map((sel) => document.querySelector(sel)!.getBoundingClientRect());
+        return Math.abs(t!.top + t!.height / 2 - (b!.top + b!.height / 2)) < 2 && t!.right <= g!.left + 0.5 && g!.right <= innerWidth;
+      });
+      if (!inRow) throw new Error('the theme button is not in the header row before the GitHub link');
+      await page.evaluate(() => document.fonts.ready);
+      return { notes: ['theme button and GitHub link share the logo row at 390'] };
     },
   },
   {
     name: 'visual-default',
-    description: 'The hero: the decade compare (first ↔ latest capture) in Slider, named as such, with its summary and the filmstrip thumbnails above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, first-view pictures <= 160 KB',
+    description: 'The default sample\'s workspace: the decade compare (first ↔ latest capture) in Slider, named "First and latest", the title block and stage above the fold; ready <= 1,000 ms, visual-ready <= 1,500 ms, CLS < 0.02, pictures within their budgets',
     shot: 'hero',
     schemes: ['light', 'dark'],
     cvd: true,
     async run({ page, baseUrl, viewport }) {
+      const workspacePictures = 2 * PICTURE_BUDGET.full + defaultFixture.snapshots.length * PICTURE_BUDGET.thumb;
       const timeToReadyMs = await openReady(page, baseUrl);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       const { from, to } = hero;
       const said = await expectSlider(page, 50);
-      // Honest about the pair: the caption and the change line say first and latest capture, not one change.
-      const named = await page.evaluate(() => [document.querySelector('.vpane .vp-cap')?.textContent ?? '', document.querySelector('#change-heading')?.textContent ?? ''] as const);
-      if (!named[0].includes('first and latest capture') || !/^first → capture to latest,/.test(named[1].trim())) throw new Error(`pair not named: caption "${named[0]}", heading "${named[1]}"`);
-      if ((await page.locator('.frame').count()) !== defaultFixture.snapshots.length) throw new Error('not one frame per capture');
-      if (!page.url().endsWith('/') || new URL(page.url()).search) throw new Error(`first view rewrote the URL: ${page.url()}`);
+      // Honest about the pair: the step label and the change line say first and latest capture, not one change.
+      // (The change section's heading is the summary since phase 5; its Before and After dates name the pair.)
+      const named = await page.evaluate(() => [document.querySelector('.step-label [aria-hidden]')?.textContent ?? '', [...document.querySelectorAll('.cs-when time [aria-hidden="true"]')].map((t) => t.textContent?.trim()).join(' to ')] as const);
+      const pair = [from, to].map((ts) => formatTimestampShort(ts)).join(' to ');
+      if (named[0] !== 'First and latest' || named[1] !== pair) throw new Error(`pair not named: step "${named[0]}", dates "${named[1]}", expected "${pair}"`);
+      if (viewport !== 'mobile' && (await page.locator('.rb-th').count()) !== defaultFixture.snapshots.length) throw new Error('not one thumbnail per capture');
+      if (new URL(page.url()).search !== `?sample=${DEFAULT_ID}`) throw new Error(`first view rewrote the URL: ${page.url()}`);
       await page.waitForTimeout(500);
       const m = await page.evaluate(async () => {
-        const cls = await new Promise<number>((done) =>
-          new PerformanceObserver((l) => done(l.getEntries().reduce((n, e) => n + ((e as unknown as { hadRecentInput: boolean }).hadRecentInput ? 0 : (e as unknown as { value: number }).value), 0))).observe({ type: 'layout-shift', buffered: true }),
-        ).then((v) => v, () => 0);
+        // No layout shift at all means no entry and no callback: 0 after a short wait.
+        const cls = await new Promise<number>((done) => {
+          setTimeout(() => done(0), 500);
+          new PerformanceObserver((l) => done(l.getEntries().reduce((n, e) => n + ((e as unknown as { hadRecentInput: boolean }).hadRecentInput ? 0 : (e as unknown as { value: number }).value), 0))).observe({ type: 'layout-shift', buffered: true });
+        }).then((v) => v, () => 0);
         const pics = performance.getEntriesByType('resource').filter((r) => r.name.includes('/samples/')) as PerformanceResourceTiming[];
         const box = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
         return {
@@ -686,7 +1256,8 @@ export const flows: readonly Flow[] = [
           cls,
           bytes: pics.reduce((n, r) => n + r.encodedBodySize, 0),
           count: pics.length,
-          fold: [box('.vp-mat').bottom, box('.panel-summary').bottom, box('.frame :is(img, .frame-none)').bottom],
+          // The stage is 1200 x 750 at full width (target/V3Work.html): its top and the title block are on first view.
+          fold: [box('.sheet-head').bottom, box('.vp-mat').top + box('.vp-mat').height / 2],
           paneWidth: box('.vp-mat').width,
         };
       });
@@ -694,35 +1265,36 @@ export const flows: readonly Flow[] = [
         timeToReadyMs > 1000 && `ready ${timeToReadyMs} ms > 1,000`,
         m.visual > 1500 && `visual-ready ${m.visual} ms > 1,500`,
         m.cls >= 0.02 && `CLS ${m.cls.toFixed(3)}`,
-        m.bytes > 160_000 && `first-view pictures ${m.bytes} B > 160 KB`,
-        viewport === 'desktop' && m.fold.some((y) => y > 800) && `stage below the fold: ${m.fold.map(Math.round).join(', ')}`,
+        // Since the redesign the first view is the hero (its pictures are measured by the hero flow and pnpm size): the
+        // default sample's workspace loads the stage's two pictures and a thumbnail per capture, each within its budget.
+        m.bytes > workspacePictures && `workspace pictures ${m.bytes} B > ${workspacePictures} B`,
+        viewport === 'desktop' && m.fold.some((y) => y > 800) && `title or the stage's upper half below the fold: ${m.fold.map(Math.round).join(', ')}`,
         viewport === 'mobile' && m.paneWidth < 300 && `pane only ${m.paneWidth}px wide on mobile`,
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { timeToReadyMs, notes: [`decade ${from}-${to} in Slider mode: ${said}`, `heading "${named[1].trim()}"`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `first-view pictures: ${m.count} files, ${m.bytes} B`, `fold (mat, summary, filmstrip thumbnails): ${m.fold.map(Math.round).join(', ')}`] };
+      return { timeToReadyMs, notes: [`decade ${from}-${to} in Slider mode: ${said}`, `dates ${named[1]}`, `visual-ready ${m.visual} ms, CLS ${m.cls.toFixed(4)}`, `workspace pictures: ${m.count} files, ${m.bytes} B (limit ${workspacePictures} B)`, `fold (title block, stage middle): ${m.fold.map(Math.round).join(', ')}`] };
     },
   },
   {
     name: 'changes-list-follows',
-    description: 'Desktop: the full-width changes list after the timeline marks the selected change after load, Previous, the filmstrip and the timeline; it has no scroll box of its own and the page never scrolls',
+    description: 'Desktop: Every change, after the ribbon and the change, marks the selected change after load, Previous, a thumbnail and the slider; it has no scroll box of its own and the page never scrolls',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
       const { entries } = defaultTimeline;
-      await openChanges(page);
       const notes = [`load: ${await currentInList(page)}`];
       // Dispatched clicks: a real click would let Playwright scroll the page to the target first.
       // From the decade compare, Previous first narrows to the selected latest change, then steps back.
       await page.locator('.diff-nav .btn').first().dispatchEvent('click');
       await expectSelected(page, defaultFixture, entries.length - 1);
-      await page.locator('#change-heading .change-mag').waitFor({ timeout: 2_000 });
+      await page.locator('#change-heading', { hasText: shownSummary(entries.at(-1)!) }).waitFor({ timeout: 2_000 });
       await page.locator('.diff-nav .btn').first().dispatchEvent('click');
       await expectSelected(page, defaultFixture, entries.length - 2);
       notes.push(`Previous: ${await currentInList(page)}`);
-      await page.locator('.frame').first().dispatchEvent('click');
+      await page.locator('.rb-th').first().dispatchEvent('click');
       await expectSelected(page, defaultFixture, 0);
-      notes.push(`filmstrip #01: ${await currentInList(page)}`);
+      notes.push(`thumbnail #01: ${await currentInList(page)}`);
       // Focusing the timeline scrolls the page to it; the End key itself must not scroll the page further.
       await slider(page).focus();
       // Wait out the page's smooth scroll to the timeline.
@@ -742,7 +1314,7 @@ export const flows: readonly Flow[] = [
       const notes: string[] = [];
       for (const [width, height] of [[390, 844], [320, 844], [320, 568]] as const) {
         await page.setViewportSize({ width, height });
-        // Single: the caption's own "Open capture" (in compare modes the pair's links are in Change details).
+        // Single: the caption's own "Open capture" (in compare modes the captures' links are in the change section).
         await openReady(page, baseUrl, '/?view=single');
         await settle(page);
         // Short screens cannot show the caption on first view; there the link must come clear when tabbed to.
@@ -768,32 +1340,32 @@ export const flows: readonly Flow[] = [
     },
   },
   {
-    name: 'visual-filmstrip-keyboard',
-    description: 'Tab to the filmstrip (one stop), Home, Right x3, Enter: the pane, the timeline valuetext and the list follow',
-    shot: 'filmstrip',
+    name: 'visual-thumbnails-keyboard',
+    description: 'Tab to the ribbon\'s thumbnails (one stop), Home, Right x3, Enter: the pane, the slider valuetext and the list follow',
+    shot: 'ribbon',
     suffix: '-kbd',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl, '/?view=single');
       const stops = new Set<string>();
-      for (let k = 0; k < 60 && !(await page.evaluate(() => document.activeElement?.classList.contains('frame'))); k++) {
+      for (let k = 0; k < 60 && !(await page.evaluate(() => document.activeElement?.classList.contains('rb-th'))); k++) {
         await page.keyboard.press('Tab');
         stops.add(await page.evaluate(() => document.activeElement?.className ?? ''));
       }
       for (const key of ['Home', 'ArrowRight', 'ArrowRight', 'ArrowRight', 'Enter']) await page.keyboard.press(key);
       const ts = defaultFixture.snapshots[3]!.ts;
-      await page.locator(`.frame[aria-current="true"] time[datetime="${timestampToIso(ts)}"]`).waitFor({ timeout: 2_000 });
+      await page.locator(`.rb-th[aria-current="true"][data-ts="${ts}"]`).waitFor({ timeout: 2_000 });
       await expectShown(page, defaultFixture, ts);
       const said = await expectSelected(page, defaultFixture, changeForCapture(defaultTimeline.entries, ts));
       await page.keyboard.press('Tab');
-      if (await page.evaluate(() => document.activeElement?.classList.contains('frame'))) throw new Error('the filmstrip has more than one tab stop');
+      if (await page.evaluate(() => document.activeElement?.classList.contains('rb-th'))) throw new Error('the thumbnails have more than one tab stop');
       await page.keyboard.press('Shift+Tab');
-      return { notes: [`frame #04 shown (${ts}); ${said}`, `tab stops before the strip: ${[...stops].join(' | ')}`] };
+      return { notes: [`thumbnail #04 shown (${ts}); ${said}`, `tab stops before the thumbnails: ${[...stops].join(' | ')}`] };
     },
   },
   {
     name: 'visual-timeline-sync',
-    description: 'Timeline keys swap the picture and the filmstrip frame; Before / After flips sides and is kept while scrubbing (?at=)',
+    description: 'Slider keys swap the picture and the ringed thumbnail; Before / After flips sides and is kept while scrubbing (?at=)',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl, '/?view=single');
@@ -819,11 +1391,11 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'visual-tab-order',
-    description: 'Desktop: the stage tabs in visual order: pane controls, the change card, filmstrip, timeline, changes list, diff',
+    description: 'Desktop: the workspace tabs in visual order: the stage, its controls row, the ribbon thumbnails and slider, the change and its diff, Every change',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
-      const parts = ['vpane', 'side', 'film', 'tl-area', 'changes-pane', 'diff-panel'];
+      const parts = ['vpane', 'controls', 'rb-strip', 'rb-slider', 'change-section', 'every'];
       const seen: string[] = [];
       for (let k = 0; k < 120; k++) {
         await page.keyboard.press('Tab');
@@ -835,25 +1407,21 @@ export const flows: readonly Flow[] = [
         if (part === null) break;
         if (part && seen.at(-1) !== part) seen.push(part);
       }
-      // The diff has stops only when it has collapsed runs or long blocks; the rest always do.
-      if (seen.length < 5 || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
-      // The first stop after the pane's controls is in the change card, beside the picture; the card holds no list.
-      // The pane's last stop: "Open capture" in Single, the divider in Slider (its links are in Change details).
-      await page.locator('.vpane :is(.cap-out, .vp-split)').last().focus();
+      if (seen.length < parts.length || seen.join() !== parts.slice(0, seen.length).join()) throw new Error(`stage tab order: ${seen.join(' -> ')}`);
+      // The stage's last stop (the divider in Slider) leads to Play, the first control under it.
+      await page.locator('.vpane .vp-split').focus();
       await page.keyboard.press('Tab');
-      const next = await page.evaluate(() => `${document.activeElement?.closest('.side') ? 'side' : 'elsewhere'}: ${document.activeElement?.textContent?.trim().slice(0, 30)}`);
-      if (!next.startsWith('side')) throw new Error(`after "Open capture": ${next}`);
-      if (await page.locator('.side .changes').count()) throw new Error('the changes list is inside the side column');
-      // The visual order matches: each part starts below the one before it (the side card beside the pane).
+      const next = await page.evaluate(() => `${document.activeElement?.closest('.controls') ? 'controls' : 'elsewhere'}: ${document.activeElement?.textContent?.trim().slice(0, 30)}`);
+      if (next !== 'controls: Play time-lapse') throw new Error(`after the divider: ${next}`);
+      // The visual order matches: each part starts below the one before it.
       const tops = await page.evaluate((ps) => ps.map((p) => Math.round(document.querySelector(`.stage .${p}`)!.getBoundingClientRect().top)), parts);
-      const rows = [tops[0]!, ...tops.slice(2)];
-      if (rows.some((t, i) => i > 0 && t <= rows[i - 1]!)) throw new Error(`parts out of visual order: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`);
-      return { notes: [`stage: ${seen.join(' -> ')}`, `after "Open capture": ${next}`, `tops: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`] };
+      if (tops.some((t, i) => i > 0 && t <= tops[i - 1]!)) throw new Error(`parts out of visual order: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`);
+      return { notes: [`stage: ${seen.join(' -> ')}`, `after the divider: ${next}`, `tops: ${parts.map((p, i) => `${p} ${tops[i]}`).join(', ')}`] };
     },
   },
   {
     name: 'visual-zoom-spacing',
-    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the change card is never clipped or scrolled inside the side column, and never spills onto the filmstrip',
+    description: '1024 px at 125% text with WCAG 1.4.12 spacing: the controls row wraps instead of clipping, stays between the stage and the ribbon, and the page never scrolls sideways',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await page.setViewportSize({ width: 1024, height: 768 });
@@ -867,66 +1435,46 @@ export const flows: readonly Flow[] = [
       await settle(page);
       const m = await page.evaluate(() => {
         const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
-        const side = document.querySelector<HTMLElement>('.stage .side')!;
-        const box = side.getBoundingClientRect();
-        return {
-          twoColumn: box.left > r('.vpane').right,
-          sideBottom: box.bottom,
-          navBottom: r('.side .diff-nav').bottom,
-          paneBottom: r('.vpane').bottom,
-          film: r('.film').top,
-          clipped: side.scrollHeight - side.clientHeight,
-        };
+        const row = r('.controls');
+        const kids = [...document.querySelectorAll('.controls button, .controls .vp-modes')].map((k) => k.getBoundingClientRect());
+        return { stage: r('.vpane').bottom, top: row.top, bottom: row.bottom, film: r('.rb').top, out: kids.filter((k) => k.left < row.left - 8.5 || k.right > row.right + 8.5).length };
       });
       const problems = [
-        !m.twoColumn && 'the stage is not two columns at 1024 px',
-        m.clipped > 1 && `the side column hides ${m.clipped}px of the card`,
-        m.navBottom > m.sideBottom + 0.5 && `Previous / Next ends at ${Math.round(m.navBottom)}, below the side column (${Math.round(m.sideBottom)})`,
-        m.sideBottom > m.film + 0.5 && `side column ends at ${Math.round(m.sideBottom)}, filmstrip starts at ${Math.round(m.film)}`,
-        m.paneBottom > m.film + 0.5 && `pane ends at ${Math.round(m.paneBottom)}, filmstrip starts at ${Math.round(m.film)}`,
+        m.top < m.stage - 0.5 && `controls start at ${Math.round(m.top)}, inside the stage (ends ${Math.round(m.stage)})`,
+        m.bottom > m.film + 0.5 && `controls end at ${Math.round(m.bottom)}, ribbon starts at ${Math.round(m.film)}`,
+        m.out > 0 && `${m.out} controls outside the row`,
       ].filter(Boolean);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { notes: [`side ends ${Math.round(m.sideBottom)} (pane ${Math.round(m.paneBottom)}) <= filmstrip ${Math.round(m.film)}; nothing clipped`] };
+      return { notes: [`stage ends ${Math.round(m.stage)}, controls ${Math.round(m.top)}-${Math.round(m.bottom)}, ribbon ${Math.round(m.film)}`] };
     },
   },
   {
     name: 'stage-fit',
-    description: 'Desktop 1024×768 and 1280×800, every sample: the change card beside the picture is fully visible with no inner scrolling; at 1280×800 the filmstrip shows above the fold',
+    description: 'Desktop 1024×768, 1280×800 and 1440×900, every sample: the stage fills the column at 16:10 (1200 × 750 at 1440), the controls row sits 16 px under it, and nothing scrolls sideways',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const notes: string[] = [];
-      for (const [width, height] of [[1024, 768], [1280, 800]] as const) {
+      for (const [width, height] of [[1024, 768], [1280, 800], [1440, 900]] as const) {
         await page.setViewportSize({ width, height });
         for (const f of fixtures) {
           await openReady(page, baseUrl, `/?sample=${f.id}`);
           await settle(page);
           const m = await page.evaluate(() => {
-            const side = document.querySelector<HTMLElement>('.stage .side')!;
-            const b = side.getBoundingClientRect();
-            const last = side.lastElementChild!.getBoundingClientRect();
-            const thumbs = [...document.querySelectorAll('.frame :is(img, .frame-none)')].map((t) => t.getBoundingClientRect());
-            return {
-              scroll: side.scrollHeight - side.clientHeight,
-              top: b.top,
-              bottom: Math.max(b.bottom, last.bottom),
-              beside: b.left > document.querySelector('.vpane')!.getBoundingClientRect().right,
-              thumbTop: Math.max(...thumbs.slice(0, 6).map((t) => t.top)),
-              thumbBottom: Math.max(...thumbs.slice(0, 6).map((t) => t.bottom)),
-              scrollY,
-            };
+            const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+            return { mat: r('.vpane .vp-mat'), main: r('main'), controls: r('.controls'), scrollY };
           });
           const label = `${width}x${height} ${f.id}`;
           const problems = [
-            !m.beside && 'the card is not beside the picture',
-            m.scroll > 1 && `the side column scrolls by ${m.scroll}px`,
-            (m.top < 0 || m.bottom > height) && `the card spans ${Math.round(m.top)}-${Math.round(m.bottom)}, outside the ${height}px viewport`,
+            Math.abs(m.mat.width - m.main.width) > 1 && `stage ${Math.round(m.mat.width)} wide in a ${Math.round(m.main.width)} column`,
+            Math.abs(m.mat.width / m.mat.height - 1.6) > 0.01 && `stage ${Math.round(m.mat.width)} x ${Math.round(m.mat.height)} is not 16:10`,
+            width === 1440 && Math.round(m.mat.width) !== 1200 && `stage ${Math.round(m.mat.width)} wide at 1440, expected 1200`,
+            Math.round(m.controls.top - m.mat.bottom) !== 16 && `controls ${Math.round(m.controls.top - m.mat.bottom)} px under the stage`,
             m.scrollY !== 0 && `the page scrolled to ${m.scrollY}`,
-            // The strip is seen on first view: its thumbnails start above the fold (all of them end above it for the default, see visual-default).
-            width === 1280 && m.thumbTop > height - 16 && `filmstrip thumbnails start at ${Math.round(m.thumbTop)}, below the fold`,
           ].filter(Boolean);
           if (problems.length) throw new Error(`${label}: ${problems.join('; ')}`);
-          notes.push(`${label}: card ${Math.round(m.top)}-${Math.round(m.bottom)}, no inner scroll${width === 1280 ? `; thumbnails ${Math.round(m.thumbTop)}-${Math.round(m.thumbBottom)}` : ''}`);
+          notes.push(`${label}: stage ${Math.round(m.mat.width)} x ${Math.round(m.mat.height)}`);
+          await noPageOverflow(page);
         }
       }
       await page.setViewportSize({ width: 1280, height: 800 });
@@ -943,27 +1491,40 @@ export const flows: readonly Flow[] = [
       const ts = f.snapshots.find((s) => s.shot?.status === 'partial')!.ts;
       await openReady(page, baseUrl, `/?at=${ts}&view=single`);
       await expectShown(page, f, ts);
-      await page.locator('.vp-cap .vp-badge', { hasText: "The archive's copy is missing some styles or images" }).waitFor({ timeout: 2_000 });
-      const labelled = await page.locator('.frame-partial').count();
-      if (labelled !== f.snapshots.filter((s) => s.shot?.status === 'partial').length) throw new Error(`${labelled} filmstrip frames labelled partial`);
+      await page.locator('.vpane .vp-mat .vp-badge', { hasText: "The archive's copy is missing some styles or images" }).waitFor({ timeout: 2_000 });
+      const labelled = await page.locator('.rb-th[data-partial][aria-label$="partial copy"]').count();
+      if (labelled !== f.snapshots.filter((s) => s.shot?.status === 'partial').length) throw new Error(`${labelled} thumbnails named "partial copy"`);
       await page.waitForSelector('[data-visual-ready="true"]');
-      return { notes: [`${ts}: partial badge in the caption, ${labelled} frames labelled "◐ partial"`] };
+      return { notes: [`${ts}: partial tag on the picture, ${labelled} thumbnails named "partial copy"`] };
     },
   },
   {
     name: 'visual-failed',
-    description: 'A capture with no picture shows the hatched card, its reason and "Open capture"; its filmstrip frame says "no picture"',
+    description: 'A capture with no picture: in Slider the stage keeps its place with the reason as a tag on the picture and no caption; in Single the hatched card, its reason and "Open capture"; its thumbnail says "no picture"',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      const f = fixtures.find((x) => x.id === 'rust-lang')!;
+      // Creative Commons: captures Arquivo.pt could not replay, and one picture dropped for its fundraising price.
+      const f = fixtures.find((x) => x.id === 'creative-commons')!;
       const shot = f.snapshots.find((s) => s.shot?.status === 'failed')!;
       const card = page.locator('.vp-none', { hasText: 'No picture of this capture' });
+      const place = () => page.evaluate(() => {
+        const r = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+        return [r('.vpane .vp-mat').top, r('.vpane .vp-mat').height, r('.controls').top].map(Math.round).join(',');
+      });
+      // Slider on a pair with pictures, then on the pair lacking one: the fallback keeps the stage and the controls where they were.
+      await openReady(page, baseUrl, `/?sample=${f.id}`);
+      const before = await place();
       await openReady(page, baseUrl, `/?sample=${f.id}&at=${shot.ts}`);
+      const tag = await page.locator('.vpane .vp-mat', { hasText: /◑ No picture of the (Before|After) capture/ }).count();
+      const after = await place();
+      const caption = await page.locator('.vpane .vp-cap').count();
+      if (tag !== 1 || after !== before || caption) throw new Error(`Slider fallback: tag ${tag}, stage and controls ${before} -> ${after}, ${caption} captions`);
+      await openReady(page, baseUrl, `/?sample=${f.id}&at=${shot.ts}&view=single`);
       await card.waitFor({ timeout: 2_000 });
       const href = await page.locator('.vp-cap a').getAttribute('href');
       if (href !== viewCaptureUrl(f.source.archive, shot.ts, f.url)) throw new Error(`open capture link ${href}`);
-      if ((await page.locator('.frame-none').count()) !== f.snapshots.filter((s) => !s.shot?.file).length) throw new Error('filmstrip "no picture" frames');
-      return { notes: [`${shot.ts}: hatched card (${shot.shot!.reason}), link ${href}`] };
+      if ((await page.locator('.rb-none', { hasText: 'no picture' }).count()) !== f.snapshots.filter((s) => !s.shot?.file).length) throw new Error('"no picture" thumbnails');
+      return { notes: [`Slider fallback: tag on the picture, stage and controls at ${before}`, `${shot.ts}: hatched card (${shot.shot!.reason}), link ${href}`] };
     },
   },
   {
@@ -1030,22 +1591,20 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'compare-side',
-    description: 'Side by side: two labelled mats with their own captions and links, side by side on desktop and stacked on phones; ?view=side',
+    description: 'Side by side: two stages, each under its own tag (dot, word, date) and link, side by side on desktop and stacked on phones; ?view=side',
     async run({ page, baseUrl, viewport }) {
-      await openReady(page, baseUrl);
-      await openDisclosure(page, 'Compare');
-      await page.getByRole('radio', { name: 'Side by side' }).check();
-      const mats = await page.locator('.vp-pair .vp-mat').evaluateAll((ms) =>
-        ms.map((m) => ({ ...JSON.parse(JSON.stringify(m.getBoundingClientRect())), label: m.querySelector('.vp-label')?.textContent, links: m.querySelectorAll('.cap-out').length })),
+      await openReady(page, baseUrl, '/?view=side');
+      const figs = await page.locator('.vp-pair .vp-fig').evaluateAll((fs) =>
+        fs.map((f) => ({ ...JSON.parse(JSON.stringify(f.querySelector('.vp-mat')!.getBoundingClientRect())), label: f.querySelector('.vp-tag')?.textContent, links: f.querySelectorAll('.cap-out').length })),
       );
-      const [a, b] = mats;
+      const [a, b] = figs;
       const problems = [
-        mats.length !== 2 && `${mats.length} mats`,
-        !a?.label?.startsWith('− Before') || !b?.label?.startsWith('+ After') ? `labels ${a?.label} / ${b?.label}` : '',
-        mats.some((m) => m.links !== 1) && 'not one capture link per mat',
-        viewport === 'desktop' && a && b && (a.top !== b.top || a.right > b.left) && 'mats are not side by side',
-        viewport === 'mobile' && a && b && a.bottom > b.top && 'mats are not stacked',
-        new URL(page.url()).searchParams.get('view') !== 'side' && `URL ${page.url()}`,
+        figs.length !== 2 && `${figs.length} stages`,
+        a?.label !== `Before ${formatTimestampShort(hero.from)}` || b?.label !== `After ${formatTimestampShort(hero.to)}` ? `tags ${a?.label} / ${b?.label}` : '',
+        figs.some((m) => m.links !== 1) && 'not one capture link per stage',
+        viewport === 'desktop' && a && b && (a.top !== b.top || a.right > b.left) && 'stages are not side by side',
+        viewport === 'mobile' && a && b && a.bottom > b.top && 'stages are not stacked',
+        (await checkedMode(page)) !== 'side' && `mode ${await checkedMode(page)}`,
       ].filter(Boolean);
       // The two links' accessible names, as a screen reader gets them: word, "capture" and the date.
       const tree = await page.locator('.vp-pair').ariaSnapshot();
@@ -1057,46 +1616,46 @@ export const flows: readonly Flow[] = [
       if (shown.join() !== 'Open Before capture ↗,Open After capture ↗') problems.push(`visible link text ${shown.join(' | ')}`);
       if (problems.length) throw new Error(problems.join('; '));
       await noPageOverflow(page);
-      return { notes: [`${a.label} | ${b.label}`, `URL ${new URL(page.url()).search}`, `links: ${tree.split('\n').filter((l) => l.includes('link')).map((l) => l.trim()).join(' | ')}`] };
+      return { notes: [`${a.label} | ${b.label}`, `links: ${tree.split('\n').filter((l) => l.includes('link')).map((l) => l.trim()).join(' | ')}`] };
     },
   },
   {
-    name: 'compare-onion',
-    description: 'Onion skin: "After opacity" range by keys (step 5) sets the top picture\'s opacity; Swap puts Before on top',
-    viewports: ['desktop'],
-    async run({ page, baseUrl }) {
+    name: 'compare-segmented',
+    description: 'The compare control is one segmented radio group (one tab stop): Right from Slider checks Side by side, then Single, and the URL follows; phones offer Slider and Single',
+    async run({ page, baseUrl, viewport }) {
       await openReady(page, baseUrl);
-      await openDisclosure(page, 'Compare');
+      const labels = await page.locator('#vp-modes .vp-mode').evaluateAll((ls) => ls.filter((l) => getComputedStyle(l).display !== 'none').map((l) => l.textContent?.trim()));
+      const want = viewport === 'mobile' ? 'Slider,Single' : 'Slider,Side by side,Single';
+      if (labels.join() !== want) throw new Error(`modes shown: ${labels.join()}`);
       await page.getByRole('radio', { name: 'Slider' }).focus();
-      await page.keyboard.press('ArrowRight');
-      if ((await checkedMode(page)) !== 'onion') throw new Error(`Right from Slider checked ${await checkedMode(page)}`);
-      const range = page.getByRole('slider', { name: 'After opacity' });
-      await range.focus();
-      for (const k of ['ArrowLeft', 'ArrowLeft', 'ArrowLeft']) await page.keyboard.press(k);
-      const top = () => page.evaluate(() => [getComputedStyle(document.querySelector('.vp-top')!).opacity, document.querySelector('.vp-top img')?.getAttribute('alt')]);
-      const [op, alt] = await top();
-      if (op !== '0.35' || !alt?.includes('(After)')) throw new Error(`top picture ${alt} at opacity ${op}, expected After at 0.35`);
-      await page.getByRole('button', { name: 'Swap' }).click();
-      const [op2, alt2] = await top();
-      if (op2 !== '0.35' || !alt2?.includes('(Before)') || !(await page.getByRole('slider', { name: 'Before opacity' }).count())) throw new Error(`after Swap: ${alt2} at ${op2}`);
-      return { notes: [`After at ${op}`, `Swap: Before on top at ${op2}`] };
+      const steps: string[] = [];
+      for (const _ of viewport === 'mobile' ? [1] : [1, 2]) {
+        await page.keyboard.press('ArrowRight');
+        steps.push(`${await checkedMode(page)} (view=${new URL(page.url()).searchParams.get('view')})`);
+      }
+      if ((await checkedMode(page)) !== 'single' || new URL(page.url()).searchParams.get('view') !== 'single') throw new Error(`after Right: ${steps.join(' -> ')}`);
+      await page.keyboard.press('Tab');
+      if (await page.evaluate(() => document.activeElement?.matches('input[name="vp-mode"]'))) throw new Error('the compare control has more than one tab stop');
+      return { notes: [`shown: ${labels.join(', ')}`, `Right: ${steps.join(' -> ')}`] };
     },
   },
   {
     name: 'compare-deeplink',
-    description: '?view=onion opens Onion skin and the mode persists across selection changes; an unknown view falls back to Slider and leaves the URL',
+    description: '?view=side opens Side by side and the mode persists across selection changes; a retired ?view=onion and an unknown view fall back to Slider and leave the URL',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      await openReady(page, baseUrl, '/?view=onion');
-      if ((await checkedMode(page)) !== 'onion' || !(await page.locator('.vp-onion input[type="range"]').count())) throw new Error('?view=onion did not open Onion skin');
+      await openReady(page, baseUrl, '/?view=side');
+      if ((await checkedMode(page)) !== 'side' || !(await page.locator('.vp-pair').count())) throw new Error('?view=side did not open Side by side');
       await slider(page).focus();
       await page.keyboard.press('Home');
       await expectSelected(page, defaultFixture, 0);
       const q = new URL(page.url()).searchParams;
-      if ((await checkedMode(page)) !== 'onion' || q.get('view') !== 'onion') throw new Error(`after Home: mode ${await checkedMode(page)}, URL ${page.url()}`);
-      await openReady(page, baseUrl, '/?view=zoom');
-      if ((await checkedMode(page)) !== 'slider' || new URL(page.url()).searchParams.has('view')) throw new Error(`?view=zoom: mode ${await checkedMode(page)}, URL ${page.url()}`);
-      return { notes: [`onion kept on Home (${q.toString()})`, '?view=zoom -> Slider, view dropped'] };
+      if ((await checkedMode(page)) !== 'side' || q.get('view') !== 'side') throw new Error(`after Home: mode ${await checkedMode(page)}, URL ${page.url()}`);
+      for (const view of ['onion', 'zoom']) {
+        await openReady(page, baseUrl, `/?view=${view}`);
+        if ((await checkedMode(page)) !== 'slider' || new URL(page.url()).searchParams.has('view')) throw new Error(`?view=${view}: mode ${await checkedMode(page)}, URL ${page.url()}`);
+      }
+      return { notes: [`side kept on Home (${q.toString()})`, '?view=onion and ?view=zoom -> Slider, view dropped'] };
     },
   },
   {
@@ -1104,7 +1663,7 @@ export const flows: readonly Flow[] = [
     description: 'A compare mode on a change with a capture that has no picture shows Single, with the reason, and keeps the chosen mode',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      const f = fixtures.find((x) => x.id === 'rust-lang')!;
+      const f = fixtures.find((x) => x.id === 'creative-commons')!;
       const ts = f.snapshots.find((s) => s.shot?.status === 'failed')!.ts;
       const e = timelineOf(f).entries.find((x) => x.to === ts || x.from === ts)!;
       await openReady(page, baseUrl, `/?sample=${f.id}&change=${e.from}-${e.to}`);
@@ -1128,6 +1687,9 @@ export const flows: readonly Flow[] = [
       const quiet = await page.locator('.diff-nav [aria-live]').getAttribute('aria-live');
       const pause = await page.getByRole('button', { name: 'Pause time-lapse', exact: true }).count();
       if (pause !== 1 || (await button.getAttribute('data-playing')) === null || (await button.getAttribute('aria-pressed')) !== null || (await checkedMode(page)) !== 'single' || quiet !== 'off') throw new Error(`playing: "${await button.textContent()}" (${pause} "Pause time-lapse"), mode ${await checkedMode(page)}, nav live ${quiet}`);
+      // The playhead (the shaded span and its start line) slides linearly through each 1.2 s hold.
+      const slide = await page.locator('.rb-span').evaluate((el) => `${getComputedStyle(el).transitionDuration} ${getComputedStyle(el).transitionTimingFunction}`);
+      if (slide !== '1.2s linear') throw new Error(`playhead transition "${slide}" while playing`);
       await page.waitForTimeout(PLAY_MS * 3 + 300);
       const at = await shownIndex(page);
       if (at !== from + 3) throw new Error(`after 3 steps at #${at + 1}, expected #${from + 4}`);
@@ -1139,7 +1701,7 @@ export const flows: readonly Flow[] = [
       if (named !== 1 || (await shownIndex(page)) !== at || (await button.getAttribute('data-playing')) !== null || !status.startsWith('Stopped at capture')) throw new Error(`a key did not stop Play (status "${status}")`);
       await button.click();
       await page.waitForTimeout(PLAY_MS + 300);
-      return { notes: [`from #${from + 1} (start #${start + 1}) to #${at + 1} in 3 steps`, `stopped by a key: "${status}"`, 'shot mid-play'] };
+      return { notes: [`from #${from + 1} (start #${start + 1}) to #${at + 1} in 3 steps`, `playhead slide while playing: ${slide}`, `stopped by a key: "${status}"`, 'shot mid-play'] };
     },
   },
   {
@@ -1194,8 +1756,8 @@ export const flows: readonly Flow[] = [
     firstView: true,
     async run({ page, baseUrl }) {
       const md = readFileSync(new URL('../examples/README.md', import.meta.url), 'utf8');
-      const links = [...md.matchAll(/\[(\d{4}·\d\d·\d\d) → (\d{4}·\d\d·\d\d)[^\]]* in (Slider|Side by side|Onion skin|Single)\]\(https:\/\/pagelapse\.geekplux\.com(\/\?sample=[^)]+)\)/g)];
-      const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', 'Onion skin': 'onion', Single: 'single' };
+      const links = [...md.matchAll(/\[(\d{4}-\d\d-\d\d) → (\d{4}-\d\d-\d\d)[^\]]* in (Slider|Side by side|Single)\]\(https:\/\/pagelapse\.geekplux\.com(\/\?sample=[^)]+)\)/g)];
+      const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', Single: 'single' };
       const all = md.match(/\]\(https:\/\/pagelapse\.geekplux\.com\/\?sample=/g)?.length ?? 0;
       if (all !== 7 || links.length !== all) throw new Error(`examples/README.md: ${links.length} of ${all} sample links parsed, expected 7`);
       const notes: string[] = [];
@@ -1205,19 +1767,21 @@ export const flows: readonly Flow[] = [
         await openReady(page, baseUrl, path);
         const m = await page.evaluate(() => ({
           label: document.querySelector('#sample-label')?.textContent?.trim(),
-          dates: [...document.querySelectorAll('#change-heading time [aria-hidden="true"]')].map((t) => t.textContent?.trim()),
+          // The change section's Before and After dates (the summary heading holds no dates since phase 5).
+          dates: [...document.querySelectorAll('.cs-when time [aria-hidden="true"]')].map((t) => t.textContent?.trim()),
           mode: document.querySelector<HTMLInputElement>('input[name="vp-mode"]:checked')?.value,
         }));
         const problems = [
           m.label !== f?.label && `sample "${m.label}"`,
-          m.dates.join() !== `${from},${to}` && `change ${m.dates.join(' → ')}`,
+          // The gallery writes dates as YYYY-MM-DD; the app shows them as `17 Mar 2014`.
+          m.dates.join() !== [from, to].map((d) => formatTimestampShort(`${d!.replace(/\D/g, '')}000000`)).join() && `change ${m.dates.join(' → ')}`,
           m.mode !== MODE[mode!] && `mode ${m.mode}`,
         ].filter(Boolean);
         if (problems.length) throw new Error(`${path}: ${problems.join('; ')}, expected ${from} → ${to} in ${mode}`);
         notes.push(`${q.get('sample')} ${from} → ${to} in ${mode}`);
       }
-      // The shot: the gallery's Wikipedia redesign link (the git-scm decade compare is the hero shot already).
-      await openReady(page, baseUrl, links.find((l) => l[4]!.includes('wikipedia') && l[3] === 'Slider')![4]);
+      // The shot: the gallery's Wikipedia redesign link (the decade compare is the workspace shot already).
+      await openReady(page, baseUrl, links.find((l) => l[4]!.includes('wikipedia') && l[4]!.includes('&change=') && l[3] === 'Slider')![4]);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       return { notes: [`${links.length} links`, ...notes] };
     },
@@ -1234,17 +1798,22 @@ export const flows: readonly Flow[] = [
       mkdirSync(dir, { recursive: true });
       const shots: number[] = [];
       const shoot = async (i: number) => {
+        // Play keeps the ribbon in view, which scrolls the stage's top away: frame the stage once its picture is decoded.
+        await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+        await page.evaluate(() => Promise.all([...document.images].map((img) => img.decode().catch(() => undefined))));
         await settle(page);
         writeFileSync(new URL(`frame-${String(shots.length).padStart(2, '0')}.png`, dir), await page.screenshot());
         shots.push(i);
       };
+      // No crossfades: each frame is one capture, not two half-faded ones.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
       await openReady(page, baseUrl);
       await page.waitForSelector('[data-visual-ready="true"]', { timeout: 5_000 });
       await shoot(-1);
       await page.locator('.vp-play').click();
       const last = defaultFixture.snapshots.length - 1;
       for (let i = 0; i <= last; i++) {
-        await page.locator(`.frame[aria-current="true"] time[datetime="${timestampToIso(defaultFixture.snapshots[i]!.ts)}"]`).waitFor({ timeout: PLAY_MS * 3 });
+        await page.locator(`.rb-th[aria-current="true"][data-ts="${defaultFixture.snapshots[i]!.ts}"]`).waitFor({ timeout: PLAY_MS * 3 });
         await shoot(i);
       }
       return { notes: [`${shots.length} frames: the decade compare, then captures #01-#${last + 1}`] };

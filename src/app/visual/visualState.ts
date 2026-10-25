@@ -41,10 +41,11 @@ export function initialView(entries: readonly Pair[], captures: readonly string[
   return { index, at: at ?? entries[index]?.to ?? captures.at(-1) ?? '' };
 }
 
-/** How the pane compares a change's two captures. Slider is the first view (D23). */
-export type Mode = 'single' | 'side' | 'slider' | 'onion';
-export const MODES: readonly [Mode, string][] = [['single', 'Single'], ['side', 'Side by side'], ['slider', 'Slider'], ['onion', 'Onion skin']];
+/** How the pane compares a change's two captures, in the segmented control's order. Slider is the first view (D23). */
+export type Mode = 'slider' | 'side' | 'single';
+export const MODES: readonly [Mode, string][] = [['slider', 'Slider'], ['side', 'Side by side'], ['single', 'Single']];
 export const DEFAULT_MODE: Mode = 'slider';
+/** A known mode, else undefined (the caller falls back to its default; a retired `onion` link opens Slider). */
 export const parseMode = (v?: string): Mode | undefined => MODES.find(([m]) => m === v)?.[0];
 
 /** Live runs open in Single: one archived page per selection, a compare mode on request (D24). */
@@ -69,20 +70,20 @@ const SPLIT_KEYS: Record<string, (v: number) => number> = {
 /** The divider position (0-100, % of Before shown) after `key`, or `null` when the key does not move it. Enter resets to 50. */
 export const splitFromKey = (key: string, v: number): number | null => (SPLIT_KEYS[key] ? clamp(SPLIT_KEYS[key](v)) : null);
 
-/** The divider position under a pointer at `x` over a box starting at `left`, `width` wide. */
-export const splitFromPointer = (x: number, left: number, width: number) => (width > 0 ? clamp(((x - left) / width) * 100) : 50);
+/** The divider position under a pointer at `x` over a box starting at `left`, `width` wide: 1:1, to a tenth of a percent. */
+export const splitFromPointer = (x: number, left: number, width: number) => (width > 0 ? Math.min(100, Math.max(0, Math.round(((x - left) / width) * 1000) / 10)) : 50);
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const monthYear = (ts: string) => `${MONTHS[Number(ts.slice(4, 6)) - 1] ?? ''} ${ts.slice(0, 4)}`.trim();
 
 /** The slider's `aria-valuetext`: `40% before (November 2013), 60% after (December 2025)`; same-year captures stay apart. */
-export const splitText = (v: number, e: Pair) => `${v}% before (${monthYear(e.from)}), ${100 - v}% after (${monthYear(e.to)})`;
+export const splitText = (v: number, e: Pair) => `${Math.round(v)}% before (${monthYear(e.from)}), ${100 - Math.round(v)}% after (${monthYear(e.to)})`;
 
 /** Same-origin URL of a recorded picture (`public/samples/<id>/`), full size or thumbnail. */
 export const shotSrc = (sampleId: string, file: string, thumb = false) => `/samples/${sampleId}/${file}${thumb ? '.thumb' : ''}.webp`;
 
 /**
- * One capture as the pane and filmstrip show it: a recorded picture (`shot`, samples), the archive's live replay in a
+ * One capture as the pane and the ribbon show it: a recorded picture (`shot`, samples), the archive's live replay in a
  * frame (`frame`, live runs, with the extracted text for its silhouette), or no picture (`none`).
  */
 export interface CaptureView {
@@ -108,7 +109,7 @@ export function sampleView(f: SampleFixture, ts: string): CaptureView {
 export const liveView = (url: string, ts: string, page?: ExtractedPage): CaptureView =>
   page ? { ts, source: 'frame', src: replayFrameUrl('internet-archive', ts, url), page } : { ts, source: 'none', src: '', reason: 'This capture could not be fetched.' };
 
-/** Frame number as shown on the filmstrip, `#01`. */
+/** Capture number, `#01`. */
 export const frameNo = (i: number) => `#${String(i + 1).padStart(2, '0')}`;
 
 const SIDE_WORD: Record<Side, string> = { before: 'Before', after: 'After' };
@@ -123,7 +124,7 @@ export function showingText(captures: readonly string[], e: Pair, at: string, tr
   return `capture ${frameNo(captures.indexOf(at))}, ${formatTimestampLong(at)}${trivial ? ', trivial edit' : ''}`;
 }
 
-/** Alt text of the pane's picture: `git-scm.com home page as captured 18 December 2025 (After), top of page`. */
+/** Alt text of the pane's picture: `NASA home page as captured 15 February 2008 (After), top of page`. */
 export const shotAlt = (label: string, e: Pair, at: string, what = 'top of page') => {
   const side = sideOf(e, at);
   return `${label} as captured ${formatTimestampLong(at)}${side ? ` (${SIDE_WORD[side]})` : ''}, ${what}`;
@@ -139,4 +140,28 @@ export function overviewPair(snapshots: readonly { ts: string; shot?: ShotRef | 
   const [first, last] = [ok[0], ok.at(-1)];
   if (!first || !last || first === last) return undefined;
   return { from: first.ts, to: last.ts, skipped: snapshots.indexOf(first) };
+}
+
+/** The address's view of a sample: `?change=`, `?at=`, `?view=`. */
+export interface OpenQuery {
+  change?: string | undefined;
+  at?: string | undefined;
+  view?: string | undefined;
+}
+
+/** The default sample (`overview`) opens on its decade compare unless the address names a change, a capture or Single. */
+export const opensOnDecade = (overview: boolean, q: OpenQuery): boolean => overview && !q.change && !q.at && parseMode(q.view) !== 'single';
+
+/**
+ * The captures whose pictures the workspace shows first, worked out without the timeline (main.tsx decodes them before
+ * the first render): the decade compare's two; else in Single the capture shown; else the change's two (the featured
+ * change when the address names none). A capture named alone (`?at=`) yields just that capture; the timeline decodes
+ * its change's pair once it renders. Unknown values are dropped later.
+ */
+export function firstCaptures(f: { snapshots: readonly { ts: string; shot?: ShotRef | undefined }[]; featured?: string | undefined }, q: OpenQuery, overview: boolean): string[] {
+  const decade = opensOnDecade(overview, q) ? overviewPair(f.snapshots) : undefined;
+  if (decade) return [decade.from, decade.to];
+  const pair = (q.change ?? (q.at ? undefined : f.featured))?.split('-') ?? [];
+  if (parseMode(q.view) === 'single') return [q.at ?? pair[1] ?? f.snapshots.at(-1)?.ts].filter((ts): ts is string => !!ts);
+  return q.at && !q.change ? [q.at] : pair;
 }

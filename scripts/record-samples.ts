@@ -1,7 +1,8 @@
 // Records the built-in samples from a web archive into trimmed, block-interned fixtures.
 // The only code that touches the live network (AC 20); never imported by tests.
 //
-// Usage: pnpm record:samples [--archive internet-archive|arquivo-pt] [--only <id>] [--max 14] [--dry-run] [--offline]
+// Usage: pnpm record:samples [--archive internet-archive|arquivo-pt] [--only <id>[,<id>…]] [--max 14] [--dry-run] [--offline]
+// --only takes one id or a comma-separated list (`--only nasa,creative-commons`); without it every config entry is recorded.
 // --offline re-records from .cache/record/ only and fails on a cache miss instead of fetching.
 // Politeness: one request at a time, >= 1.5 s apart, identified User-Agent, and every response
 // (CDX and raw HTML) cached in .cache/record/ so re-runs never refetch. Delete it to refresh.
@@ -11,6 +12,7 @@ import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { gzipSync } from 'node:zlib';
 import { writeFixture } from './lib/fixtureFile.ts';
+import { pickSamples, readSampleConfig } from './lib/sampleConfig.ts';
 import { ARCHIVE_IDS } from '../src/archive/archives.ts';
 import { APP_VERSION, HttpError, politeFetch } from '../src/archive/politeFetch.ts';
 import { buildCdxUrl, dedupeAdjacentDigests, parseCdx } from '../src/core/cdx.ts';
@@ -47,10 +49,7 @@ const { values: args } = parseArgs({
 const archive = args.archive as ArchiveId;
 if (!ARCHIVE_IDS.includes(archive)) throw new Error(`--archive must be one of ${ARCHIVE_IDS.join(', ')}`);
 const max = Number(args.max);
-const configs = (JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as SampleConfig[]).filter(
-  (c) => !args.only || c.id === args.only,
-);
-if (!configs.length) throw new Error(`no sample with id "${args.only}"`);
+const configs = pickSamples(readSampleConfig<SampleConfig>(root), args.only);
 
 const cacheDir = join(root, '.cache/record', archive);
 mkdirSync(cacheDir, { recursive: true });

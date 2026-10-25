@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captureForChange, changeForCapture, frameNo, initialView, overviewPair, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
+import { DEFAULT_MODE, MODES, captureForChange, changeForCapture, firstCaptures, frameNo, initialView, opensOnDecade, overviewPair, parseMode, shotAlt, shotSrc, showingText, sideOf, splitFromKey, splitFromPointer, splitText, viewQuery } from './visualState.ts';
 
 const caps = ['2013', '2014', '2015', '2016', '2017'].map((y) => `${y}0101000000`);
 // 2015 is a trivial capture: the 2014 -> 2016 change skips it.
@@ -39,14 +39,19 @@ describe('visualState', () => {
 
   it('keeps the default `at` out of the query', () => {
     expect(viewQuery(entries[1]!, caps[3]!)).toEqual({ change: `${caps[1]}-${caps[3]}`, at: undefined, view: undefined });
-    expect(viewQuery(entries[1]!, caps[1]!, 'onion')).toEqual({ change: `${caps[1]}-${caps[3]}`, at: caps[1], view: 'onion' });
+    expect(viewQuery(entries[1]!, caps[1]!, 'side')).toEqual({ change: `${caps[1]}-${caps[3]}`, at: caps[1], view: 'side' });
     expect(viewQuery(entries[1]!, caps[3]!, 'slider').view).toBeUndefined();
     expect(viewQuery(entries[1]!, caps[3]!, 'slider', 'single').view).toBe('slider');
     expect(viewQuery(entries[1]!, caps[3]!, 'single', 'single').view).toBeUndefined();
   });
 
-  it('parses compare modes', () => {
-    expect(['single', 'side', 'slider', 'onion', 'zoom', undefined].map((v) => parseMode(v))).toEqual(['single', 'side', 'slider', 'onion', undefined, undefined]);
+  it('parses compare modes; the retired onion skin is unknown, so a `view=onion` link opens Slider', () => {
+    expect(['single', 'side', 'slider', 'onion', 'zoom', undefined].map((v) => parseMode(v))).toEqual(['single', 'side', 'slider', undefined, undefined, undefined]);
+    expect(parseMode('onion') ?? DEFAULT_MODE).toBe('slider');
+  });
+
+  it('lists the modes in the segmented control\'s order: Slider, Side by side, Single', () => {
+    expect(MODES.map(([, label]) => label)).toEqual(['Slider', 'Side by side', 'Single']);
   });
 
   it('moves the divider by key: ±5, ±25 by page, Home/End, Enter resets; clamped to 0-100', () => {
@@ -61,16 +66,19 @@ describe('visualState', () => {
     expect(splitFromPointer(50, 100, 200)).toBe(0);
     expect(splitFromPointer(400, 100, 200)).toBe(100);
     expect(splitFromPointer(10, 0, 0)).toBe(50);
+    // 1:1 with the pointer: one pixel of a 1200 px stage is not rounded to a whole percent.
+    expect(splitFromPointer(601, 0, 1200)).toBe(50.1);
   });
 
   it('says how much of each side the slider shows', () => {
     expect(splitText(40, { from: '20131106090756', to: '20251218000000' })).toBe('40% before (November 2013), 60% after (December 2025)');
+    expect(splitText(50.1, { from: '20131106090756', to: '20251218000000' })).toBe('50% before (November 2013), 50% after (December 2025)');
     expect(splitText(100, { from: '20250404000000', to: '20251218000000' })).toBe('100% before (April 2025), 0% after (December 2025)');
   });
 
   it('builds same-origin picture URLs and frame numbers', () => {
-    expect(shotSrc('git-scm', '20131106090756-302c3cea')).toBe('/samples/git-scm/20131106090756-302c3cea.webp');
-    expect(shotSrc('git-scm', '20131106090756-302c3cea', true)).toBe('/samples/git-scm/20131106090756-302c3cea.thumb.webp');
+    expect(shotSrc('nasa', '19970605230559-47f6dc29')).toBe('/samples/nasa/19970605230559-47f6dc29.webp');
+    expect(shotSrc('nasa', '19970605230559-47f6dc29', true)).toBe('/samples/nasa/19970605230559-47f6dc29.thumb.webp');
     expect(frameNo(0)).toBe('#01');
     expect(frameNo(13)).toBe('#14');
   });
@@ -101,5 +109,26 @@ describe('visualState', () => {
     expect(overviewPair(snaps.map((s) => ({ ...s, shot: shot('ok') })))).toEqual({ from: caps[0], to: caps[4], skipped: 0 });
     expect(overviewPair(snaps.slice(0, 3))).toBeUndefined();
     expect(overviewPair([])).toBeUndefined();
+  });
+
+  it('opens the default sample on its decade compare only when the address names no change, capture or Single', () => {
+    expect(opensOnDecade(true, {})).toBe(true);
+    expect(opensOnDecade(true, { view: 'side' })).toBe(true);
+    expect(opensOnDecade(true, { view: 'single' })).toBe(false);
+    expect(opensOnDecade(true, { change: 'a-b' })).toBe(false);
+    expect(opensOnDecade(true, { at: caps[1] })).toBe(false);
+    expect(opensOnDecade(false, {})).toBe(false);
+  });
+
+  it('names the pictures the workspace shows first, without the timeline', () => {
+    const ok = { status: 'ok' as const, settle: 'quiet' as const, file: 'x' };
+    const f = { snapshots: caps.map((ts) => ({ ts, shot: ok })), featured: `${caps[1]}-${caps[3]}` };
+    expect(firstCaptures(f, {}, true)).toEqual([caps[0], caps[4]]);
+    expect(firstCaptures(f, { view: 'single' }, true)).toEqual([caps[3]]);
+    expect(firstCaptures(f, { view: 'side' }, false)).toEqual([caps[1], caps[3]]);
+    expect(firstCaptures(f, { change: `${caps[3]}-${caps[4]}` }, true)).toEqual([caps[3], caps[4]]);
+    expect(firstCaptures(f, { at: caps[2], view: 'single' }, true)).toEqual([caps[2]]);
+    expect(firstCaptures(f, { at: caps[2] }, true)).toEqual([caps[2]]);
+    expect(firstCaptures({ snapshots: f.snapshots }, { view: 'single' }, false)).toEqual([caps[4]]);
   });
 });

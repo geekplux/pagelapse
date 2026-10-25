@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import git from '../samples/git-scm.json';
-import rust from '../samples/rust-lang.json';
+import cc from '../samples/creative-commons.json';
+import nasa from '../samples/nasa.json';
 import wiki from '../samples/wikipedia-internet-archive.json';
 import { MAX_RECORD_CHARS, MAX_SNIPPET_CHARS, toChangeRecord } from './changeRecord.ts';
 import { diffPages } from './diff.ts';
@@ -10,7 +10,7 @@ import { MAGNITUDE_THRESHOLDS } from './score.ts';
 import { appendSnapshot, buildTimeline, emptyTimeline, trivialEntries } from './timeline.ts';
 import type { ChangeRecord, SnapshotPage } from './types.ts';
 
-const samples = [wiki, git, rust].map((j) => parseSampleFixture(j));
+const samples = [wiki, nasa, cc].map((j) => parseSampleFixture(j));
 const snap = (n: number, texts: string[], title = 'Field notes'): SnapshotPage => ({
   ts: `2020010${n}000000`,
   digest: `d${n}`,
@@ -65,6 +65,38 @@ describe('ruleSummary', () => {
     expect(ruleSummary(toChangeRecord(diffPages(snap(1, BASE), e), snap(1, BASE), e))).toMatch(/^Title changed to .*; added 2 sections incl\. "Why Rust\?"/);
   });
 
+  it('names a rename only between two headings that read as titles (Wikipedia, first capture to the latest)', () => {
+    // Real fixture data: the 2018 page's paragraph "40" pairs with the 2026 heading "2024 cyberattacks" (their word
+    // sets match once digits fold), which read as `Renamed section "40" to "2024 cyberattacks"`.
+    const s = fixtureToSnapshots(samples[0]!);
+    const [a, b] = [s.find((x) => x.ts === '20180425033645')!, s.find((x) => x.ts === '20260210204802')!];
+    const r = toChangeRecord(diffPages(a, b), a, b);
+    expect(r.headingsRenamed ?? []).toEqual([]);
+    expect(r.headingsAdded).toContain('2024 cyberattacks');
+    expect(ruleSummary(r)).toBe('Added section "2024 cyberattacks"; removed 3 sections incl. "Web archiving" (+913 / −963 words)');
+    // Minimal: a bare number, a date or a count on either side of a reworded heading is not a section name.
+    const h = (text: string) => ({ kind: 'heading' as const, text, level: 2 as const });
+    const page = (n: number, head: string) => ({ ...snap(n, BASE), blocks: [h(head), ...snap(n, BASE).blocks] });
+    for (const [x, y] of [['40', '2024 cyberattacks'], ['12 May 2024', 'May 2024 news'], ['1,204', '1,204 downloads']] as const) {
+      const [c, d] = [page(1, x), page(2, y)];
+      const rec = toChangeRecord(diffPages(c, d), c, d);
+      expect(rec.headingsRenamed ?? []).toEqual([]);
+      expect(ruleSummary(rec)).toMatch(new RegExp(`^Added section "${y}"`));
+    }
+  });
+
+  it('counts bare-year headings as sections added or removed, and a year heading changing as one gone and one new', () => {
+    const h = (text: string) => ({ kind: 'heading' as const, text, level: 2 as const });
+    const base = snap(1, BASE);
+    const added = { ...snap(2, BASE), blocks: [h('2025'), ...base.blocks] };
+    expect(toChangeRecord(diffPages(base, added), base, added).headingsAdded).toEqual(['2025']);
+    expect(ruleSummary(toChangeRecord(diffPages(added, base), added, base))).toMatch(/^Removed section "2025"/);
+    const [c, d] = [{ ...snap(1, BASE), blocks: [h('2023'), ...base.blocks] }, { ...snap(2, BASE), blocks: [h('2024'), ...base.blocks] }];
+    const r = toChangeRecord(diffPages(c, d), c, d);
+    expect([r.headingsRenamed ?? [], r.headingsAdded, r.headingsRemoved]).toEqual([[], ['2024'], ['2023']]);
+    expect(ruleSummary(r)).toBe('Added section "2024"; removed section "2023" (+1 / −1 words)');
+  });
+
   it('stays within budget for long names, and falls back for moves only', () => {
     const stats = { wordsAdded: 12345, wordsRemoved: 6789, blocksAdded: 3, blocksRemoved: 1, blocksModified: 0 };
     const r: ChangeRecord = { pair: 'p', title: 'x'.repeat(100), titleChanged: true, headingsAdded: ['y'.repeat(80), 'z'], headingsRemoved: ['w'.repeat(80)], added: [], removed: [], modified: [], stats };
@@ -106,6 +138,6 @@ describe('buildTimeline', () => {
   it('each committed sample yields 4-15 meaningful changes', () => {
     const counts = Object.fromEntries(samples.map((f) => [f.id, buildTimeline(f.url, fixtureToSnapshots(f)).entries.length]));
     expect(Object.values(counts).every((n) => n >= 4 && n <= 15)).toBe(true);
-    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, 'git-scm': 9, 'rust-lang': 5 }); // recorded in phase 6
+    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, nasa: 10, 'creative-commons': 13 }); // Wikipedia recorded in phase 6, NASA and Creative Commons on 2026-10-25
   });
 });

@@ -37,10 +37,10 @@ Write tests next to the code (`*.test.ts`). Prefer small, typed functions with T
 
 ## Design rules: crowding is a bug
 
-Every UI change is reviewed against [docs/DESIGN.md](docs/DESIGN.md), and especially its **Calm layout** rules.
+Every UI change is reviewed against [docs/DESIGN.md](docs/DESIGN.md): its binding UI rules and its [calm layout caps](docs/DESIGN.md#calm-layout-caps).
 
 - Each view has exactly one focal point. A change that adds a second one, or pushes the first screen over its caps (regions, tab stops, framed boxes, eyebrow labels, accent fills), **fails review**, however useful the feature. Fold secondary things behind a native `<details>` disclosure instead.
-- Spacing uses only the six `--space-*` tokens (`spacing.test.ts` enforces it). There is one accent, ink, and a solid fill is kept for one primary action per view.
+- Spacing uses only the six `--space-*` tokens (`spacing.test.ts` enforces it), type only the sizes 12, 14, 20 and 40, and lines are 0.5px hairlines. Cyan means Before and amber After, each with a word, a ring or a symbol, and a solid fill is kept for one primary action per view.
 - Never rely on colour alone, keep everything keyboard operable with a visible focus ring, and respect `prefers-reduced-motion`. Colours come from `src/design/palette.ts` and must keep passing `palette.test.ts` (contrast and colour-vision deficiency checks).
 - Include a screenshot (1440 px wide, light theme) of every UI change in the pull request.
 
@@ -48,10 +48,10 @@ Every UI change is reviewed against [docs/DESIGN.md](docs/DESIGN.md), and especi
 
 The built-in samples are committed so the first view works offline. Re-recording is rarely needed, and it must stay polite:
 
-- `pnpm record:samples [--only <id>]` records the text from an archive's raw captures into `src/samples/<id>.json`. Settings live in `src/samples/samples.config.json`.
-- `pnpm record:visuals [--only <id>]` screenshots the same captures in headless Chrome into `public/samples/<id>/` and writes each picture's status into the fixture. One capture at a time, at least 5 s apart, with only the archive's hosts allowed.
+- `pnpm record:samples [--only <id>,<id>]` records the text from an archive's raw captures into `src/samples/<id>.json`. Settings live in `src/samples/samples.config.json`.
+- `pnpm record:visuals [--only <id>,<id>]` screenshots the same captures in headless Chrome into `public/samples/<id>/` and writes each picture's status into the fixture. One capture at a time, at least 5 s apart, with only the archive's hosts allowed.
 - Both cache everything under `.cache/record/` (gitignored), and `--offline` rebuilds from that cache with no network at all. Use `--dry-run` first.
-- **Image budget**, checked by `pnpm size` and `src/samples/samples.test.ts`: each full picture (960×600 WebP) at most 64 KB, each thumbnail (320×200) at most 8 KB, all sample pictures together at most 2.2 MB, and the first view's pictures at most 160 KB.
+- **Image budget**, checked by `pnpm size` and `scripts/lib/pictures.test.ts`: each full picture (960×600 WebP) at most 64 KB, each thumbnail (320×200) at most 8 KB, all sample pictures together at most 2.2 MB, the first view's pictures at most 160 KB, and at least 85% of captures with a picture.
 - Samples must be openly licensed and attributed, and stay away from finance topics. Blocks that state monetary figures are trimmed from text and hidden in pictures, and the fixture says so.
 
 ## Being kind to the archives

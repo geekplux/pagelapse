@@ -5,16 +5,16 @@ import { viewCaptureUrl } from '../core/url.ts';
 import { fixtureToSnapshots } from '../core/fixture.ts';
 import { buildTimeline, compareCaptures, trivialEntries, withAiSummaries } from '../core/timeline.ts';
 import { changePictures, decodePicture } from '../samples/index.ts';
-import { ChangesList } from './ChangesList.tsx';
-import { ChangeCard, DiffView } from './diff/DiffView.tsx';
-import { Legend } from './timeline/Legend.tsx';
-import { Timeline } from './timeline/Timeline.tsx';
+import { ChangeSection } from './ChangeSection.tsx';
+import { EveryChange } from './EveryChange.tsx';
+import { SheetHead } from './SheetHead.tsx';
+import { Ribbon } from './timeline/Ribbon.tsx';
 import { Ts } from './Ts.tsx';
 import { type UrlState, changeIndex } from './urlState.ts';
-import { Filmstrip } from './visual/Filmstrip.tsx';
+import { StepNav } from './visual/Controls.tsx';
 import { usePlay } from './visual/usePlay.ts';
 import { VisualPane } from './visual/VisualPane.tsx';
-import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, overviewPair, pairOf, parseMode, sampleView, shotSrc, showingText, sideOf, viewQuery } from './visual/visualState.ts';
+import { DEFAULT_MODE, type Mode, type Side, captureForChange, changeForCapture, initialView, opensOnDecade, overviewPair, pairOf, parseMode, sampleView, showingText, sideOf, viewQuery } from './visual/visualState.ts';
 
 interface Props {
   fixture: SampleFixture;
@@ -29,7 +29,7 @@ interface Props {
   onChange: (q: Pick<UrlState, 'change' | 'at' | 'view'>) => void;
 }
 
-/** The sample: the hero (title, picture, change line and controls), the scrub strip (filmstrip over timeline), the folded lists, then the diff. */
+/** The sample: the title block, the stage and its controls, the time ribbon, the change and its text diff, every change, then all captures (folded). */
 export function TimelineView({ fixture, initialChange, initialAt, initialMode, overview = false, onChange }: Props) {
   const root = useRef<HTMLElement>(null);
   const { snapshots } = fixture;
@@ -46,8 +46,13 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     [showTrivial, entries, timeline],
   );
   const shown = useMemo(() => ({ ...timeline, entries: all, trivialCaptures: showTrivial ? [] : trivialCaptures }), [timeline, all, showTrivial, trivialCaptures]);
+  // The default sample opens on its decade compare unless the address names a change, a capture or Single.
+  const [decade] = useState(() => opensOnDecade(overview, { change: initialChange, at: initialAt, view: initialMode }));
   const [view, setView] = useState(() => {
-    const v = initialView(entries, snapshots.map((s) => s.ts), { change: initialChange, at: initialAt, featured: fixture.featured });
+    // Under the decade compare the timeline keeps the latest change selected (so Play starts from the first capture);
+    // otherwise the sample opens on its featured change.
+    const featured = decade ? undefined : fixture.featured;
+    const v = initialView(entries, snapshots.map((s) => s.ts), { change: initialChange, at: initialAt, featured });
     return { key: entries[v.index] ? pairOf(entries[v.index]!) : '', at: v.at };
   });
   const [mode, setMode] = useState<Mode>(() => parseMode(initialMode) ?? DEFAULT_MODE);
@@ -58,12 +63,11 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     const [a, b] = [pair?.from, pair?.to].map((ts) => timeline.snapshots.find((s) => s.ts === ts));
     return pair && a && b ? { entry: compareCaptures(a, b), skipped: pair.skipped, latest: pair.to === snapshots.at(-1)?.ts } : undefined;
   }, [overview, snapshots, timeline]);
-  const [wide, setWide] = useState(() => !!span && entries.length > 0 && !initialChange && !initialAt && parseMode(initialMode) !== 'single');
+  const [wide, setWide] = useState(() => !!span && entries.length > 0 && decade);
   const selected = changeIndex(all, view.key);
   const entry = all[selected];
   const shownEntry = wide && span ? span.entry : entry;
   const ends = span && ([span.skipped ? 'earliest complete' : 'first', span.latest ? 'latest' : 'latest complete'] as const);
-  const years = `${snapshots[0]?.ts.slice(0, 4)}–${snapshots.at(-1)?.ts.slice(0, 4)}`;
   const capUrl = (ts: string) => viewCaptureUrl(fixture.source.archive, ts, fixture.url);
   const page = (ts: string) => timeline.snapshots.find((s) => s.ts === ts);
   /** Selects change `e`, showing capture `at` (default: the same side as now, so Before stays Before while scrubbing). */
@@ -87,7 +91,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     if (!on && !entries.some((e) => pairOf(e) === view.key)) showCapture(view.at, entries);
   };
   // Play steps through every capture in Single mode, from the first when the last is shown; it stops at the last.
-  const captures = snapshots.map((s) => s.ts);
+  const captures = useMemo(() => snapshots.map((s) => s.ts), [snapshots]);
   const play = usePlay(() => {
     const next = captures[captures.indexOf(view.at) + 1];
     if (next) showCapture(next);
@@ -101,10 +105,6 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
       else if (entry) onChange(viewQuery(entry, view.at, 'single'));
     }
     play.toggle();
-  };
-  const thumbOf = (ts: string) => {
-    const file = snapshots.find((s) => s.ts === ts)?.shot?.file;
-    return file && shotSrc(fixture.id, file, true);
   };
   const viewOf = (ts: string) => sampleView(fixture, ts);
   const items = useMemo(() => snapshots.map((s) => sampleView(fixture, s.ts)), [fixture, snapshots]);
@@ -141,12 +141,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
     <article className="sheet" aria-labelledby="sample-label" ref={root}>
       <div className="stage">
         <div className="hero" data-region="hero">
-          <div className="sheet-head">
-            <h2 id="sample-label">{fixture.label}</h2>
-            <p className="sheet-meta mono">
-              {snapshots.length} captures · {years}
-            </p>
-          </div>
+          <SheetHead id="sample-label" title={fixture.label} captures={captures} changes={entries.length} trivial={trivialCaptures.length} sample />
           {entry && shownEntry && (
             <VisualPane
               label={fixture.label}
@@ -160,39 +155,37 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
               onMode={changeMode}
               onSide={(side: Side) => choose(entry, captureForChange(entry, side))}
               play={{ ...play, toggle: togglePlay }}
-              pairNote={wide && ends ? `${ends[0]} and ${ends[1]} capture` : undefined}
-              side={(lead, tools) => (
-                <div className="side">
-                  <ChangeCard entry={shownEntry} index={selected} count={all.length} captureUrl={capUrl} onSelect={select} showing={showingText(captures, shownEntry, view.at, trivial.has(view.at))} quiet={play.playing} lead={lead} tools={tools} overview={wide ? ends : undefined} />
-                </div>
-              )}
+              nav={<StepNav entry={shownEntry} index={selected} count={all.length} onSelect={select} showing={showingText(captures, shownEntry, view.at, trivial.has(view.at))} quiet={play.playing} overview={wide ? ends : undefined} />}
             />
           )}
         </div>
         <div className="scrub" data-region="scrub">
-          <Filmstrip items={items} at={view.at} trivial={trivial} onSelect={(ts) => showCapture(ts)} />
-          <div className="tl-area">
-            <h3 id="timeline-heading" className="sr-only">
-              Timeline
-            </h3>
-            {entry ? (
-              <Timeline timeline={shown} selected={selected} onSelect={select} labelledBy="timeline-heading" describedBy="timeline-legend" thumbOf={thumbOf} />
-            ) : (
-              <p className="panel-summary" id="diff" tabIndex={-1}>
-                Nothing meaningful changed across {snapshots.length} captures.
-              </p>
-            )}
-            <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={toggleTrivial} />
-          </div>
+          <h3 id="timeline-heading" className="sr-only">
+            Timeline
+          </h3>
+          <Ribbon
+            items={items}
+            times={captures}
+            timeline={shown}
+            selected={selected}
+            pair={shownEntry}
+            at={view.at}
+            onSelect={select}
+            onCapture={(ts) => showCapture(ts)}
+            labelledBy="timeline-heading"
+            playing={play.playing}
+          />
         </div>
-        <div className="lists" data-region="changes">
-          {entry && (
-            // The timeline's text alternative, folded at every width (one Enter away).
-            <details className="fold changes-pane">
-              <summary id="changes-heading">All changes ({all.length})</summary>
-              <ChangesList entries={all} selected={selected} onSelect={select} />
-            </details>
-          )}
+        <ChangeSection
+          entry={shownEntry}
+          from={shownEntry && page(shownEntry.from)}
+          to={shownEntry && page(shownEntry.to)}
+          archive={ARCHIVES[fixture.source.archive].name}
+          captureUrl={capUrl}
+          empty={<p className="cs-empty">Nothing meaningful changed across {snapshots.length} captures.</p>}
+        />
+        <EveryChange entries={all} selected={selected} onSelect={select} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={toggleTrivial} />
+        <div className="lists">
           <details className="fold captures-all">
             <summary>All {snapshots.length} captures</summary>
             <p className="captures-source">
@@ -216,7 +209,7 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
                     {trivial.has(s.ts) && (
                       <>
                         {' '}
-                        <span className="source-label mono">trivial edit</span>
+                        <span className="tag">trivial edit</span>
                       </>
                     )}
                   </span>
@@ -225,7 +218,6 @@ export function TimelineView({ fixture, initialChange, initialAt, initialMode, o
             </ol>
           </details>
         </div>
-        {shownEntry && <DiffView entry={shownEntry} from={page(shownEntry.from)!} to={page(shownEntry.to)!} />}
       </div>
     </article>
   );

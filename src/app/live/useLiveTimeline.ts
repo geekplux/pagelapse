@@ -15,7 +15,7 @@ const CONCURRENCY = 2;
 
 /**
  * Runs a live lookup of `url` on mount: the capture list, then each capture's text, in time order, two at a time.
- * A capture that fails is skipped (dashed); a rate limit stops the run. Unmounting or `cancel` aborts everything in flight.
+ * A capture that fails is skipped (its thumbnail says "not fetched"); a rate limit stops the run. Unmounting or `cancel` aborts everything in flight.
  */
 export function useLiveTimeline(url: string) {
   const [state, dispatch] = useReducer(liveReducer, url, initialLive);

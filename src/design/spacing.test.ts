@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { cssDecls } from './cssRules.ts';
 import base from './base.css?raw';
+import hero from './hero.css?raw';
 import live from './live.css?raw';
 import tokens from './tokens.css?raw';
 import visual from './visual.css?raw';
 
 // D32: margins, paddings, gaps, insets and scroll paddings use only the --space-* scale (4/8/16/24/40/64 px).
-const decls = Object.entries({ 'base.css': base, 'live.css': live, 'visual.css': visual }).flatMap(([f, css]) => cssDecls(f, css));
+const decls = Object.entries({ 'base.css': base, 'live.css': live, 'visual.css': visual, 'hero.css': hero }).flatMap(([f, css]) => cssDecls(f, css));
 const SPACING = /^(margin|padding|gap|row-gap|column-gap|inset|top|right|bottom|left|scroll-padding|scroll-margin)(-|$)/;
 const INSET = /^(inset|top|right|bottom|left)/;
 const TOKEN = /var\(--space-[1-6]\)/g;

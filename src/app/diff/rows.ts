@@ -1,11 +1,11 @@
-import type { BlockKind, BlockOp } from '../../core/types.ts';
+import type { BlockOp } from '../../core/types.ts';
 
 /** An unchanged block op. */
 export type EqualOp = Extract<BlockOp, { type: 'equal' }>;
 /** A diff row: one block op, or a run of unchanged blocks shown collapsed. */
 export type Row = { op: BlockOp } | { gap: EqualOp[] };
 
-/** Unchanged runs at least this long collapse behind a "Show N unchanged …" button. */
+/** Unchanged runs at least this long collapse behind a "Show N unchanged blocks" button. */
 export const MIN_GAP = 3;
 
 /**
@@ -32,10 +32,26 @@ export function collapseUnchanged(ops: readonly BlockOp[], min = MIN_GAP, contex
   return rows;
 }
 
-const NOUN: Record<BlockKind, string> = { heading: 'heading', paragraph: 'paragraph', 'list-item': 'list item', quote: 'quote', code: 'code block', 'table-row': 'table row' };
+/** Button text for a collapsed run: "Show 12 unchanged blocks". */
+export function unchangedLabel(n: number): string {
+  return `Show ${n} unchanged block${n === 1 ? '' : 's'}`;
+}
 
-/** Button text for a collapsed run, e.g. "Show 12 unchanged paragraphs" ("blocks" when kinds mix). */
-export function unchangedLabel(kinds: readonly BlockKind[]): string {
-  const noun = new Set(kinds).size === 1 ? NOUN[kinds[0]!] : 'block';
-  return `Show ${kinds.length} unchanged ${noun}${kinds.length === 1 ? '' : 's'}`;
+/** Changed blocks shown before "Show n more changes" (target/V3Work.html). */
+export const FIRST_CHANGES = 8;
+
+const changed = (r: Row) => 'op' in r && r.op.type !== 'equal';
+
+/**
+ * Where the first view of a long diff ends: after its `n`th changed block and the unchanged block that follows it, if
+ * one does. Returns `rows.length` when the diff has at most `n` changes; `more` is how many changes are left.
+ */
+export function firstChanges(rows: readonly Row[], n = FIRST_CHANGES): { cut: number; more: number } {
+  const total = rows.filter(changed).length;
+  if (total <= n) return { cut: rows.length, more: 0 };
+  let seen = 0;
+  let cut = rows.findIndex((r) => changed(r) && ++seen === n) + 1;
+  const next = rows[cut];
+  if (next && 'op' in next && next.op.type === 'equal') cut++;
+  return { cut, more: total - n };
 }

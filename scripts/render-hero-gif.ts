@@ -43,12 +43,14 @@ if (pngs.length < 2) throw new Error(`render-hero-gif: only ${pngs.length} frame
 // A concat list gives each frame its duration (the last one listed twice, as the format requires).
 const list = [...pngs.map((f, i) => `file '${f}'\nduration ${i === 0 ? DECADE_S : i === pngs.length - 1 ? STEP_S * 3 : STEP_S}`), `file '${pngs.at(-1)}'`].join('\n');
 writeFileSync(join(frames, 'frames.txt'), `${list}\n`);
-for (const colors of [128, 64]) {
+// 64 colours without dithering: the captures are mostly flat text on white, so it looks the same as 128 dithered
+// colours at about three quarters of the size.
+for (const colors of [64, 48]) {
   const run = spawnSync(
     'ffmpeg',
     [
       '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', 'frames.txt',
-      '-vf', `scale=960:600:flags=lanczos,split[a][b];[a]palettegen=max_colors=${colors}:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`,
+      '-vf', `scale=960:600:flags=lanczos,split[a][b];[a]palettegen=max_colors=${colors}:stats_mode=diff[p];[b][p]paletteuse=dither=none:diff_mode=rectangle`,
       '-loop', '0', OUT,
     ],
     { cwd: frames, stdio: 'inherit' },
@@ -65,5 +67,5 @@ for (const colors of [128, 64]) {
     process.exit(0);
   }
 }
-console.error(`render-hero-gif: docs/hero.gif is over ${MAX_BYTES} B even at 64 colours`);
+console.error(`render-hero-gif: docs/hero.gif is over ${MAX_BYTES} B even at 48 colours`);
 process.exit(1);

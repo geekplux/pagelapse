@@ -243,7 +243,7 @@ async function main(): Promise<number> {
       const report: FlowReport = { flow: flow.name, viewport, scheme, ok: false, durationMs: 0, stubbed: 0 };
       try {
         Object.assign(report, await flow.run({ page, baseUrl, viewport, scheme }));
-        // Let the sheet's `settle` fade (and any transition) finish first, so neither the axe contrast check nor the
+        // Let any animation or transition finish first, so neither the axe contrast check nor the
         // screenshot sees a picture or text mid-animation.
         await page.evaluate(() =>
           Promise.race([

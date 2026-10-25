@@ -1,21 +1,23 @@
-import { type FocusEvent, type KeyboardEvent, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type FocusEvent, type KeyboardEvent, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ARCHIVES } from '../../archive/archives.ts';
 import { trivialEntries, withAiSummaries } from '../../core/timeline.ts';
 import type { TimelineEntry } from '../../core/types.ts';
 import { viewCaptureUrl } from '../../core/url.ts';
-import { ChangesList } from '../ChangesList.tsx';
-import { ChangeCard, DiffView } from '../diff/DiffView.tsx';
+import { ChangeSection } from '../ChangeSection.tsx';
+import { EveryChange } from '../EveryChange.tsx';
+import { SheetHead } from '../SheetHead.tsx';
+import { hostOf } from '../../samples/index.ts';
 import { EmptyState } from '../states/EmptyState.tsx';
 import { ErrorCard } from '../states/ErrorCard.tsx';
-import { LoadingStatus, type StatusFocus } from '../states/LoadingStatus.tsx';
+import { LoadingStatus } from '../states/LoadingStatus.tsx';
+import { Silhouette } from '../visual/Silhouette.tsx';
 import { stepIndex, tsToMs } from '../timeline/scale.ts';
-import { Legend } from '../timeline/Legend.tsx';
-import { Timeline } from '../timeline/Timeline.tsx';
+import { Ribbon } from '../timeline/Ribbon.tsx';
 import { type UrlState, changeIndex } from '../urlState.ts';
-import { Filmstrip } from '../visual/Filmstrip.tsx';
+import { StepNav } from '../visual/Controls.tsx';
 import { VisualPane } from '../visual/VisualPane.tsx';
 import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pairOf, parseMode, showingText, sideOf, viewQuery } from '../visual/visualState.ts';
-import { progressText } from './liveState.ts';
+import { announced, progressText } from './liveState.ts';
 import { useLiveTimeline } from './useLiveTimeline.ts';
 import { useSummaries } from './useSummaries.ts';
 
@@ -35,13 +37,18 @@ interface Props {
   onSample: () => void;
 }
 
+/** What the ribbon's description adds during a run: captures still coming, and those that failed. */
+const liveNote = (marks: readonly { failed: boolean }[]) => {
+  const failedN = marks.filter((m) => m.failed).length;
+  const waiting = marks.length - failedN;
+  return [waiting > 0 && `${waiting} not fetched yet.`, failedN > 0 && `${failedN} could not be fetched.`].filter(Boolean).join(' ') || undefined;
+};
 const years = (a?: string, b?: string) => (a && b ? `${a.slice(0, 4)}–${b.slice(0, 4)}` : '');
 const IA = ARCHIVES['internet-archive'];
 
 /**
- * A live run: the hero (title, then the empty or error card, or the replay pane and the side column: the run's status
- * line over the selected change), the scrub strip (filmstrip and timeline growing capture by capture), the folded
- * changes list and the diff.
+ * A live run: the title block with the run's status line, then the empty or error card, or the replay stage and its
+ * controls; the time ribbon (growing capture by capture), the change and its text diff, and every change.
  */
 export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
   const { state, cancel } = useLiveTimeline(url);
@@ -50,7 +57,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const timeline = useMemo(() => withAiSummaries(state.timeline, ai), [state.timeline, ai]);
   const { entries, trivialCaptures, snapshots } = timeline;
   const [pick, setPick] = useState(initialChange);
-  /** The user has picked a change or capture here (timeline, filmstrip, list, Previous / Next, Before / After). */
+  /** The user has picked a change or capture here (ribbon, list, Previous / Next, Before / After). */
   const [picked, setPicked] = useState(false);
   const [showTrivial, setShowTrivial] = useState(false);
   const all = useMemo(
@@ -58,11 +65,13 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     [showTrivial, entries, timeline],
   );
   const shown = useMemo(() => ({ ...timeline, entries: all, trivialCaptures: showTrivial ? [] : trivialCaptures }), [timeline, all, showTrivial, trivialCaptures]);
-  // Captures not on the timeline yet: still coming (dotted) or failed (dashed).
+  // Captures not on the timeline yet: still coming, or failed.
   const marks = useMemo(() => {
     const done = new Set(snapshots.map((s) => s.ts));
     return captures.filter((c) => !done.has(c.ts)).map((c) => ({ ts: c.ts, failed: failed.includes(c.ts) }));
   }, [captures, snapshots, failed]);
+  const failedSet = useMemo(() => new Set(failed), [failed]);
+  const captureTimes = useMemo(() => captures.map((c) => c.ts), [captures]);
   const selected = changeIndex(all, pick);
   const entry = all[selected];
   // The capture shown in Single mode, while its change is selected; else the change's After.
@@ -82,7 +91,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const page = (ts: string) => snapshots.find((s) => s.ts === ts)!;
   const pages = useMemo(() => new Map(snapshots.map((s) => [s.ts, s])), [snapshots]);
   const view = (ts: string) => liveView(url, ts, pages.get(ts));
-  // The filmstrip: every capture that has joined the timeline or failed, as a text silhouette (no image requests).
+  // The ribbon's thumbnails: every capture that has joined the timeline or failed, as a text outline (no image requests).
   const items = useMemo(() => captures.slice(0, state.next).map((c) => liveView(url, c.ts, pages.get(c.ts))), [captures, state.next, url, pages]);
   const trivialSet = useMemo(() => new Set(trivialCaptures), [trivialCaptures]);
   const side = entry && shownAt && sideOf(entry, shownAt) === 'before' ? 'before' : 'after';
@@ -94,10 +103,11 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const hold = running && !asked;
   const text = progressText(state);
 
-  // Progress for screen readers: the part before " · " (AC 22).
-  useEffect(() => announce(text.split(' · ')[0]!), [announce, text]);
+  // Progress for screen readers, without the note on fetching slowly (AC 22).
+  useEffect(() => announce(announced(text)), [announce, text]);
 
-  // Focus (WCAG 2.4.3). `target` is the status text, or the empty / error card's heading, whichever is showing.
+  // Focus (WCAG 2.4.3). `target` is the status text, the meta line once the run is done, or the empty / error card's
+  // heading, whichever is showing.
   const target = useRef<HTMLElement | null>(null);
   const setTarget = useCallback((el: HTMLElement | null) => void (target.current = el), []);
   /** The element in this view that last had focus, until focus leaves it for another element that stays on the page. */
@@ -126,7 +136,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     // Mount only: a retry button started this run.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // When the run ends and takes the focused button (Cancel) with it, focus the status text or the card's heading
+  // When the run ends and takes the focused button (Cancel) with it, focus the meta line or the card's heading
   // instead of <body>. Only then: a `?url=` page load, where nothing here had focus, never moves focus.
   const wasRunning = useRef(running);
   useEffect(() => {
@@ -141,7 +151,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const [frozen, setFrozen] = useState<{ timeline: typeof shown; marks: typeof marks } | null>(null);
   const strip = frozen ?? { timeline: shown, marks };
   const stripSelected = changeIndex(strip.timeline.entries, pick);
-  const isSlider = (e: FocusEvent | KeyboardEvent) => e.target instanceof Element && e.target.matches('.tl-slider');
+  const isSlider = (e: FocusEvent | KeyboardEvent) => e.target instanceof Element && e.target.matches('.rb-slider');
   const onSliderFocus = (e: FocusEvent) => {
     if (!isSlider(e) || !running || !entry) return;
     setPick(pairOf(entry));
@@ -174,52 +184,36 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     if (fresh > 0) newsFrame.current = requestAnimationFrame(() => setNews(`${fresh} more change${fresh === 1 ? '' : 's'} arrived.`));
   };
 
-  // The run's status line sits at the top of the side column, directly under the picture on phones, so a running run
-  // shows its progress and Cancel in the first viewport; with no side column it follows the title. It moves between
-  // the two (a remount), so it carries focus across (`carry`).
-  const carried = useRef<StatusFocus>(null);
-  const carry = useMemo(
-    () => ({
-      take: () => {
-        const where = carried.current;
-        carried.current = null;
-        return where;
-      },
-      keep: (where: StatusFocus) => void (carried.current = where),
-    }),
-    [],
-  );
-  const statusLine = !error && (
-    <LoadingStatus text={text} running={running} progress={captures.length ? [state.next, captures.length] : undefined} onCancel={cancel} onRetry={status === 'cancelled' ? onRetry : undefined} textRef={setTarget} carry={carry} />
-  );
-  const withSide = captures.length > 0 && (!!(entry && shownAt) || running);
-
-  const span = years(captures[0]?.ts, captures.at(-1)?.ts);
-  const quiet = status === 'done' && !entries.length && snapshots.length > 0;
-  const card = (lead?: ReactNode, tools?: ReactNode) =>
-    entry && (
-    <ChangeCard
-      entry={entry}
-      index={selected}
-      count={all.length}
-      captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)}
-      onSelect={select}
-      showing={shownAt && showingText(captures.map((c) => c.ts), entry, shownAt, trivialSet.has(shownAt))}
-      lead={lead}
-      tools={tools}
+  // The run's status takes the meta line's place under the title (target/V1Live.html): progress and Cancel in the first
+  // viewport. Once the run is done (or fails), the meta line shows in the same box, which keeps its height.
+  const statusShown = running || status === 'cancelled';
+  const statusLine = (
+    <LoadingStatus
+      running={running}
+      shown={statusShown}
+      progress={[state.next, captures.length]}
+      stopped={status === 'cancelled' ? text : undefined}
+      onCancel={cancel}
+      onRetry={status === 'cancelled' ? onRetry : undefined}
+      textRef={setTarget}
     />
   );
+  const quiet = status === 'done' && !entries.length && snapshots.length > 0;
   return (
     <article className="sheet" aria-labelledby="live-label" data-live={status} ref={article}>
       <div className="stage live-stage">
         <div className="hero" data-region="hero">
-          <div className="sheet-head">
-            <h2 id="live-label">{url.replace(/^https?:\/\//, '').replace(/\/$/, '')}</h2>
-            <p className="sheet-meta mono">
-              Live{captures.length > 0 && ` · ${captures.length} captures`}
-              {span && ` · ${span}`}
-            </p>
-          </div>
+          <SheetHead
+            id="live-label"
+            title={hostOf(url)}
+            captures={captures.map((c) => c.ts)}
+            changes={entries.length}
+            trivial={trivialCaptures.length}
+            failed={failed.length}
+            status={error ? undefined : statusLine}
+            statusShown={statusShown}
+            metaRef={status === 'done' ? setTarget : undefined}
+          />
           {error?.code === 'no_captures' ? (
             <EmptyState url={url} onSample={onSample} headingRef={setTarget} />
           ) : (
@@ -253,38 +247,43 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
                 steps={shownAt && changeSteps.includes(shownAt) ? changeSteps : snapshots.map((x) => x.ts)}
                 runActive={running}
                 hold={hold}
-                side={(lead, tools) => (
-                  <div className="side">
-                    {statusLine}
-                    {card(lead, tools)}
-                  </div>
-                )}
+                nav={
+                  <StepNav
+                    entry={entry}
+                    index={selected}
+                    count={all.length}
+                    onSelect={select}
+                    showing={showingText(captures.map((c) => c.ts), entry, shownAt, trivialSet.has(shownAt))}
+                    // Until the user moves the selection, it follows the run's newest change and its label is not read
+                    // out at each one (the polite run status says how far the run got, and when it is done).
+                    quiet={!asked}
+                  />
+                }
               />
             ) : (
               running && (
+                // Until the first change: the newest capture read so far as a text outline, in the stage's place, and
+                // the controls row's height kept, so nothing moves when the change arrives.
                 <>
                   <section className="vpane vpane-wait" aria-labelledby="vpane-heading">
                     <h3 id="vpane-heading" className="sr-only">
                       How it looked
                     </h3>
-                    <figure className="vp-mat">
-                      <p className="vp-shot live-wait">The page as the Internet Archive kept it shows here once the first change is found.</p>
-                      <figcaption className="vp-cap mono">&nbsp;</figcaption>
+                    <figure className="vp-fig">
+                      <div className="vp-mat">
+                        <div className="vp-shot lf">{snapshots.at(-1) && <Silhouette page={snapshots.at(-1)!} />}</div>
+                      </div>
+                      <div className="vp-cap" aria-hidden="true" />
                     </figure>
                   </section>
-                  <div className="side">
-                    {statusLine}
-                    <p className="live-wait">The first change shows here as soon as two captures have been compared.</p>
-                  </div>
+                  <div className="controls controls-wait" aria-hidden="true" />
                 </>
               )
             ))}
-          {!withSide && statusLine}
         </div>
         {captures.length > 0 && (
           <div className="scrub" data-region="scrub">
-            <Filmstrip items={items} pending={captures.length - items.length} at={shownAt ?? ''} trivial={trivialSet} onSelect={(ts) => choose(all[changeForCapture(all, ts)], ts)} />
-            <div className="tl-area" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
+            <div className="rb-live" onFocus={onSliderFocus} onBlur={onSliderBlur} onKeyDownCapture={onSliderKey}>
               <h3 id="timeline-heading" className="sr-only">
                 Timeline
               </h3>
@@ -292,38 +291,24 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
               <span className="sr-only" role="status">
                 {news}
               </span>
-              <Timeline
+              <Ribbon
+                items={items}
+                pending={captures.length - items.length}
+                times={captureTimes}
                 timeline={strip.timeline}
-                marks={strip.marks}
                 selected={stripSelected}
+                at={shownAt ?? ''}
+                failed={failedSet}
                 onSelect={selectOnStrip}
+                onCapture={(ts) => choose(all[changeForCapture(all, ts)], ts)}
                 labelledBy="timeline-heading"
-                describedBy="timeline-legend"
+                note={liveNote(strip.marks)}
               />
-              <Legend changes={entries.length} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial}>
-                {marks.length > failed.length && (
-                  <span>
-                    <i className="mark-pending" /> not fetched yet
-                  </span>
-                )}
-                {failed.length > 0 && (
-                  <span>
-                    <i className="mark-failed" /> {failed.length} could not be fetched
-                  </span>
-                )}
-              </Legend>
             </div>
           </div>
         )}
-        {entry && (
-          <div className="lists" data-region="changes">
-            <details className="fold changes-pane">
-              <summary id="changes-heading">All changes ({all.length})</summary>
-              <ChangesList entries={all} selected={selected} onSelect={select} />
-            </details>
-          </div>
-        )}
-        {entry && <DiffView entry={entry} from={page(entry.from)} to={page(entry.to)} />}
+        {entry && <ChangeSection entry={entry} from={page(entry.from)} to={page(entry.to)} archive="the Wayback Machine" captureUrl={(ts) => viewCaptureUrl(IA.id, ts, url)} />}
+        {captures.length > 0 && <EveryChange entries={all} selected={selected} onSelect={select} trivial={trivialCaptures.length} showTrivial={showTrivial} onTrivial={setShowTrivial} />}
       </div>
     </article>
   );

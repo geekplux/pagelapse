@@ -47,12 +47,8 @@ export function LiveFrame({ ts, page, frames, loaded, onLoad, frame, slow, onSlo
     <div className="vp-shot lf" ref={box} data-state={state}>
       <span className="sr-only">{frame(ts).title}</span>
       {!done && page && <Silhouette page={page} />}
-      {!done && (
-        <span className="lf-tag mono">
-          text outline ·{' '}
-          {mounted ? 'loading the capture…' : hold ? <span className="vp-hold">the page itself loads when you pick a change or the run finishes</span> : 'waiting'}
-        </span>
-      )}
+      {/* The capture's text outline shows meanwhile; held, the page loads once a change is picked or the run ends. */}
+      {!done && <span className={`lf-tag${hold && !mounted ? ' vp-hold' : ''}`}>{hold && !mounted ? 'Loads after the run, or pick a change' : 'Loading the archived page'}</span>}
       {frames.map((f) => {
         const hidden = f !== ts;
         const { src, title } = frame(f);

@@ -1,132 +1,207 @@
-/* The stage. Regions in DOM order, which is the visual and keyboard order: the hero (title, then the picture with the
-   selected change beside it), the scrub strip (filmstrip over timeline), the folded lists, the diff. The picture is
-   the focal point: about two thirds of the width on desktop; the change line is top-aligned with it and the controls
-   row ends at its bottom edge. The scrub strip belongs to the focal point, so it sits closer (24 px) than the rest. */
+/* The workspace. Regions in DOM order, which is the visual and keyboard order: the title block, the stage (the
+   picture, 1200 x 750 at full width) and its controls row, the time ribbon, the change and its text diff, every
+   change, the folded list of captures (target/V3Work.html). */
 .stage { display: grid; gap: var(--space-4); }
-@media (min-width: 60rem) { main { padding-top: var(--space-4); } }
 .stage > *, .hero > *, .scrub > *, .lists > * { min-width: 0; }
-.lists, .diff-panel { margin-top: var(--space-3); }
+.lists { margin-top: var(--space-3); }
 .lists { display: grid; gap: var(--space-3); justify-items: start; }
-.hero { display: grid; gap: var(--space-3) var(--space-5); }
-.scrub { display: grid; gap: var(--space-2); }
-@media (min-width: 60rem) {
-  .hero { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
-  .hero > .sheet-head, .hero > .state-card { grid-column: 1 / -1; }
-  /* Side by side needs the width: the two prints span both columns, the selected change follows below. */
-  .hero:has(> .vpane[data-mode="side"]) { grid-template-columns: minmax(0, 1fr); }
-  /* The side column is never a scroll box: longer, enlarged or spaced-out text makes the row taller instead. */
-  .side { display: flex; flex-direction: column; }
-  .side .change-panel { flex: 1; }
-  .controls { margin-top: auto; }
-  /* "Change details" opens downward: the space it takes is added below the picture (DiffView sets --details-h), so
-     the row grows and the controls row stays put instead of rising (not in Side by side, where the change follows). */
-  .hero:has(.change-details[open]):not(:has(> .vpane[data-mode="side"])) > .vpane { margin-bottom: var(--details-h, 0) /* spacing-allow: the measured height of the open details */; }
-  .hero > .live-status { grid-column: 1 / -1; }
-}
+.hero { display: grid; gap: var(--space-4); }
+.hero > .controls { margin-top: calc(-1 * var(--space-2)); }
+.scrub { display: grid; gap: var(--space-2); margin-top: var(--space-3); }
 .stage h3 { margin: 0; }
-/* A live run's status line tops the side column (directly under the picture on phones). */
-.side > .live-status { margin-bottom: var(--space-3); }
+/* 40 px under the header (28 on phones). */
+.sheet-head { padding-top: calc(7 * var(--space-1)); }
+@media (min-width: 40rem) { .sheet-head { padding-top: var(--space-5); } }
 
-/* One controls row: Play, Previous / Next, Compare (and Before / After in Single), then "Change details". */
-.controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
-.controls > .vp-modes, .controls > .change-details { flex-basis: 100%; }
-/* Phones: once the row has scrolled away above, Previous / Next sticks to the bottom of the screen (its slot keeps
-   its size, so nothing moves), and focus scrolls stop above it. */
+/* The controls row: Play and Previous / Next on the left; the compare control and Copy link on the right, flush with
+   the stage's edge (the quiet button's padding hangs outside it, so its icon lines up). */
+.controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
+.ctrl-start, .ctrl-end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.ctrl-start > .nav-slot { margin-left: var(--space-2); }
+.ctrl-end > .vp-copy-wrap { margin-right: calc(-1 * var(--space-2)); }
+/* Copy link's failure note hangs under the row, right-aligned, in the gap before the strip: nothing moves. */
+.vp-copy-wrap { position: relative; display: inline-flex; }
+.vp-copy-note { position: absolute; top: 100%; right: 0; margin-top: var(--space-1); color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); white-space: nowrap; }
+.vp-copy[data-said] { color: var(--sand-12); }
+.diff-nav { display: flex; align-items: center; gap: var(--space-1); }
+.step-label { min-width: 8.25rem; text-align: center; white-space: nowrap; }
+.btn-icon { justify-content: center; width: 2.5rem; padding: 0; }
+.btn-quiet { padding: 0 var(--space-2); border: 0; background: none; color: var(--sand-11); }
+.btn-quiet:hover { background: none; color: var(--sand-12); }
+.diff-nav .btn { border-color: transparent; background: none; color: var(--sand-11); }
+.diff-nav .btn:hover { background: none; color: var(--sand-12); }
+.diff-nav .btn[aria-disabled="true"] { color: var(--sand-8); }
+/* Playing: a sand-3 fill and semibold text, besides the changed icon and label. */
+.vp-play[data-playing] { background: var(--sand-3); font-weight: 600; }
+/* Phones: Play and the compare control share the first row; Previous / Next is centred on the second. Once that row
+   has scrolled away above, Previous / Next sticks to the bottom of the screen (its slot keeps its size, so nothing
+   moves), and focus scrolls stop above it. Copy link keeps its icon. */
 @media (max-width: 39.99rem) {
+  .controls { justify-content: flex-start; row-gap: calc(3 * var(--space-1)); }
+  .ctrl-start, .ctrl-end { display: contents; }
+  .controls .vp-modes { margin-left: auto; }
+  .ctrl-start > .nav-slot { order: 2; display: flex; justify-content: center; flex-basis: 100%; min-height: 2.5rem; margin-left: 0; }
+  /* Single's Before / After takes its own row, split evenly; the date is on the picture's tag. */
+  .controls .vp-sides { order: 1; flex: 1 0 100%; }
+  .vp-side { flex: 1; justify-content: center; }
+  .vp-side time > [aria-hidden] { display: none; }
+  /* Copy link is its icon on phones (a check or an alert while it holds); a failure's note floats above it, on the
+     stage's edge, as a tag. */
+  /* A 40 px square, its glyph flush with the column's edge. */
+  .controls .vp-copy { justify-content: center; width: 2.5rem; padding: 0; }
+  .ctrl-end > .vp-copy-wrap { margin-right: calc(-3 * var(--space-1)); }
+  /* Open capture: a 40 px tall target on the caption's 28 px row. */
+  .vpane .vp-cap a { padding-block: calc(2.5 * var(--space-1)); margin-block: calc(-1.5 * var(--space-1)); }
+  .vp-copy-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .vp-copy-note:not(:empty) { top: auto; bottom: 100%; z-index: 3; margin: 0 0 var(--space-1); padding: var(--space-1) var(--space-2); border-radius: var(--radius-6); background: var(--bg); box-shadow: 0 0 0 var(--line) var(--sand-7); }
+  .vp-copy-note:has(> .sr-only) { padding: 0; box-shadow: none; }
+  .vp-mode[data-mode="side"]:not(:has(:checked)) { display: none; }
   html { scroll-padding-bottom: calc(var(--space-6) + var(--space-2)); }
   /* A changes-list row brought into view stops clear of the sticky bar too (AAA 2.4.12). */
   .change { scroll-margin-bottom: calc(var(--space-6) + var(--space-2)); }
-  .nav-slot { min-height: 2.5rem; }
-  .diff-nav[data-stuck] { position: fixed; z-index: 1; inset: auto 0 0; justify-content: space-between; padding: var(--space-2) var(--space-3); background: var(--paper); border-top: 1px solid var(--rule-strong); }
+  .diff-nav[data-stuck] { position: fixed; z-index: 1; inset: auto 0 0; justify-content: center; padding: var(--space-2) var(--space-3); background: var(--bg); border-top: var(--line) solid var(--sand-6); }
 }
 
-/* Compare: a disclosure button naming the mode, then native radios as quiet text segments. */
-.vp-compare::after { content: " ▾" / ""; }
-.vp-compare[aria-expanded="true"]::after { content: " ▴" / ""; }
-.vp-modes:not([hidden]) { display: flex; }
-.vp-modes { flex-wrap: wrap; gap: 0 var(--space-3); min-width: 0; margin: 0; padding: 0; border: 0; }
-.vp-mode { position: relative; display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--ink-2); font: 500 0.9rem/1 var(--font-ui); white-space: nowrap; cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 0.45em; }
-.vp-mode input { position: absolute; inset: 0; margin: 0; appearance: none; cursor: pointer; }
-.vp-play { white-space: nowrap; }
-/* Playing, or swapped: a heavier ink border and bold text, besides the changed label. */
-.vp-play[data-playing], .vp-onion .btn[aria-pressed="true"] { border: 2px solid var(--ink); font-weight: 700; }
-.vp-sides { display: inline-flex; }
-.vp-side { min-height: 2.5rem; padding: var(--space-1) var(--space-3); border: 1px solid var(--rule-strong); background: none; color: var(--ink-2); font: 500 0.85rem/1 var(--font-ui); cursor: pointer; text-decoration: underline 2px transparent; text-underline-offset: 0.45em; }
-.vp-side + .vp-side { border-left: 0; }
-.vp-side b, .vp-label b { font-family: var(--font-mono); }
-.vp-side [data-op="added"], .vp-label [data-op="added"] { color: var(--added); }
-.vp-side [data-op="removed"], .vp-label [data-op="removed"] { color: var(--removed); }
-/* Pressed or checked: ink, bold and underlined; never a fill, never hue alone. */
-:is(.vp-mode:has(:checked), .vp-side[aria-checked="true"]) { color: var(--ink); font-weight: 700; text-decoration-color: var(--ink); }
+/* Compare: native radios as a segmented control; outer radius 8 = inner 6 + the 2 px inset (concentric). */
+.vp-modes { display: inline-flex; gap: 2px /* spacing-allow: segmented control inset (DESIGN.md) */; min-width: 0; height: 2.5rem; margin: 0; padding: 2px /* spacing-allow: segmented control inset (DESIGN.md) */; border: 0; border-radius: var(--radius-8); background: var(--sand-3); }
+.vp-mode { position: relative; display: inline-flex; align-items: center; padding: 0 calc(3.5 * var(--space-1)); border-radius: var(--radius-6); color: var(--sand-11); font: 400 var(--fs-14) / var(--lh-14) var(--font-ui); white-space: nowrap; cursor: pointer; transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+.vp-mode:hover { color: var(--sand-12); }
+.vp-mode input { position: absolute; inset: 0; margin: 0; appearance: none; border-radius: var(--radius-6); cursor: pointer; }
+.vp-sides { display: inline-flex; height: 2.5rem; padding: 2px /* spacing-allow: segmented control inset (DESIGN.md) */; gap: 2px /* spacing-allow: segmented control inset (DESIGN.md) */; border-radius: var(--radius-8); background: var(--sand-3); }
+.vp-side { display: inline-flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-6); background: none; color: var(--sand-11); font: 400 var(--fs-14) / var(--lh-14) var(--font-ui); cursor: pointer; transition: background-color var(--dur) var(--ease), color var(--dur) var(--ease); }
+/* Pressed or checked: the raised segment (bg, a sand-7 hairline) in sand-12 and medium weight; never hue alone. */
+:is(.vp-mode:has(:checked), .vp-side[aria-checked="true"]) { background: var(--bg); color: var(--sand-12); font-weight: 500; box-shadow: 0 0 0 var(--line) var(--sand-7); }
 
-/* The mounted print: a card mat, a strong hairline, the picture at 16:10 with its size reserved. */
-.vp-mat { position: relative; margin: 0; padding: var(--space-2); background: var(--card); border: 1px solid var(--rule-strong); border-radius: 2px; box-shadow: 0 18px 40px -28px var(--shadow); }
-.vp-shot { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: var(--paper) center / cover no-repeat; }
+/* The stage: the picture at 16:10 with its size reserved, on the frame surface inside a sand-7 hairline. */
+.vp-fig { margin: 0; }
+.vp-mat { position: relative; background: var(--frame); border-radius: var(--radius-8); overflow: hidden; }
+/* The hairline is drawn inside, over the picture, so the stage is exactly the picture's 16:10 (1200 x 750 at 1440). */
+.vp-mat::after { content: ""; position: absolute; inset: 0; z-index: 2; border: var(--line) solid var(--sand-7); border-radius: var(--radius-8); pointer-events: none; }
+.vp-shot { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: var(--frame) center / cover no-repeat; }
 .vp-none {
-  display: grid; place-content: center; gap: var(--space-2); padding: var(--space-3); text-align: center; color: var(--ink-2);
-  background: repeating-linear-gradient(135deg, var(--card) 0 9px, var(--rule) 9px 10px); border: 1px dashed var(--rule-strong);
+  display: grid; place-content: center; gap: var(--space-2); padding: var(--space-3); text-align: center; color: var(--sand-11);
+  background: var(--sand-2); border: var(--line) dashed var(--sand-8);
 }
-.vp-none p:first-child { color: var(--ink); font: 600 var(--step-1) / 1.3 var(--font-display); }
-.vp-none p { padding: var(--space-1) var(--space-2); background: var(--card); }
-.vp-label { position: absolute; z-index: 1; top: var(--space-3); left: var(--space-3); padding: var(--space-1) var(--space-2); background: var(--card); color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 2px; font-size: 0.8rem; box-shadow: 0 0 0 2px var(--card); max-width: calc(50% - 20px); overflow-wrap: anywhere; }
-.vp-label[data-side="after"] { left: auto; right: var(--space-3); }
-@media (max-width: 39.99rem) { .vp-label { padding: 0 var(--space-1); font-size: 0.7rem; } }
+.vp-none p:first-child { color: var(--sand-12); font: 600 var(--fs-20) / var(--lh-20) var(--font-ui); }
 
-/* Compare: the two pictures share one 16:10 cell. Slider clips After at --split; onion skin fades the top one. */
+/* Before / After tags: a ring (Before) or a filled dot (After), the word in cyan-11 or amber-11, the mono date. On the
+   picture they float in its top corners on the page ground with a hairline. */
+.vp-label, .vp-tag, .vp-badge { display: inline-flex; align-items: center; gap: var(--space-2); height: 1.75rem; color: var(--sand-12); font-size: var(--fs-14); line-height: var(--lh-14); white-space: nowrap; }
+.vp-label { position: absolute; z-index: 1; top: calc(3 * var(--space-1)); left: calc(3 * var(--space-1)); padding: 0 calc(2.5 * var(--space-1)); border-radius: var(--radius-6); background: var(--bg); box-shadow: 0 0 0 var(--line) var(--sand-7); }
+.vp-label[data-side="after"] { left: auto; right: calc(3 * var(--space-1)); }
+/* "◐ Partial copy": the same tag, in the bottom corner of its side. */
+.vp-badge { position: absolute; z-index: 1; bottom: calc(3 * var(--space-1)); left: calc(3 * var(--space-1)); padding: 0 calc(2.5 * var(--space-1)); border-radius: var(--radius-6); background: var(--bg); color: var(--sand-11); box-shadow: 0 0 0 var(--line) var(--sand-7); }
+.vp-badge[data-corner="after"] { left: auto; right: calc(3 * var(--space-1)); }
+.vp-label b, .vp-tag b { font-weight: 600; }
+:is(.vp-label, .vp-tag)[data-side="before"] b { color: var(--cyan-11); }
+:is(.vp-label, .vp-tag)[data-side="after"] b { color: var(--amber-11); }
+.vp-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; }
+:is(.vp-label, .vp-tag)[data-side="before"] .vp-dot, .vp-dot[data-side="before"] { box-shadow: inset 0 0 0 1.5px var(--cyan-11); }
+:is(.vp-label, .vp-tag)[data-side="after"] .vp-dot, .vp-dot[data-side="after"] { background: var(--amber-11); }
+/* Phones: two tags keep to their words; a single one has room for its date. */
+@media (max-width: 39.99rem) { .vpane:not([data-mode="single"]) .vp-label .vp-date { display: none; } }
+
+/* Slider: the two pictures share one 16:10 cell; After is clipped at --split. Keys and clicks glide (250 ms). */
 .vp-cmp { position: relative; display: grid; }
 .vp-cmp > :not(.vp-split) { grid-area: 1 / 1; min-width: 0; }
 .vp-clip { clip-path: inset(0 0 0 var(--split)); }
-.vp-top { opacity: var(--op); }
-/* The divider: a 32 px wide drag strip with its own touch handling, a 2 px ink line on a card halo, a card knob. */
-.vp-split { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - var(--space-3)) /* spacing-allow: the divider follows --split */; width: 32px; display: grid; place-items: center; touch-action: none; cursor: ew-resize; }
-.vp-split::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin-inline: auto; width: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--card); }
-.vp-knob { position: relative; display: grid; place-items: center; width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 50%; background: var(--card); color: var(--ink); box-shadow: 0 0 0 2px var(--card); font: 700 0.85rem/1 var(--font-mono); }
-.vp-split:focus-visible .vp-knob { background: var(--ink); color: var(--card); }
-.vp-onion { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-top: var(--space-2); font: 0.85rem var(--font-ui); }
-.vp-onion input { vertical-align: middle; accent-color: var(--ink); }
-.vp-onion input[type=range] { min-height: 24px; }
+.vp-cmp[data-glide] .vp-clip { transition: clip-path var(--dur) var(--ease); }
+.vp-cmp[data-glide] .vp-split { transition: left var(--dur) var(--ease); }
+/* The divider: a 40 px wide drag strip with its own touch handling, a 3 px white line with a dark hairline, a 40 px knob. */
+.vp-split { position: absolute; top: 0; bottom: 0; left: calc(var(--split) - 20px) /* spacing-allow: the divider follows --split */; width: 40px; display: grid; place-items: center; touch-action: none; cursor: ew-resize; }
+.vp-split::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin-inline: auto; width: 3px; background: var(--divider); box-shadow: 0 0 0 var(--line) var(--divider-edge); }
+.vp-knob { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--divider); color: var(--divider-ink); box-shadow: var(--shadow); }
+.vp-knob svg { display: block; }
+.vp-split:focus-visible { outline: none; }
+.vp-split:focus-visible .vp-knob { outline: 2px solid var(--sand-12); outline-offset: 2px; }
+
+/* Side by side: two stages, each under its own caption (tag, then the link out). */
 .vp-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 @media (max-width: 39.99rem) { .vp-pair { grid-template-columns: 1fr; } }
+.vp-cap-side { margin-bottom: var(--space-2); }
 /* A new picture fades in over the previous one (none under reduced motion). */
 .vp-frame { background: center / cover no-repeat; }
 @media (prefers-reduced-motion: no-preference) {
   .vp-frame[data-fade] { background-image: var(--prev); }
-  .vp-frame[data-fade] .vp-shot { animation: vp-fade 120ms ease-out; }
+  .vp-frame[data-fade] .vp-shot { animation: vp-fade var(--dur) var(--ease); }
 }
 @keyframes vp-fade { from { opacity: 0; } }
-/* One caption line: frame, date, the link out; honest badges below it. */
-.vp-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-3); padding-top: var(--space-2); color: var(--ink-2); font-size: 0.8rem; }
-.vp-cap > :first-child { color: var(--ink); font-weight: 700; }
-.vp-cap a { margin-left: auto; color: var(--ink); padding-block: var(--space-1); }
-.vp-cap a + a { margin-left: 0; }
+/* Under a picture: the link out (Single) and the honest badges. */
+.vp-cap { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); padding-top: var(--space-2); color: var(--sand-11); }
+.vp-cap a { margin-left: auto; color: var(--sand-12); padding-block: var(--space-1); }
+.vp-cap-side { padding-top: 0; }
 .vp-note { margin-bottom: var(--space-2); }
-.vp-badge, .vp-note { flex-basis: 100%; font-family: var(--font-ui); color: var(--ink); padding: var(--space-1) var(--space-2); border-left: 3px solid var(--rule-strong); font-size: 0.85rem; }
+.vp-note { flex-basis: 100%; width: fit-content; font-family: var(--font-ui); color: var(--sand-11); padding: 0 var(--space-2); border-radius: var(--radius-4); background: var(--sand-3); font-size: var(--fs-12); line-height: var(--lh-12); }
 
-/* The contact sheet: numbered frames; the shown one has a thick ink outline (on a paper gap, so it holds against any
-   thumbnail edge) and a caret above it. */
-.film-strip { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(4.4rem, 1fr); gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-2) var(--space-2); list-style: none; overflow-x: auto; }
-@media (prefers-reduced-motion: no-preference) { .film-strip { scroll-behavior: smooth; } }
-.frame { position: relative; display: grid; gap: var(--space-1); width: 100%; padding: 0; border: 0; background: none; color: var(--ink-2); text-align: left; cursor: pointer; }
-.frame img, .frame-none { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; border: 1px solid var(--rule-strong); }
-.frame-none { display: grid; place-content: center; border-style: dashed; font: 0.72rem var(--font-mono); }
-.frame[data-trivial] img { filter: grayscale(1) contrast(0.75); }
-.frame:hover img { border-color: var(--ink); }
-.frame[aria-current="true"] { color: var(--ink); }
-.frame[aria-current="true"] :is(img, .frame-none, .sil) { outline: 3px solid var(--ink); outline-offset: 2px; }
-.frame[aria-current="true"]::before { content: "▼" / ""; position: absolute; top: calc(-1 * var(--space-3)); left: 0; right: 0; text-align: center; font-size: 0.7rem; line-height: 1; color: var(--ink); }
-.frame[aria-current="true"] .frame-cap { font-weight: 700; }
-.frame-cap { display: flex; flex-wrap: wrap; gap: 0 var(--space-1); font-size: 0.7rem; line-height: 1.35; }
-.frame-trivial, .frame-partial { font-style: italic; }
-
-.tl-tip img { width: 160px; height: auto; border: 1px solid var(--rule); }
+/* The time ribbon (target/V3Work.html): evenly spaced thumbnails over a year axis, each joined to its date by a
+   hairline. Only the ribbon scrolls sideways, inside its own box, whose padding holds the rings, the 2 px lift and the
+   focus ring. The stage's pair: Before ringed in cyan, After in amber (their names say so too), a sand-3 span between
+   their dates with a cyan line at its start, the selected change's bar in amber. Bars and dots differ by shape. */
+.rb { position: relative; }
+.rb-scroll { overflow-x: auto; overflow-y: hidden; padding: var(--space-2); margin: calc(-1 * var(--space-2)); }
+@media (prefers-reduced-motion: no-preference) { .rb-scroll { scroll-behavior: smooth; } }
+.rb-strip { display: flex; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.rb-strip > li { flex: 1 1 0; min-width: 0; }
+.rb-th, .rb-pending { display: block; width: 100%; aspect-ratio: 16 / 10; border-radius: var(--radius-4); }
+.rb-th { position: relative; overflow: hidden; padding: 0; border: 0; background: var(--sand-3); box-shadow: 0 0 0 var(--line) var(--sand-7); cursor: pointer; transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+.rb-th img, .rb-th .sil { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.rb-th[data-trivial] :is(img, .sil) { opacity: 0.45; }
+.rb-th:hover { transform: translateY(-2px); }
+.rb-th:focus-visible { outline-offset: 5px; }
+.rb-th[aria-current="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--sand-12); }
+.rb-th[data-side="before"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--cyan-11); }
+.rb-th[data-side="after"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--amber-11); }
+.rb-none { display: grid; place-content: center; height: 100%; color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); text-align: center; }
+.rb-pending { background: var(--sand-2); box-shadow: inset 0 0 0 var(--line) var(--sand-6); }
+.rb-in svg { display: block; overflow: visible; }
+.rb-slider { cursor: pointer; touch-action: pan-y; user-select: none; }
+/* The slider's focus ring is drawn on the visible part of the axis band (the band may scroll wider than the column), just
+   inside it, so all four sides show and it never runs under the thumbnails above it. */
+/* Without :has, the slider keeps its own ring. The overlay's sides sit 4 px outside the column, clear of the first and
+   last year labels; its top stays inside the band, clear of the thumbnails. */
+.rb-slider:focus-visible { outline-offset: -2px; }
+@supports selector(:has(*)) { .rb-slider:focus-visible { outline: none; } }
+.rb-ring { position: absolute; left: calc(-1 * var(--space-1)); right: calc(-1 * var(--space-1)); pointer-events: none; }
+.rb:has(.rb-slider:focus-visible) > .rb-ring { outline: 2px solid var(--sand-12); outline-offset: -2px; }
+.rb-cv { fill: none; stroke: var(--sand-8); stroke-width: var(--line); transition: stroke var(--dur) var(--ease), stroke-width var(--dur) var(--ease); }
+.rb-cv[data-side="before"] { stroke: var(--cyan-11); stroke-width: 1; }
+.rb-cv[data-side="after"] { stroke: var(--amber-11); stroke-width: 1; }
+.rb-bar { fill: var(--sand-9); transition: fill var(--dur) var(--ease); }
+.rb-bar.is-sel { fill: var(--amber-11); }
+.rb-first { fill: var(--sand-12); }
+.rb-dot { fill: var(--bg); stroke: var(--sand-9); stroke-width: 1; }
+.rb-dot.is-sel { stroke: var(--amber-11); stroke-width: 1.5; }
+.rb-span { fill: var(--sand-3); transition: transform var(--dur) var(--ease); }
+.rb-start { fill: var(--cyan-11); transition: transform var(--dur) var(--ease); }
+/* Play: the span slides linearly to the next capture through each 1.2 s hold. */
+.rb[data-playing] :is(.rb-span, .rb-start) { transition-duration: var(--dur-play); transition-timing-function: linear; }
+.rb-ax { stroke: var(--sand-8); stroke-width: var(--line); }
+.rb-yr { font: var(--fs-12) var(--font-mono); fill: var(--sand-11); }
+.rb-tip {
+  position: absolute; z-index: 2; transform: translate(-50%, -100%); width: max-content; max-width: min(17rem, 85vw);
+  display: grid; gap: var(--space-1); padding: calc(1.5 * var(--space-1)) calc(2.5 * var(--space-1)); border-radius: var(--radius-6);
+  background: var(--sand-12); color: var(--sand-1); font-size: var(--fs-12); line-height: var(--lh-12); pointer-events: auto;
+}
+.rb-tip b { font-weight: 600; }
+.rb-tip-cap { display: flex; gap: var(--space-2); pointer-events: none; white-space: nowrap; }
 
 @media (forced-colors: active) {
-  .frame[aria-current="true"] :is(img, .frame-none, .sil) { outline-color: Highlight; }
-  .frame[aria-current="true"]::before { color: CanvasText; }
-  :is(.vp-side[aria-checked="true"], .vp-mode:has(:checked)) { text-decoration-color: CanvasText; }
+  .rb-th:is([aria-current="true"], [data-side]) { outline: 3px solid Highlight; outline-offset: 2px; }
+  .rb-bar, .rb-first, .rb-start { fill: CanvasText; }
+  .rb-bar.is-sel { fill: Highlight; }
+  .rb-cv, .rb-ax { stroke: CanvasText; }
+  .rb-cv[data-side] { stroke: Highlight; }
+  .rb-dot { fill: Canvas; stroke: CanvasText; }
+  .rb-dot.is-sel { stroke: Highlight; }
+  .rb-span { fill: Canvas; }
+  .rb-yr { fill: CanvasText; }
+  .rb:has(.rb-slider:focus-visible) > .rb-ring { outline-color: Highlight; }
+  :is(.vp-side[aria-checked="true"], .vp-mode:has(:checked)) { outline: 2px solid Highlight; }
   .vp-split::before { forced-color-adjust: none; background: CanvasText; box-shadow: 0 0 0 2px Canvas; }
   .vp-split:focus-visible .vp-knob { background: Highlight; color: HighlightText; }
-  .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .vp-knob { forced-color-adjust: none; background: Canvas; color: CanvasText; border: 2px solid CanvasText; }
+  .vp-dot { forced-color-adjust: none; border: 1.5px solid CanvasText; }
+  :is(.vp-label, .vp-tag)[data-side="after"] .vp-dot, .vp-dot[data-side="after"] { background: CanvasText; }
 }
 
 /* Live replay (phase 15): the archive's 1280×800 page scaled into the mat (`--k` from a ResizeObserver), its text
@@ -134,19 +209,28 @@
 .lf { position: relative; overflow: hidden; }
 .lf iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; background: var(--replay-bg); transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
 .lf iframe:not([data-loaded]), .lf iframe[data-hidden] { visibility: hidden; }
-.sil { display: block; width: 100%; height: 100%; background: var(--card); }
-.sil rect { fill: var(--rule); }
-.sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--rule-strong); }
-/* While a run fetches, the pane's outline is quieter than the strip filling in below it. */
-:is([data-live="captures"], [data-live="snapshots"]) .vpane .sil { opacity: 0.6; }
-.frame-pending .frame-none { border-style: dotted; }
-.frame .sil { aspect-ratio: 16 / 10; height: auto; border: 1px solid var(--rule-strong); }
-.lf-tag, .lf-note p { position: absolute; left: var(--space-2); bottom: var(--space-2); padding: var(--space-1) var(--space-2); border: 1px solid var(--rule-strong); border-radius: 2px; background: var(--card); color: var(--ink); font-size: 0.75rem; }
+/* Text outlines (target/V1Live.html): on the stage, sand-6 lines and sand-9 headings on sand-2; in the ribbon, sand-7
+   lines and sand-11 headings on the frame. */
+.sil { display: block; width: 100%; height: 100%; background: var(--frame); }
+.sil rect { fill: var(--sand-7); }
+.sil [data-kind="title"], .sil [data-kind="heading"] { fill: var(--sand-11); }
+.lf, .lf .sil { background: var(--sand-2); }
+.lf .sil rect { fill: var(--sand-6); }
+.lf .sil [data-kind="title"], .lf .sil [data-kind="heading"] { fill: var(--sand-9); }
+/* Arrive (a live run): an outline fades in, a change's bar grows from the axis once it is scored. */
+[data-live] .sil { animation: fade var(--dur) var(--ease); }
+[data-live] .rb-bar { transform-box: fill-box; transform-origin: bottom; animation: rb-grow var(--dur) var(--ease); }
+@keyframes rb-grow { from { transform: scaleY(0); } }
+/* "Loading the archived page": a tag centred at the stage's foot, on the page ground with a hairline. */
+.lf-tag { position: absolute; left: 50%; bottom: var(--space-4); transform: translateX(-50%); display: inline-flex; align-items: center; height: 1.75rem; padding: 0 calc(2.5 * var(--space-1)); border-radius: var(--radius-6); background: var(--bg); color: var(--sand-11); box-shadow: 0 0 0 var(--line) var(--sand-7); white-space: nowrap; }
 /* The tag stays inside the picture at any width; on phones it keeps to one line (the full text stays readable to
    assistive tech), so it never covers more than a sliver of the outline. */
-.lf-tag { max-width: calc(100% - 2 * var(--space-2)); }
-@media (max-width: 39.99rem) { .lf-tag { max-width: 60%; padding-block: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
+.lf-tag { max-width: calc(100% - 2 * var(--space-2)); overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 39.99rem) { .lf-tag { bottom: var(--space-2); height: 1.25rem; padding: 0 var(--space-2); font-size: var(--fs-12); line-height: var(--lh-12); } }
 /* The pane's one "still loading" note sits below the picture(s) in normal flow, so nothing covers or clips it. */
-.lf-note p { position: static; margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border-width: 0 0 0 3px; font: 0.9rem / 1.45 var(--font-ui); background: none; }
-.vpane .live-wait { display: grid; place-content: center; padding: var(--space-3); text-align: center; }
+.lf-note p { margin-top: var(--space-2); color: var(--sand-11); }
+/* Before the first change: the controls row's place, kept (one 40 px row; three rows on phones in Single). */
+.controls-wait { min-height: 2.5rem; }
+@media (max-width: 39.99rem) { .controls-wait { min-height: 9rem; } }
+.vpane-wait .vp-cap { min-height: 2.25rem; }
 @media (forced-colors: active) { .sil rect, .sil [data-kind] { fill: CanvasText; } .sil { background: Canvas; } }

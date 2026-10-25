@@ -10,7 +10,7 @@ interface Props {
 
 /**
  * A recorded picture in its 16:10 box. Its thumbnail stands in, scaled up, until the full picture has decoded. When
- * the picture changes, the new one fades in over the previous one in 120 ms (CSS; none under reduced motion).
+ * the picture changes, the new one fades in over the previous one in 250 ms (CSS; none under reduced motion).
  */
 export function Shot({ src, thumb, alt, onError, className = '' }: Props) {
   const [seen, setSeen] = useState({ src, prev: '' });

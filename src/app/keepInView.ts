@@ -9,25 +9,3 @@ export function keepInView(start: number, size: number, scroll: number, view: nu
   return Math.round(start - padStart - (view - padStart - padEnd - size) / 2);
 }
 
-/**
- * Scrolls `box` (only `box`, never the page) so `el` is fully visible. Smooth or instant comes from the
- * box's CSS `scroll-behavior` (smooth only when motion is allowed); `instant` forces no animation.
- */
-export function scrollWithin(box: HTMLElement, el: HTMLElement, axis: 'x' | 'y', instant = false): void {
-  const b = box.getBoundingClientRect();
-  const r = el.getBoundingClientRect();
-  const x = axis === 'x';
-  const start = x ? r.left - b.left - box.clientLeft + box.scrollLeft : r.top - b.top - box.clientTop + box.scrollTop;
-  const cs = getComputedStyle(box);
-  const pad = (v: string) => parseFloat(v) || 0;
-  const to = keepInView(
-    start,
-    x ? r.width : r.height,
-    x ? box.scrollLeft : box.scrollTop,
-    x ? box.clientWidth : box.clientHeight,
-    pad(x ? cs.scrollPaddingLeft : cs.scrollPaddingTop),
-    pad(x ? cs.scrollPaddingRight : cs.scrollPaddingBottom),
-  );
-  if (to === null) return;
-  box.scrollTo({ [x ? 'left' : 'top']: to, ...(instant && { behavior: 'instant' }) });
-}
