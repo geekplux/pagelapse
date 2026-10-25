@@ -42,8 +42,8 @@
     "attribution": "Trimmed text excerpt from creativecommons.org by Creative Commons, licensed CC BY 4.0 (blocks about donations, fundraising, sponsors or the CC store, or stating monetary figures, are omitted). Creative Commons and the CC logos are trademarks of Creative Commons.",
     "visualRedact": {
       "selector": "p, li, a, button, h2, h3",
-      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bfundrais(?:er|ers|ing)\\b|\\bmake a gift\\b|\\bgive today\\b",
-      "note": "Donate buttons and links, and paragraphs about donations or stating monetary figures, were hidden before the screenshot."
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bfundrais(?:er|ers|ing)\\b|\\bmake a gift\\b|\\bgive today\\b|\\b(?:store|shop|merch\\w*|swag)\\b|\\bsupport (?:us|cc|creative commons)\\b|\\bhelp us build\\b",
+      "note": "Donate, store and support links, and paragraphs about donations or stating monetary figures, were hidden before the screenshot."
     },
     "visualDrop": {
       "20111209164214": "Hidden: a fundraising appeal"

@@ -35,6 +35,11 @@ export function spanText(captures: readonly string[]): string {
   return a === b ? a! : `${a} to ${b}`;
 }
 
+/** A host breaks after its dots on a narrow screen (creativecommons.<wbr>org), not mid-word. */
+export function breakAfterDots(title: string): ReactNode[] {
+  return title.split(/(?<=\.)/).flatMap((part, i) => (i === 0 ? [part] : [<wbr key={i} />, part]));
+}
+
 /** The title block: the title, then one meta line (captures, span, changes, trivial edits hidden, the Sample tag). */
 export function SheetHead({ id, title, captures, changes, trivial, failed = 0, sample = false, status, statusShown = false, metaRef }: Props) {
   const meta = (
@@ -54,7 +59,7 @@ export function SheetHead({ id, title, captures, changes, trivial, failed = 0, s
   );
   return (
     <div className="sheet-head">
-      <h2 id={id}>{title}</h2>
+      <h2 id={id}>{breakAfterDots(title)}</h2>
       {status === undefined ? (
         meta
       ) : (
