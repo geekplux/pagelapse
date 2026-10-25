@@ -77,6 +77,6 @@ New controls go where the user already means to choose (the address menu, the co
 
 ## Samples
 
-Wikipedia: Internet Archive is the default and the hero deck. The options come from `src/samples/samples.config.json`, in its order, and only entries with a recorded fixture are offered: a hero option, an address-menu item or a `?sample=` link to an unrecorded entry never appears (the link opens the default). Today the options are Wikipedia, nasa.gov and creativecommons.org, in that order.
+Wikipedia: Internet Archive is the default and the hero deck. The options come from `src/samples/samples.config.json`, in its order, and only entries with a recorded fixture are offered: a hero option, an address-menu item or a `?sample=` link to an unrecorded entry never appears (the link opens the default). Today the options are Wikipedia, NASA and Creative Commons, in that order.
 
 NASA (nasa.gov, US government work) and Creative Commons (creativecommons.org, CC BY 4.0) replaced git-scm.com and rust-lang.org on 2026-10-25: all three samples are open-licensed or public, with the same money-figure filtering in text and pictures. NASA opens on its 2000 to 2008 redesign, Creative Commons on its 2022 to 2023 one. Recording needs network access to the archives ([EXTENDING.md](EXTENDING.md#add-a-sample-text-and-pictures) has the steps).

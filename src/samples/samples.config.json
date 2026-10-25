@@ -17,7 +17,7 @@
   },
   {
     "id": "nasa",
-    "label": "nasa.gov home page",
+    "label": "NASA home page",
     "url": "https://www.nasa.gov/",
     "description": "NASA's home page: the missions, pictures and news it leads with, over a decade of captures and redesigns.",
     "maxChars": 6000,
@@ -33,7 +33,7 @@
   },
   {
     "id": "creative-commons",
-    "label": "creativecommons.org home page",
+    "label": "Creative Commons home page",
     "url": "https://creativecommons.org/",
     "description": "The home page of Creative Commons, the organisation behind the CC licences: how it describes its mission and its licences, over a decade of captures and redesigns.",
     "maxChars": 6000,

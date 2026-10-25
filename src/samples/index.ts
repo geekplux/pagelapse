@@ -30,7 +30,7 @@ const FIXTURES = import.meta.glob<{ default: unknown }>(['./*.json', '!./samples
 export const recorded = <C extends SampleConfig>(entries: readonly C[], fixtures: Record<string, unknown>): C[] =>
   entries.filter((c) => `./${c.id}.json` in fixtures);
 
-/** The short name an option shows: the label without " home page" (`nasa.gov`, `Wikipedia: Internet Archive`). */
+/** The short name an option shows: the label without " home page" (`NASA`, `Wikipedia: Internet Archive`). */
 export const sampleName = (label: string) => label.replace(/ home page$/, '');
 
 /** Registry of the built-in samples that are recorded, in samples.config.json order; each loads lazily, once. */

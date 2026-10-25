@@ -24,7 +24,7 @@ Open it:
 - [2022-02-02 → 2023-03-26 in Slider](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&change=20220202204805-20230326224104&view=slider): the 2022 design arrives.
 - [2024-03-16 → 2025-05-02 in Side by side](https://pagelapse.geekplux.com/?sample=wikipedia-internet-archive&change=20240316020238-20250502083649&view=side): the cyberattacks section.
 
-### nasa.gov home page (1997–2026)
+### NASA home page (1997–2026)
 
 ![The NASA home page as captured in February 2008: a dark starfield design with the NASA insignia, a spacewalk photo under "Atlantis Astronauts Set for Friday Spacewalk" and a grid of topic tiles](../public/samples/nasa/20080215055318-9eba8132.thumb.webp)
 
@@ -41,7 +41,7 @@ Open it:
 - [2000-08-15 → 2008-02-15 in Slider](https://pagelapse.geekplux.com/?sample=nasa&change=20000815052806-20080215055318&view=slider): the dark redesign arrives, what the sample opens on.
 - [2023-09-29 → 2026-04-13 in Side by side](https://pagelapse.geekplux.com/?sample=nasa&change=20230929171030-20260413235549&view=side): the Psyche mission makes way for "Welcome Home".
 
-### creativecommons.org home page (2009–2026)
+### Creative Commons home page (2009–2026)
 
 ![The Creative Commons home page as captured in October 2023: "Better sharing, brighter future" in large black type beside a video still of the CC logo](../public/samples/creative-commons/20231019221042-0b01a563.thumb.webp)
 

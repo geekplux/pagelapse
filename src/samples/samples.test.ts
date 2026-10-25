@@ -25,7 +25,7 @@ describe('committed samples', () => {
     expect(samples.map((s) => s.url)).toEqual(shown.map((c) => c.url));
     expect(samples.map((s) => s.name)).toEqual(shown.map((c) => sampleName(c.label)));
     // Today's options, in order.
-    expect(samples.map((s) => s.name)).toEqual(['Wikipedia: Internet Archive', 'nasa.gov', 'creativecommons.org']);
+    expect(samples.map((s) => s.name)).toEqual(['Wikipedia: Internet Archive', 'NASA', 'Creative Commons']);
     expect(config[0]!.id).toBe('wikipedia-internet-archive');
     expect(defaultEntry.id).toBe('wikipedia-internet-archive');
     expect(DECK_SAMPLE).toBe(defaultEntry.id);
@@ -38,12 +38,12 @@ describe('committed samples', () => {
   it('never offers an entry without a recorded fixture, and offers one as soon as it is recorded', () => {
     const entries = [
       { id: 'a', label: 'a.example home page', url: 'https://a.example/' },
-      { id: 'nasa', label: 'nasa.gov home page', url: 'https://www.nasa.gov/' },
+      { id: 'nasa', label: 'NASA home page', url: 'https://www.nasa.gov/' },
       { id: 'b', label: 'B', url: 'https://b.example/' },
     ];
     expect(recorded(entries, { './a.json': 1, './b.json': 1 }).map((c) => c.id)).toEqual(['a', 'b']);
     expect(recorded(entries, { './a.json': 1, './nasa.json': 1, './b.json': 1 }).map((c) => c.id)).toEqual(['a', 'nasa', 'b']);
-    expect(sampleName('nasa.gov home page')).toBe('nasa.gov');
+    expect(sampleName('NASA home page')).toBe('NASA');
     // The real config: NASA and Creative Commons carry their licences and money-figure filters, and are recorded, so offered.
     for (const id of ['nasa', 'creative-commons']) {
       expect(config.some((c) => c.id === id && c.license && c.attribution && c.dropBlocks && c.visualRedact)).toBe(true);

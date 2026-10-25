@@ -21,7 +21,7 @@ git clone https://github.com/geekplux/pagelapse.git && cd pagelapse
 pnpm i && pnpm dev
 ```
 
-Open the address `pnpm dev` prints (usually http://localhost:5173). The first view deals the captures of the built-in Wikipedia sample. Open a card or a sample (Wikipedia, nasa.gov or creativecommons.org): their text and pictures ship with the app, so they need no network, no account and no key. Or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
+Open the address `pnpm dev` prints (usually http://localhost:5173). The first view deals the captures of the built-in Wikipedia sample. Open a card or a sample (Wikipedia, NASA or Creative Commons): their text and pictures ship with the app, so they need no network, no account and no key. Or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
 
 ## Features
 

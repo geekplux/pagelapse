@@ -653,6 +653,15 @@ export const liveFlows: readonly Flow[] = [
       await openReady(page, baseUrl);
       await sleep(500);
       if (api.frames.length) throw new Error(`${api.frames.length} Archive requests on the first view`);
+      // The page stamps the moment the run ends: Playwright's polling sees it later, after the first frame may have started.
+      await page.evaluate(() => {
+        const w = window as unknown as { __liveDone?: number };
+        new MutationObserver((_, o) => {
+          if (!document.querySelector('[data-live="done"]')) return;
+          w.__liveDone = Date.now();
+          o.disconnect();
+        }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-live'], childList: true });
+      });
       const input = page.getByRole('combobox', { name: 'Page address' });
       await input.fill('creativecommons.org');
       await input.press('Enter');
@@ -660,7 +669,7 @@ export const liveFlows: readonly Flow[] = [
       const hold = await expectText(page, '.vp-hold', /^Loads after the run, or pick a change$/);
       if (!(await page.locator('.lf .sil').isVisible())) throw new Error('no silhouette while the run holds the frame');
       await page.locator('[data-live="done"]').waitFor({ timeout: 30_000 });
-      const done = Date.now();
+      const done = await page.evaluate(() => (window as unknown as { __liveDone?: number }).__liveDone ?? Date.now());
       const during = api.frames.filter((f) => f.start < done).length;
       if (during) throw new Error(`${during} replay requests while the run was fetching, expected 0`);
       await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });

@@ -1,7 +1,7 @@
 {
 "schema": 1,
 "id": "creative-commons",
-"label": "creativecommons.org home page",
+"label": "Creative Commons home page",
 "url": "https://creativecommons.org/",
 "description": "The home page of Creative Commons, the organisation behind the CC licences: how it describes its mission and its licences, over a decade of captures and redesigns.",
 "source": {"archive":"arquivo-pt","recordedAt":"2026-10-25","recorder":"pagelapse record-samples 0.1.0 (extractor v2)","license":"CC-BY-4.0","attribution":"Trimmed text excerpt from creativecommons.org by Creative Commons, licensed CC BY 4.0 (blocks about donations, fundraising, sponsors or the CC store, or stating monetary figures, are omitted). Creative Commons and the CC logos are trademarks of Creative Commons."},

@@ -1,7 +1,7 @@
 {
 "schema": 1,
 "id": "nasa",
-"label": "nasa.gov home page",
+"label": "NASA home page",
 "url": "https://www.nasa.gov/",
 "description": "NASA's home page: the missions, pictures and news it leads with, over a decade of captures and redesigns.",
 "source": {"archive":"arquivo-pt","recordedAt":"2026-10-25","recorder":"pagelapse record-samples 0.1.0 (extractor v2)","license":"LicenseRef-US-Government-Work","attribution":"Trimmed text excerpt from www.nasa.gov by NASA (blocks stating monetary figures are omitted). NASA content is a US government work and generally not subject to copyright in the United States; see NASA's media usage guidelines (www.nasa.gov/nasa-brand-center/images-and-media). Images and text from third parties on nasa.gov may not be in the public domain, and the NASA insignia and logos are protected."},

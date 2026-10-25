@@ -11,7 +11,7 @@ import { useFramePool } from './useFramePool.ts';
 import { type CaptureView, MODES, type Mode, type Side, captureForChange, frameNo, shotAlt, sideOf } from './visualState.ts';
 
 interface Props {
-  /** The page, for alt text: `nasa.gov home page`. */
+  /** The page, for alt text: `NASA home page`. */
   label: string;
   /** Every capture, oldest first (frame numbers). */
   captures: readonly string[];
