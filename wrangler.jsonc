@@ -20,18 +20,19 @@
   "ai": { "binding": "AI" },
   // KV `CACHE`: the namespace titled PAGELAPSE_CACHE (docs/DEPLOY.md, step 3). Not a secret.
   "kv_namespaces": [{ "binding": "CACHE", "id": "d1881ba046b74f8bbd26b6d7164f555f" }],
-  // Per-IP limits on uncached upstream fetches and summary batches (namespace ids are arbitrary per account).
+  // Per-IP limits on uncached upstream fetches and summary batches. namespace_id is account-wide and Workers that
+  // share one share counters; sibling projects use 1xxx-4xxx and 6xxx, so Pagelapse uses 5xxx.
   "ratelimits": [
-    { "name": "UPSTREAM_LIMIT", "namespace_id": "1001", "simple": { "limit": 20, "period": 60 } },
-    { "name": "AI_LIMIT", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
+    { "name": "UPSTREAM_LIMIT", "namespace_id": "5001", "simple": { "limit": 20, "period": 60 } },
+    { "name": "AI_LIMIT", "namespace_id": "5002", "simple": { "limit": 10, "period": 60 } }
   ],
   // Workers Builds branch previews (`npx wrangler preview`) do not inherit the bindings above. Previews get their
   // own rate-limit counters, but no CACHE (the Worker falls back to a small in-memory cache) and no AI (the daily AI
   // cap is counted in KV, so previews write rule summaries). They never touch production KV.
   "previews": {
     "ratelimits": [
-      { "name": "UPSTREAM_LIMIT", "namespace_id": "2001", "simple": { "limit": 20, "period": 60 } },
-      { "name": "AI_LIMIT", "namespace_id": "2002", "simple": { "limit": 10, "period": 60 } }
+      { "name": "UPSTREAM_LIMIT", "namespace_id": "5101", "simple": { "limit": 20, "period": 60 } },
+      { "name": "AI_LIMIT", "namespace_id": "5102", "simple": { "limit": 10, "period": 60 } }
     ]
   }
 }
