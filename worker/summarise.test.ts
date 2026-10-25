@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import git from '../src/samples/git-scm.json';
+import nasa from '../src/samples/nasa.json';
 import wiki from '../src/samples/wikipedia-internet-archive.json';
 import { fixtureToSnapshots, parseSampleFixture } from '../src/core/fixture.ts';
 import { ruleSummary } from '../src/core/ruleSummary.ts';
@@ -16,8 +16,8 @@ const timeline = (j: unknown) => {
   const f = parseSampleFixture(j);
   return buildTimeline(f.url, fixtureToSnapshots(f));
 };
-const [gitT, wikiT] = [timeline(git), timeline(wiki)];
-const records = [...wikiT.entries, ...gitT.entries].map((e) => e.record);
+const [nasaT, wikiT] = [timeline(nasa), timeline(wiki)];
+const records = [...wikiT.entries, ...nasaT.entries].map((e) => e.record);
 
 /** A fake KV, and a fake Workers AI that answers each numbered record with `line(n)` and logs every call. */
 function setup(line: (n: number) => string = (n) => `Reworded the page's section number ${n}`) {
@@ -90,19 +90,19 @@ describe('POST /api/summaries', () => {
     });
     return { res, body: (await res.json()) as { summaries?: { pair: string; source: string; text?: string }[]; error?: string } };
   };
-  const pairs = gitT.entries.slice(0, 3).map((e) => ({ from: e.from, to: e.to }));
+  const pairs = nasaT.entries.slice(0, 3).map((e) => ({ from: e.from, to: e.to }));
 
   it('rebuilds records from KV only: cached pairs get AI text, the others "rule" with no text and no fetch', async () => {
     const t = setup();
-    for (const p of gitT.snapshots.slice(0, 3)) t.store.set(await snapKey('https://git-scm.com/', p.ts), JSON.stringify(p));
-    const { res, body } = await post(t.env, { url: 'git-scm.com', pairs });
+    for (const p of nasaT.snapshots.slice(0, 3)) t.store.set(await snapKey('https://www.nasa.gov/', p.ts), JSON.stringify(p));
+    const { res, body } = await post(t.env, { url: 'www.nasa.gov', pairs });
     expect([res.status, res.headers.get('cache-control')]).toEqual([200, 'no-store']);
     expect(body.summaries!.map((s) => [s.source, !!s.text])).toEqual([['ai', true], ['ai', true], ['rule', false]]);
     expect(t.calls).toHaveLength(1);
-    expect(t.calls[0]!.prompt).toContain(JSON.stringify(gitT.entries[0]!.record.headingsAdded));
+    expect(t.calls[0]!.prompt).toContain(JSON.stringify(nasaT.entries[0]!.record.headingsAdded));
   });
 
-  it.each([{}, { url: 'git-scm.com', pairs: [] }, { url: 'git-scm.com', pairs: Array(9).fill(pairs[0]) }, { url: 'git-scm.com', pairs: [{ from: '2', to: '1' }] }])(
+  it.each([{}, { url: 'www.nasa.gov', pairs: [] }, { url: 'www.nasa.gov', pairs: Array(9).fill(pairs[0]) }, { url: 'www.nasa.gov', pairs: [{ from: '2', to: '1' }] }])(
     'rejects a bad body with 400 (%#)',
     async (body) => {
       const t = setup();

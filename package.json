@@ -22,7 +22,6 @@
     "smoke": "node scripts/smoke.ts",
     "record:samples": "node scripts/record-samples.ts",
     "record:visuals": "node scripts/record-visuals.ts",
-    "record:new": "node scripts/record-samples.ts --only nasa,creative-commons --archive arquivo-pt && node scripts/record-visuals.ts --only wikipedia-internet-archive,nasa,creative-commons",
     "bake:summaries": "node scripts/bake-sample-summaries.ts",
     "render:social": "node scripts/render-social.ts",
     "render:gif": "node scripts/render-hero-gif.ts",

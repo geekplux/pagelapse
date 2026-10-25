@@ -5,7 +5,7 @@ import { LoadingStatus } from './LoadingStatus.tsx';
 
 const caps = ['20131106000000', '20251218000000'];
 const head = (status: Parameters<typeof LoadingStatus>[0], shown = status.shown) =>
-  renderToStaticMarkup(<SheetHead id="h" title="git-scm.com" captures={caps} changes={9} trivial={4} failed={2} status={<LoadingStatus {...status} />} statusShown={shown} />);
+  renderToStaticMarkup(<SheetHead id="h" title="nasa.gov" captures={caps} changes={9} trivial={4} failed={2} status={<LoadingStatus {...status} />} statusShown={shown} />);
 const run = { running: true, shown: true, progress: [9, 14] as const, onCancel: () => {} };
 
 describe('a live run\'s status in the meta line\'s place (target/V1Live.html)', () => {

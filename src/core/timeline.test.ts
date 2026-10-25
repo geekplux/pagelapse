@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import git from '../samples/git-scm.json';
-import rust from '../samples/rust-lang.json';
+import cc from '../samples/creative-commons.json';
+import nasa from '../samples/nasa.json';
 import wiki from '../samples/wikipedia-internet-archive.json';
 import { MAX_RECORD_CHARS, MAX_SNIPPET_CHARS, toChangeRecord } from './changeRecord.ts';
 import { diffPages } from './diff.ts';
@@ -10,7 +10,7 @@ import { MAGNITUDE_THRESHOLDS } from './score.ts';
 import { appendSnapshot, buildTimeline, emptyTimeline, trivialEntries } from './timeline.ts';
 import type { ChangeRecord, SnapshotPage } from './types.ts';
 
-const samples = [wiki, git, rust].map((j) => parseSampleFixture(j));
+const samples = [wiki, nasa, cc].map((j) => parseSampleFixture(j));
 const snap = (n: number, texts: string[], title = 'Field notes'): SnapshotPage => ({
   ts: `2020010${n}000000`,
   digest: `d${n}`,
@@ -138,6 +138,6 @@ describe('buildTimeline', () => {
   it('each committed sample yields 4-15 meaningful changes', () => {
     const counts = Object.fromEntries(samples.map((f) => [f.id, buildTimeline(f.url, fixtureToSnapshots(f)).entries.length]));
     expect(Object.values(counts).every((n) => n >= 4 && n <= 15)).toBe(true);
-    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, 'git-scm': 9, 'rust-lang': 5 }); // recorded in phase 6
+    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, nasa: 10, 'creative-commons': 13 }); // Wikipedia recorded in phase 6, NASA and Creative Commons on 2026-10-25
   });
 });

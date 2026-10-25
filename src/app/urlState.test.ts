@@ -10,9 +10,9 @@ const entries = [
 
 describe('urlState', () => {
   it('round-trips sample, change, at and view', () => {
-    const s = { sample: 'git-scm', change: '20140101000000-20150101000000', at: '20140101000000', view: 'onion' };
+    const s = { sample: 'nasa', change: '20140101000000-20150101000000', at: '20140101000000', view: 'onion' };
     expect(parseUrlState(formatUrlState(s))).toEqual(s);
-    expect(formatUrlState(s)).toBe('?sample=git-scm&change=20140101000000-20150101000000&at=20140101000000&view=onion');
+    expect(formatUrlState(s)).toBe('?sample=nasa&change=20140101000000-20150101000000&at=20140101000000&view=onion');
     expect(parseUrlState('')).toEqual({ sample: undefined, url: undefined, change: undefined, at: undefined, view: undefined });
     expect(formatUrlState({})).toBe('');
   });

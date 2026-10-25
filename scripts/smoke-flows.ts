@@ -9,7 +9,7 @@ import { collapseUnchanged } from '../src/app/diff/rows.ts';
 import { stepIndex, tsToMs } from '../src/app/timeline/scale.ts';
 import { fixtureToSnapshots, parseSampleFixture } from '../src/core/fixture.ts';
 import { namedSections } from '../src/core/ruleSummary.ts';
-import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
+import { buildTimeline } from '../src/core/timeline.ts';
 import { formatTimestampLong, formatTimestampMonth, formatTimestampShort, timestampToIso } from '../src/core/timestamp.ts';
 import { viewCaptureUrl } from '../src/core/url.ts';
 import { type Theme, palette } from '../src/design/palette.ts';
@@ -355,11 +355,11 @@ export const flows: readonly Flow[] = [
   ),
   {
     name: 'sample-unrecorded',
-    description: 'A config entry without a recorded fixture (NASA, Creative Commons) is never offered: not a hero option, not in the address menu, and its deep link opens the default sample',
+    description: 'A config entry without a recorded fixture, or a retired sample (git-scm, rust-lang), is never offered: not a hero option, not in the address menu, and its deep link opens the default sample',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      const unrecorded = readSampleConfig(root).flatMap((c) => (isRecorded(root, c.id) ? [] : [c.id]));
-      if (!unrecorded.length) return { notes: ['every config entry is recorded: nothing to hide'] };
+      // Config entries waiting for their recording (none today), and the samples retired on 2026-10-25 (old links exist).
+      const unrecorded = [...readSampleConfig(root).flatMap((c) => (isRecorded(root, c.id) ? [] : [c.id])), 'git-scm', 'rust-lang'];
       const ids = fixtures.map((f) => f.id).join();
       await openHero(page, baseUrl);
       const options = await page.locator('.sample-opt').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-sample')));
@@ -843,28 +843,32 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'timeline-deeplink',
-    description: '?sample=git-scm&change=<from>-<to> selects that change; an unknown change falls back to the latest; reflows at 320 px',
+    description: '?sample=nasa&change=<from>-<to> selects that change; an unknown change falls back to the featured one (what the sample opens on); reflows at 320 px',
     async run({ page, baseUrl }) {
-      const f = fixtures.find((x) => x.id === 'git-scm')!;
+      const f = fixtures.find((x) => x.id === 'nasa')!;
       const t = timelineOf(f);
-      const e = t.entries[2]!;
-      const timeToReadyMs = await openReady(page, baseUrl, `/?sample=git-scm&change=${e.from}-${e.to}`);
-      if ((await page.locator('#sample-label').textContent())?.trim() !== f.label) throw new Error('deep link did not open git-scm');
-      const said = await expectSelected(page, f, 2);
+      // Not NASA's featured change (the third), which the sample opens on anyway.
+      const e = t.entries[4]!;
+      const timeToReadyMs = await openReady(page, baseUrl, `/?sample=nasa&change=${e.from}-${e.to}`);
+      if ((await page.locator('#sample-label').textContent())?.trim() !== f.label) throw new Error('deep link did not open nasa');
+      const said = await expectSelected(page, f, 4);
+      // NASA has no trivial captures (live-trivial covers the hollow dots): none drawn.
       const ticks = await page.locator('.rb-dot').count();
       if (ticks !== t.trivialCaptures.length) throw new Error(`${ticks} hollow dots for ${t.trivialCaptures.length} trivial captures`);
-      await openReady(page, baseUrl, '/?sample=git-scm&change=bogus');
-      await expectSelected(page, f, t.entries.length - 1);
+      await openReady(page, baseUrl, '/?sample=nasa&change=bogus');
+      // The featured change is not the latest here, so this tells the two fallbacks apart.
+      const featured = t.entries.findIndex((x) => `${x.from}-${x.to}` === f.featured);
+      if (featured < 0 || featured === t.entries.length - 1) throw new Error(`featured change ${f.featured} at ${featured} of ${t.entries.length}`);
+      await expectSelected(page, f, featured);
       // Invalid query values are replaced in the address bar by the state actually shown.
-      const latest = (x: Fixture) => { const l = timelineOf(x).entries.at(-1)!; return `${l.from}-${l.to}`; };
-      if (new URL(page.url()).search !== `?sample=git-scm&change=${latest(f)}`) throw new Error(`bogus change not replaced: ${page.url()}`);
+      if (new URL(page.url()).search !== `?sample=nasa&change=${f.featured}`) throw new Error(`bogus change not replaced: ${page.url()}`);
       await openReady(page, baseUrl, '/?sample=nope');
       if (new URL(page.url()).search !== `?sample=${defaultFixture.id}`) throw new Error(`bogus sample not replaced: ${page.url()}`);
       await page.setViewportSize({ width: 320, height: 800 });
       await noPageOverflow(page);
       // Let any picture fade finish so axe measures settled colours.
       await settle(page);
-      return { timeToReadyMs, notes: [said, `${ticks} hollow dots; bogus change -> latest; no page overflow at 320 px`] };
+      return { timeToReadyMs, notes: [said, `${ticks} hollow dots; bogus change -> featured ${f.featured}; no page overflow at 320 px`] };
     },
   },
   {
@@ -977,16 +981,18 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'diff-copy-link',
-    description: 'Copy link puts the deep link on the clipboard, confirms politely, and the link restores the view; trivial edits can be shown and selected',
+    description: 'Copy link puts the deep link on the clipboard, confirms politely, and the link restores the view (showing and selecting trivial edits: live-trivial)',
     async run({ page, baseUrl }) {
       await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(baseUrl).origin });
-      const f = fixtures.find((x) => x.id === 'git-scm')!;
+      const f = fixtures.find((x) => x.id === 'nasa')!;
       const t = timelineOf(f);
-      await openReady(page, baseUrl, `/?sample=git-scm`);
-      // git-scm opens on its featured change, the latest (only the default sample opens on the decade compare); Previous steps back.
-      await expectSelected(page, f, t.entries.length - 1);
+      const featured = t.entries.findIndex((e) => `${e.from}-${e.to}` === f.featured);
+      if (featured < 1) throw new Error(`NASA's featured change ${f.featured} is not a later change of its timeline`);
+      await openReady(page, baseUrl, `/?sample=nasa`);
+      // NASA opens on its featured change (only the default sample opens on the decade compare); Previous steps back.
+      await expectSelected(page, f, featured);
       await page.locator('.diff-nav .btn').first().click();
-      await expectSelected(page, f, t.entries.length - 2);
+      await expectSelected(page, f, featured - 1);
       await page.locator('.controls .vp-copy').click();
       // Seen on the button, and said by the polite status region (its text is for screen readers on success).
       await page.locator('.controls .vp-copy[data-said="ok"]', { hasText: 'Link copied' }).waitFor({ timeout: 2_000 });
@@ -994,18 +1000,8 @@ export const flows: readonly Flow[] = [
       const copied = await page.evaluate(() => navigator.clipboard.readText());
       if (copied !== page.url() || !copied.includes('change=')) throw new Error(`copied "${copied}", page at ${page.url()}`);
       await openReady(page, baseUrl, new URL(copied).pathname + new URL(copied).search);
-      await expectSelected(page, f, t.entries.length - 2);
-      // "Show them" turns the hollow dots into selectable, labelled entries.
-      const trivial = trivialEntries(t);
-      await page.locator('.changes-trivial button', { hasText: 'Show them' }).click();
-      await page.locator('.changes-trivial button', { hasText: 'Hide them' }).waitFor({ timeout: 2_000 });
-      const marks = await page.locator('.rb-slider .rb-dot[data-index]').count();
-      const items = await page.locator('.changes li').count();
-      if (marks !== trivial.length || items !== t.entries.length + trivial.length) throw new Error(`${marks} trivial dots on the slider, ${items} list items`);
-      await page.locator('.change', { hasText: 'trivial' }).last().click();
-      await page.locator('.change[aria-current="true"]', { hasText: 'trivial' }).waitFor({ timeout: 2_000 });
-      if (!page.url().includes(`change=${trivial[0]!.from}-${trivial[0]!.to}`)) throw new Error(`trivial entry not selected: ${page.url()}`);
-      return { notes: [`copied ${new URL(copied).search}, reopened it; ${marks} trivial entries shown and selectable`] };
+      await expectSelected(page, f, featured - 1);
+      return { notes: [`copied ${new URL(copied).search}, reopened it on change ${featured} of ${t.entries.length}`] };
     },
   },
   {
@@ -1451,7 +1447,8 @@ export const flows: readonly Flow[] = [
     description: 'A capture with no picture: in Slider the stage keeps its place with the reason as a tag on the picture and no caption; in Single the hatched card, its reason and "Open capture"; its thumbnail says "no picture"',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      const f = fixtures.find((x) => x.id === 'rust-lang')!;
+      // Creative Commons: captures Arquivo.pt could not replay, and one picture dropped for its fundraising price.
+      const f = fixtures.find((x) => x.id === 'creative-commons')!;
       const shot = f.snapshots.find((s) => s.shot?.status === 'failed')!;
       const card = page.locator('.vp-none', { hasText: 'No picture of this capture' });
       const place = () => page.evaluate(() => {
@@ -1610,7 +1607,7 @@ export const flows: readonly Flow[] = [
     description: 'A compare mode on a change with a capture that has no picture shows Single, with the reason, and keeps the chosen mode',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      const f = fixtures.find((x) => x.id === 'rust-lang')!;
+      const f = fixtures.find((x) => x.id === 'creative-commons')!;
       const ts = f.snapshots.find((s) => s.shot?.status === 'failed')!.ts;
       const e = timelineOf(f).entries.find((x) => x.to === ts || x.from === ts)!;
       await openReady(page, baseUrl, `/?sample=${f.id}&change=${e.from}-${e.to}`);

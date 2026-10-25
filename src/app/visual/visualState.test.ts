@@ -77,8 +77,8 @@ describe('visualState', () => {
   });
 
   it('builds same-origin picture URLs and frame numbers', () => {
-    expect(shotSrc('git-scm', '20131106090756-302c3cea')).toBe('/samples/git-scm/20131106090756-302c3cea.webp');
-    expect(shotSrc('git-scm', '20131106090756-302c3cea', true)).toBe('/samples/git-scm/20131106090756-302c3cea.thumb.webp');
+    expect(shotSrc('nasa', '19970605230559-47f6dc29')).toBe('/samples/nasa/19970605230559-47f6dc29.webp');
+    expect(shotSrc('nasa', '19970605230559-47f6dc29', true)).toBe('/samples/nasa/19970605230559-47f6dc29.thumb.webp');
     expect(frameNo(0)).toBe('#01');
     expect(frameNo(13)).toBe('#14');
   });

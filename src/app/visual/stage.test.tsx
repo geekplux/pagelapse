@@ -1,19 +1,20 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { parseSampleFixture } from '../../core/fixture.ts';
-import gitScm from '../../samples/git-scm.json';
-import rustLang from '../../samples/rust-lang.json';
+import creativeCommons from '../../samples/creative-commons.json';
+import nasaJson from '../../samples/nasa.json';
 import { buildTimeline } from '../../core/timeline.ts';
 import { fixtureToSnapshots } from '../../core/fixture.ts';
 import wikipedia from '../../samples/wikipedia-internet-archive.json';
 import { TimelineView } from '../TimelineView.tsx';
 import { spanText } from '../SheetHead.tsx';
+import { minuteAfter, withEchoes } from '../../../test/fixtures/echo.ts';
 
 const fixture = parseSampleFixture(wikipedia);
 const PAIR = '20240316020238-20250502083649';
 const render = (q: { change?: string; at?: string; view?: string; overview?: boolean } = {}, f = fixture) =>
   renderToStaticMarkup(<TimelineView fixture={f} initialChange={q.change} initialAt={q.at} initialMode={q.view} overview={q.overview} onChange={() => {}} />);
-const git = parseSampleFixture(gitScm);
+const nasa = parseSampleFixture(nasaJson);
 const text = (html: string) => html.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"');
 const radios = (html: string) => [...html.matchAll(/<input[^>]*name="vp-mode"[^>]*>/g)].map(([tag]) => ({ value: /value="(\w+)"/.exec(tag)?.[1], checked: tag.includes('checked') }));
 const checked = (html: string) => radios(html).find((r) => r.checked)?.value;
@@ -82,26 +83,30 @@ describe('workspace stage', () => {
 
 describe('stage captions', () => {
   it('says "Trivial edit" once in Single, on the picture tag; the caption keeps "Open capture"', () => {
-    const html = render({ change: '20160114164816-20170607181950', at: '20180716160704', view: 'single' }, git);
+    // NASA with its 2008 capture echoed a minute later (no built-in sample has a trivial edit of its own).
+    const [from, to] = ['20000815052806', '20080215055318'];
+    const echoed = { ...nasa, snapshots: withEchoes(nasa.snapshots, [nasa.snapshots.findIndex((s) => s.ts === to)]) };
+    const html = render({ change: `${from}-${to}`, at: minuteAfter(to), view: 'single' }, echoed);
     expect(text(html).match(/Trivial edit/g)).toHaveLength(1);
     expect(text(/<figcaption class="vp-cap">(.*?)<\/figcaption>/.exec(html)![1]!)).toBe('Open capture (opens in a new tab)');
   });
 
   it('tags a partial capture on the picture, so nothing under the stage depends on the pair', () => {
-    const ts = git.snapshots.find((x) => x.shot?.status === 'partial')!.ts;
-    const html = render({ at: ts, view: 'single' }, git);
+    const ts = nasa.snapshots.find((x) => x.shot?.status === 'partial')!.ts;
+    const html = render({ at: ts, view: 'single' }, nasa);
     expect(/<div class="vp-mat">.*class="vp-badge" data-corner="before".*?Partial copy/.test(html)).toBe(true);
     expect(text(/<figcaption class="vp-cap">(.*?)<\/figcaption>/.exec(html)![1]!)).toBe('Open capture (opens in a new tab)');
   });
 });
 
 describe('a pair with no picture', () => {
-  const rust = parseSampleFixture(rustLang);
-  const ts = rust.snapshots.find((x) => !x.shot?.file)!.ts;
-  const e = buildTimeline(rust.url, fixtureToSnapshots(rust)).entries.find((x) => x.to === ts || x.from === ts)!;
+  // Creative Commons: some captures failed to replay, and one picture was dropped (its fundraising price).
+  const cc = parseSampleFixture(creativeCommons);
+  const ts = cc.snapshots.find((x) => !x.shot?.file)!.ts;
+  const e = buildTimeline(cc.url, fixtureToSnapshots(cc)).entries.find((x) => x.to === ts || x.from === ts)!;
 
   it('Slider falls back to Single in the same footprint: the reason is a tag on the picture, nothing is added around it', () => {
-    const html = render({ change: `${e.from}-${e.to}` }, rust);
+    const html = render({ change: `${e.from}-${e.to}` }, cc);
     expect(html).toContain('data-mode="single"');
     expect(/<div class="vp-mat">.*◑ No picture of the (Before|After) capture/.test(html)).toBe(true);
     expect(html).toMatch(/<div class="sr-only" role="status"><p class="vp-note">Slider needs a picture of both captures/);
@@ -110,7 +115,7 @@ describe('a pair with no picture', () => {
   });
 
   it('Side by side keeps both mats, one with the "No picture" card', () => {
-    const html = render({ change: `${e.from}-${e.to}`, view: 'side' }, rust);
+    const html = render({ change: `${e.from}-${e.to}`, view: 'side' }, cc);
     expect(html).toContain('data-mode="side"');
     expect(html.match(/class="vp-fig"/g)).toHaveLength(2);
     expect(html).toContain('No picture of this capture');

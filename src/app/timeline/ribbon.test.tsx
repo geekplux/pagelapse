@@ -2,9 +2,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { fixtureToSnapshots, parseSampleFixture } from '../../core/fixture.ts';
 import { buildTimeline } from '../../core/timeline.ts';
-import gitScm from '../../samples/git-scm.json';
+import nasaJson from '../../samples/nasa.json';
 import wikipedia from '../../samples/wikipedia-internet-archive.json';
 import { TimelineView } from '../TimelineView.tsx';
+import { withEchoes } from '../../../test/fixtures/echo.ts';
 
 const render = (f: ReturnType<typeof parseSampleFixture>, change?: string) =>
   renderToStaticMarkup(<TimelineView fixture={f} initialChange={change} onChange={() => {}} />);
@@ -40,10 +41,12 @@ describe('time ribbon', () => {
   });
 
   it('draws trivial captures as hollow dots, says so in their names and offers to show them', () => {
-    const git = parseSampleFixture(gitScm);
-    const t = buildTimeline(git.url, fixtureToSnapshots(git));
-    expect(t.trivialCaptures.length).toBeGreaterThan(0);
-    const out = render(git);
+    // NASA with two echoed captures (no built-in sample has a trivial edit of its own).
+    const nasa = parseSampleFixture(nasaJson);
+    const echoed = { ...nasa, snapshots: withEchoes(nasa.snapshots, [2, 6]) };
+    const t = buildTimeline(echoed.url, fixtureToSnapshots(echoed));
+    expect(t.trivialCaptures).toHaveLength(2);
+    const out = render(echoed);
     expect(count(out, /class="rb-dot"/g)).toBe(t.trivialCaptures.length);
     expect(count(out, /data-trivial="true"[^>]*aria-label="[^"]*trivial edit/g)).toBe(t.trivialCaptures.length);
     expect(out).toContain(`${t.trivialCaptures.length} ${t.trivialCaptures.length === 1 ? 'capture' : 'captures'} only changed dates or counters.`);

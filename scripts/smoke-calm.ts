@@ -12,7 +12,7 @@ import { framesPainted, mockApi, openLive } from './smoke-live.ts';
 const baseline = !!process.env.CALM_BASELINE;
 /** First-load caps per width: regions, tab stops, framed boxes, eyebrow labels, solid accent fills (section 4 §3). */
 const CAPS = { wide: [3, 13, 2, 2, 1], mobile: [3, 12, 2, 1, 1] } as const;
-const HEROES = new Set(['hero', 'hero-git-scm', 'single', 'live-done']);
+const HEROES = new Set(['hero', 'hero-nasa', 'single', 'live-done']);
 
 /** Opens every closed disclosure (native or `aria-expanded`) and returns a function that closes them again. */
 export async function openAll(page: Page): Promise<() => Promise<void>> {
@@ -110,7 +110,7 @@ const sample = (path: string) => async (page: Page, baseUrl: string) => {
 const VIEWS: View[] = [
   { name: 'hero', setup: sample('/') },
   // `hero` is the default sample (Wikipedia); this one keeps a second sample in the audit.
-  { name: 'hero-git-scm', setup: sample('/?sample=git-scm') },
+  { name: 'hero-nasa', setup: sample('/?sample=nasa') },
   { name: 'compare-side', setup: sample('/?view=side') },
   { name: 'single', setup: sample('/?view=single') },
   {
@@ -124,7 +124,7 @@ const VIEWS: View[] = [
     name: 'live-running',
     async setup(page, baseUrl) {
       await mockApi(page, { snapshot: (i) => (i < 6 ? {} : { delay: null }) });
-      await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
+      await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
       await page.waitForFunction(() => document.querySelector('.live-status .live-count')?.textContent === '6 of 14', null, { timeout: 10_000 });
     },
   },
@@ -132,7 +132,7 @@ const VIEWS: View[] = [
     name: 'live-done',
     async setup(page, baseUrl) {
       await mockApi(page);
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
       await framesPainted(page, '.vpane');
     },
   },
@@ -140,21 +140,21 @@ const VIEWS: View[] = [
     name: 'live-empty',
     async setup(page, baseUrl) {
       await mockApi(page, { captures: 'no_captures' });
-      await openLive(page, baseUrl, 'git-scm.com', 'error');
+      await openLive(page, baseUrl, 'creativecommons.org', 'error');
     },
   },
   {
     name: 'live-no-meaningful',
     async setup(page, baseUrl) {
-      await mockApi(page, { data: () => mockFromSample('git-scm', { same: true }) });
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await mockApi(page, { data: () => mockFromSample('creative-commons', { same: true }) });
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
     },
   },
   {
     name: 'live-error-ratelimited',
     async setup(page, baseUrl) {
       await mockApi(page, { captures: 'archive_rate_limited' });
-      await openLive(page, baseUrl, 'git-scm.com', 'error');
+      await openLive(page, baseUrl, 'creativecommons.org', 'error');
     },
   },
   { name: 'live-invalid-url', setup: (page, baseUrl) => openReady(page, baseUrl, '/?url=ftp%3A%2F%2Fexample.org') },
@@ -206,7 +206,7 @@ async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
 
 /** Every feature reachable by Tab, Enter and Space only, opening at most one disclosure (AC 5). */
 /** `wide`: a feature phones do not have (the ribbon's thumbnails, target/V3WorkPhone.html). */
-type Item = { name: string; sel: string; path?: string; via?: string; wide?: boolean };
+type Item = { name: string; sel: string; path?: string; via?: string; wide?: boolean; open?: (page: Page, baseUrl: string) => Promise<unknown> };
 /** Every offered sample (the recorded entries of samples.config.json), the default first. */
 const SAMPLE_IDS = recordedSamples(fileURLToPath(new URL('..', import.meta.url))).map((c) => c.id);
 /** Wikipedia's 2022 design change: its diff has unchanged runs to collapse (the decade compare, the default's first view, has few). */
@@ -229,7 +229,15 @@ const INVENTORY: Item[] = [
   { name: 'Open capture', sel: '.vpane .cap-out', path: '/?view=single' },
   { name: 'ribbon thumbnails', sel: '.rb-th', wide: true },
   { name: 'ribbon slider', sel: '.rb-slider' },
-  { name: 'Show them (trivial edits)', sel: '.changes-trivial button', path: '/?sample=git-scm' },
+  // No built-in sample has a trivial edit: a live run of Creative Commons with two captures echoed a minute later.
+  {
+    name: 'Show them (trivial edits)',
+    sel: '.changes-trivial button',
+    async open(page, baseUrl) {
+      await mockApi(page, { data: () => mockFromSample('creative-commons', { echo: [2, 6] }) });
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
+    },
+  },
   { name: 'Every change rows', sel: '.changes .change' },
   { name: 'Show unchanged blocks', sel: '.db-gap', path: wiki },
   { name: 'Show more changes', sel: '.db-more .btn' },
@@ -241,14 +249,14 @@ const INVENTORY: Item[] = [
 
 /** Tabs from the top until `item` has focus, pressing Enter on its one disclosure on the way. */
 async function reach(page: Page, baseUrl: string, item: Item): Promise<string> {
-  await openReady(page, baseUrl, item.path ?? '/');
+  await (item.open ? item.open(page, baseUrl) : openReady(page, baseUrl, item.path ?? '/'));
   let opened = '';
   for (let k = 1; k <= 160; k++) {
     await page.keyboard.press('Tab');
     const at = await page.evaluate(({ sel, via }) => {
       const a = document.activeElement;
       return { hit: !!a?.matches(sel), via: !!via && !!a?.matches(via) };
-    }, item);
+    }, { sel: item.sel, via: item.via });
     if (at.via && !opened) {
       // Enter for a <summary>, Space for a button: both native activations.
       opened = item.via!.includes('summary') ? 'Enter' : 'Space';
@@ -337,7 +345,7 @@ export const calmFlows: readonly Flow[] = [
   { name: 'calm-inventory', description: 'Every feature reachable by Tab, Enter and Space, opening at most one disclosure, named in the tree', viewports: ['wide', 'mobile'], widthTag: true, firstView: true, run: inventory },
   {
     name: 'calm-fit',
-    description: 'Every sample at 1280×800 and 1440×900 (and git-scm at 960×800): the controls row starts 16 px under the picture',
+    description: 'Every sample at 1280×800 and 1440×900 (and NASA at 960×800): the controls row starts 16 px under the picture',
     viewports: ['desktop', 'wide'],
     widthTag: true,
     firstView: true,
@@ -355,10 +363,10 @@ export const calmFlows: readonly Flow[] = [
       const size = page.viewportSize()!;
       if (size.width === 1440) {
         await page.setViewportSize({ width: 960, height: 800 });
-        await openReady(page, baseUrl, '/?sample=git-scm');
+        await openReady(page, baseUrl, '/?sample=nasa');
         const gap = await page.evaluate(() => Math.round(document.querySelector('.controls')!.getBoundingClientRect().top - document.querySelector('.vpane')!.getBoundingClientRect().bottom));
-        if (gap !== 16) throw new Error(`git-scm at 960: controls ${gap} px under the picture, expected 16`);
-        notes.push(`git-scm at 960: controls ${gap} px under the picture`);
+        if (gap !== 16) throw new Error(`nasa at 960: controls ${gap} px under the picture, expected 16`);
+        notes.push(`nasa at 960: controls ${gap} px under the picture`);
         await page.setViewportSize(size);
       }
       return { notes };
@@ -413,7 +421,7 @@ export const calmFlows: readonly Flow[] = [
     widthTag: true,
     async run({ page, baseUrl }) {
       await mockApi(page, { snapshot: (i) => (i < 4 ? { delay: 900 } : { delay: null }) });
-      await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
+      await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
       const cancel = page.locator('.live-status button', { hasText: 'Cancel' });
       await cancel.focus();
       const where = () => page.evaluate(() => {
@@ -465,7 +473,7 @@ export const calmFlows: readonly Flow[] = [
       viewports: ['desktop'],
       async run({ page, baseUrl }) {
         await mockApi(page, v === 'rule' ? {} : { summaries: v });
-        await openLive(page, baseUrl, 'git-scm.com', 'done');
+        await openLive(page, baseUrl, 'creativecommons.org', 'done');
         // AI lines arrive after the run: wait until the list shows what this source mix should.
         await page.waitForFunction(
           (want) => {

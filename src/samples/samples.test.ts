@@ -18,14 +18,14 @@ async function gzipBytes(text: string): Promise<number> {
 describe('committed samples', () => {
   it('match the recorder config: the registry offers the recorded entries in config order; Wikipedia is the default', () => {
     const files = Object.keys(RAW).map((f) => f.slice(2, -5));
-    // Every committed fixture has a config entry; a config entry may wait for its recording (NASA, Creative Commons).
+    // Every committed fixture has a config entry; a config entry may wait for its recording.
     expect(files.filter((id) => !config.some((c) => c.id === id))).toEqual([]);
     const shown = config.filter((c) => files.includes(c.id));
     expect(samples.map((s) => s.id)).toEqual(shown.map((c) => c.id));
     expect(samples.map((s) => s.url)).toEqual(shown.map((c) => c.url));
     expect(samples.map((s) => s.name)).toEqual(shown.map((c) => sampleName(c.label)));
-    // Today's options, in order (NASA and Creative Commons slot in after Wikipedia once recorded).
-    expect(samples.map((s) => s.name).filter((n) => !['nasa.gov', 'creativecommons.org'].includes(n))).toEqual(['Wikipedia: Internet Archive', 'git-scm.com', 'rust-lang.org']);
+    // Today's options, in order.
+    expect(samples.map((s) => s.name)).toEqual(['Wikipedia: Internet Archive', 'nasa.gov', 'creativecommons.org']);
     expect(config[0]!.id).toBe('wikipedia-internet-archive');
     expect(defaultEntry.id).toBe('wikipedia-internet-archive');
     expect(DECK_SAMPLE).toBe(defaultEntry.id);
@@ -44,19 +44,20 @@ describe('committed samples', () => {
     expect(recorded(entries, { './a.json': 1, './b.json': 1 }).map((c) => c.id)).toEqual(['a', 'b']);
     expect(recorded(entries, { './a.json': 1, './nasa.json': 1, './b.json': 1 }).map((c) => c.id)).toEqual(['a', 'nasa', 'b']);
     expect(sampleName('nasa.gov home page')).toBe('nasa.gov');
-    // The real config: NASA and Creative Commons are listed with their licences but not recorded yet, so not offered.
+    // The real config: NASA and Creative Commons carry their licences and money-figure filters, and are recorded, so offered.
     for (const id of ['nasa', 'creative-commons']) {
       expect(config.some((c) => c.id === id && c.license && c.attribution && c.dropBlocks && c.visualRedact)).toBe(true);
-      if (RAW[`./${id}.json`]) continue;
-      expect(samples.some((s) => s.id === id)).toBe(false);
+      expect(samples.some((s) => s.id === id)).toBe(!!RAW[`./${id}.json`]);
     }
   });
 
-  it('a deep link to an unknown or unrecorded sample opens the default (?sample=nasa until it is recorded)', () => {
+  it('a deep link to an unknown or retired sample opens the default; a recorded one opens itself', () => {
     expect(sampleFor('nope').id).toBe('wikipedia-internet-archive');
     expect(sampleFor(undefined).id).toBe('wikipedia-internet-archive');
-    expect(sampleFor('nasa').id).toBe(RAW['./nasa.json'] ? 'nasa' : 'wikipedia-internet-archive');
-    expect(sampleFor('rust-lang').id).toBe('rust-lang');
+    // git-scm and rust-lang were retired (no config entry, no fixture): old links land on the default.
+    expect(sampleFor('git-scm').id).toBe('wikipedia-internet-archive');
+    expect(sampleFor('nasa').id).toBe('nasa');
+    expect(sampleFor('creative-commons').id).toBe('creative-commons');
   });
 
   it('trims the same money figures from the new samples as from Wikipedia (text and pictures)', () => {

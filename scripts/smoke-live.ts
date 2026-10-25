@@ -5,15 +5,16 @@
 import { readFileSync } from 'node:fs';
 import type { Page } from 'playwright-core';
 import { shownSummary } from '../src/app/describe.ts';
-import { buildTimeline } from '../src/core/timeline.ts';
-import { API_ERRORS, GIT_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
+import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
+import { API_ERRORS, CC_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
 import { DEFAULT_ID, type Flow, openReady } from './smoke-flows.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 
-const git = mockFromSample('git-scm');
-const rust = mockFromSample('rust-lang');
-const gitTimeline = buildTimeline(git.url, git.pages).entries;
-const gitEntries = gitTimeline.length;
+/** Live runs replay Creative Commons (14 captures) as if fetched from the Archive; NASA is the first run that gets replaced. */
+const cc = mockFromSample('creative-commons');
+const nasa = mockFromSample('nasa');
+const ccTimeline = buildTimeline(cc.url, cc.pages).entries;
+const ccEntries = ccTimeline.length;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface Logged {
@@ -58,7 +59,7 @@ export async function mockApi(
   page: Page,
   opts: {
     data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; snapshot?: (i: number) => Plan; frame?: (ts: string) => number | null;
-    /** `/api/summaries`: Workers AI lines (git-scm), a 500, or (default) "rule" for every pair, as without a binding. */
+    /** `/api/summaries`: Workers AI lines (Creative Commons), a 500, or (default) "rule" for every pair, as without a binding. */
     summaries?: 'ai' | 'some' | 'error';
   } = {},
 ) {
@@ -71,7 +72,7 @@ export async function mockApi(
     const target = host(u.searchParams.get('url') ?? '');
     const entry: Logged = { path: u.pathname, target, ts: u.searchParams.get('ts') ?? undefined, start: Date.now() };
     log.push(entry);
-    const api = (opts.data ?? (() => git))(target);
+    const api = (opts.data ?? (() => cc))(target);
     let reply: { status: number; body: unknown } = { status: 404, body: { error: 'not_found', message: 'No such API.' } };
     if (u.pathname === '/api/captures') {
       reply = opts.captures ? API_ERRORS[opts.captures] : { status: 200, body: api.captures };
@@ -89,7 +90,7 @@ export async function mockApi(
       entry.pairs = pairs.map((p) => `${p.from}-${p.to}`);
       await sleep(300);
       // 'some': AI lines for every other change only (a mixed list).
-      const line = (pair: string, i = gitTimeline.findIndex((e) => `${e.from}-${e.to}` === pair)) => (opts.summaries === 'some' && i % 2 ? undefined : GIT_AI_SUMMARIES[i]);
+      const line = (pair: string, i = ccTimeline.findIndex((e) => `${e.from}-${e.to}` === pair)) => (opts.summaries === 'some' && i % 2 ? undefined : CC_AI_SUMMARIES[i]);
       reply = opts.summaries === 'error'
         ? { status: 500, body: { error: 'archive_unavailable', message: 'Something went wrong.' } }
         : { status: 200, body: { summaries: entry.pairs.map((pair) => (opts.summaries !== 'error' && opts.summaries && line(pair) ? { pair, source: 'ai', text: line(pair) } : { pair, source: 'rule' })) } };
@@ -209,7 +210,7 @@ async function expectActions(page: Page, names: string[]): Promise<void> {
 /** Shared by live-loading and its reduced-motion variant: 6 captures answer, then the run waits on the Archive. */
 async function loading(page: Page, baseUrl: string, phone: boolean): Promise<string[]> {
   const api = await mockApi(page, { snapshot: (i) => (i < 6 ? {} : { delay: null }) });
-  await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
+  await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
   await page.waitForFunction(() => document.querySelector('.live-status .live-count')?.textContent === '6 of 14', null, { timeout: 10_000 });
   // Phones show the ribbon's axis only (target/V3WorkPhone.html): no thumbnails, so no pending slots.
   const pending = await page.locator('.rb-pending').count();
@@ -225,7 +226,7 @@ export const liveFlows: readonly Flow[] = [
     description: 'Paste a URL: a first run is replaced by a second (no stale bars), 2 snapshots in flight at most, throttled announcements, Copy link deep link',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      const api = await mockApi(page, { data: (t) => (t.includes('rust') ? rust : git), snapshot: () => ({ delay: 150 }) });
+      const api = await mockApi(page, { data: (t) => (t.includes('nasa') ? nasa : cc), snapshot: () => ({ delay: 150 }) });
       await openReady(page, baseUrl);
       if (api.log.length || api.frames.length) throw new Error(`the first view called the API or the Archive: ${[...api.log.map((l) => l.path), ...api.frames.map((f) => f.url)].join(', ')}`);
       // Record what the polite live region says, and when; and what every other live region says (one inserted with
@@ -263,20 +264,20 @@ export const liveFlows: readonly Flow[] = [
         }, 50);
       });
       const input = page.getByRole('combobox', { name: 'Page address' });
-      await input.fill('rust-lang.org');
+      await input.fill('nasa.gov');
       await input.press('Enter');
       await page.waitForFunction(() => document.querySelector('[data-live="snapshots"]'));
       await page.waitForTimeout(400);
       const switchedAt = Date.now();
-      await input.fill('git-scm.com');
+      await input.fill('creativecommons.org');
       await input.press('Enter');
-      await page.locator('#live-label', { hasText: 'git-scm.com' }).waitFor();
+      await page.locator('#live-label', { hasText: 'creativecommons.org' }).waitFor();
       await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
       await sleep(600); // any answer still due for the first run lands now
       const markers = await page.locator('.rb-bar').count();
-      if (markers !== gitEntries) throw new Error(`${markers} bars, expected ${gitEntries} (stale bars from the first run?)`);
-      if (!api.snaps(rust.url).length) throw new Error('no first-run requests logged: the host matcher is wrong');
-      const late = api.snaps(rust.url).filter((l) => l.start > switchedAt);
+      if (markers !== ccEntries) throw new Error(`${markers} bars, expected ${ccEntries} (stale bars from the first run?)`);
+      if (!api.snaps(nasa.url).length) throw new Error('no first-run requests logged: the host matcher is wrong');
+      const late = api.snaps(nasa.url).filter((l) => l.start > switchedAt);
       if (late.length) throw new Error(`${late.length} requests for the first run after the second started`);
       const tops = await page.evaluate(() => (window as unknown as { tops: number[] }).tops);
       const jump = Math.max(...tops) - Math.min(...tops);
@@ -287,13 +288,13 @@ export const liveFlows: readonly Flow[] = [
       if (at < 1) throw new Error(`no sample on both sides of the run's end: ${ends.map(([s]) => s).join(' ')}`);
       const moved = ends.slice(at).map(([, t]) => Math.abs(t - ends[at - 1]![1]));
       if (Math.max(...moved) > 0.5) throw new Error(`the ribbon moved by ${Math.max(...moved)}px when the run ended`);
-      const max = api.maxInFlight(git.url);
+      const max = api.maxInFlight(cc.url);
       if (max > 2) throw new Error(`${max} snapshot requests in flight at once`);
       const done = await statusLine(page);
-      if (!done.startsWith(`14 captures Nov 2013 to Dec 2025 ${gitEntries} changes`)) throw new Error(`meta line "${done}"`);
-      if (!page.url().includes(`url=${encodeURIComponent(git.url)}`)) throw new Error(`address bar ${page.url()}`);
+      if (!done.startsWith(`14 captures May 2009 to Oct 2026 ${ccEntries} changes`)) throw new Error(`meta line "${done}"`);
+      if (!page.url().includes(`url=${encodeURIComponent(cc.url)}`)) throw new Error(`address bar ${page.url()}`);
       // The polite region says the end last (it may wait out the 2 s throttle).
-      await page.waitForFunction((want) => (window as unknown as { said: [number, string][] }).said.at(-1)?.[1].startsWith(want), `Done: 14 captures, ${gitEntries} meaningful changes.`, { timeout: 3000 });
+      await page.waitForFunction((want) => (window as unknown as { said: [number, string][] }).said.at(-1)?.[1].startsWith(want), `Done: 14 captures, ${ccEntries} meaningful changes.`, { timeout: 3000 });
       const said = await page.evaluate(() => (window as unknown as { said: [number, string][] }).said.filter(([, t]) => t));
       const gaps = said.slice(1).map(([t], i) => t - said[i]![0]);
       if (said.length < 2 || gaps.some((g) => g < 1900)) throw new Error(`announcements ${said.map(([t, s]) => `${Math.round(t)} ${s}`).join(' | ')}`);
@@ -311,8 +312,8 @@ export const liveFlows: readonly Flow[] = [
       if (now !== '1') throw new Error(`deep link selected change ${now}, expected 1`);
       return {
         notes: [
-          `${markers} bars, max ${max} snapshot requests in flight, ${api.snaps(rust.url).length} first-run requests all before the switch`,
-          `request log (ms from start): ${api.snaps(git.url).slice(0, 6).map((l) => `${l.ts?.slice(0, 8)} ${l.start - api.log[0]!.start}-${(l.end ?? 0) - api.log[0]!.start}`).join(', ')} …`,
+          `${markers} bars, max ${max} snapshot requests in flight, ${api.snaps(nasa.url).length} first-run requests all before the switch`,
+          `request log (ms from start): ${api.snaps(cc.url).slice(0, 6).map((l) => `${l.ts?.slice(0, 8)} ${l.start - api.log[0]!.start}-${(l.end ?? 0) - api.log[0]!.start}`).join(', ')} …`,
           `announced: ${said.map(([t, s]) => `${Math.round(t)} ms "${s}"`).join(' | ')}; no other live region spoke`,
           `deep link ${link} restored change 1`,
           `timeline top moved ${jump}px over ${tops.length} samples, 0px at the run's end; meta line "${done}"`,
@@ -359,7 +360,7 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { snapshot: () => ({ delay: 800 }) });
-      await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
+      await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
       await page.waitForFunction(() => document.querySelectorAll('.rb-th .sil').length >= 2, null, { timeout: 10_000 });
       await page.getByRole('button', { name: 'Cancel' }).click();
       const cancelledAt = Date.now();
@@ -393,7 +394,7 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await mockApi(page, { snapshot: (i) => (i < 4 ? {} : i < 11 ? { delay: 500 } : { delay: null }) });
-      await openLive(page, baseUrl, 'git-scm.com', 'snapshots');
+      await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
       const slider = page.locator('.rb-slider');
       await slider.waitFor({ timeout: 10_000 });
       await slider.focus();
@@ -407,10 +408,11 @@ export const liveFlows: readonly Flow[] = [
       const label = () => page.locator('.step-label').getAttribute('aria-live');
       const quiet = await label();
       if (quiet !== 'off') throw new Error(`the change label is aria-live="${quiet}" while it follows the run`);
-      const listed = () => page.evaluate(() => document.querySelectorAll('.changes .change').length);
       await page.keyboard.press('End');
-      const [end, now] = [await values(), await listed()];
-      if (end !== `${now}/${now}` || now <= max) throw new Error(`End went to ${end}, expected the newest of ${now} changes`);
+      // Read together: with a change every ~250 ms (Creative Commons has no trivial captures), one may land right after End.
+      const [end, listedNow] = await slider.evaluate((el) => [`${el.getAttribute('aria-valuenow')}/${el.getAttribute('aria-valuemax')}`, document.querySelectorAll('.changes .change').length] as const);
+      const now = Number(end.split('/')[1]);
+      if (end !== `${now}/${now}` || now <= max || now > listedNow) throw new Error(`End went to ${end}, expected the newest of the ${listedNow} changes listed (more than ${max})`);
       const spoken = await label();
       if (spoken !== 'polite') throw new Error(`the change label is aria-live="${spoken}" once the user moved the selection`);
       const said = await page
@@ -476,7 +478,7 @@ export const liveFlows: readonly Flow[] = [
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { snapshot: (i) => (i === 4 ? { error: 'archive_rate_limited' } : {}) });
       await focusCancelOnSight(page);
-      await openLive(page, baseUrl, 'git-scm.com', 'error');
+      await openLive(page, baseUrl, 'creativecommons.org', 'error');
       // Cancel had focus when the error card replaced the status line: focus moves to the card's heading.
       const moved = await expectFocus(page, '#state-heading', 'error replaced Cancel');
       const first = await expectText(page, '.state-card', /The Internet Archive asked us to slow down\. Try again in 40 s\./);
@@ -503,7 +505,7 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await mockApi(page, { snapshot: (i) => (i === 3 || i === 9 ? { error: 'archive_unavailable' } : {}) });
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
       if ((await focusAt(page)) !== 'body') throw new Error(`a ?url= load moved focus to ${await focusAt(page)}`);
       const failed = await page.locator('.rb-th .rb-none', { hasText: 'not fetched' }).count();
       if (failed !== 2) throw new Error(`${failed} "not fetched" thumbnails, expected 2`);
@@ -518,12 +520,38 @@ export const liveFlows: readonly Flow[] = [
     shot: 'live-no-meaningful',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      await mockApi(page, { data: () => mockFromSample('git-scm', { same: true }) });
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
-      const text = await expectText(page, '.state-card', /14 captures, 2013–2025: nothing meaningful changed\. 13 trivial edits hidden \(dates, counters, whitespace\)\./);
+      await mockApi(page, { data: () => mockFromSample('creative-commons', { same: true }) });
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
+      const text = await expectText(page, '.state-card', /14 captures, 2009–2026: nothing meaningful changed\. 13 trivial edits hidden \(dates, counters, whitespace\)\./);
       if (await page.locator('.rb-slider').count()) throw new Error('a slider with no changes');
       if (!(await page.locator('.changes-trivial').getByRole('button', { name: 'Show them' }).count())) throw new Error('no "Show them" toggle for the trivial edits');
       return { notes: [text] };
+    },
+  },
+  {
+    name: 'live-trivial',
+    description: 'A run with trivial edits (two echoed captures): hollow dots on the ribbon; "Show them" turns them into selectable, labelled entries, and the address bar follows',
+    viewports: ['desktop'],
+    async run({ page, baseUrl }) {
+      // No built-in sample has a trivial edit of its own: Creative Commons with two captures echoed a minute later.
+      const echoed = mockFromSample('creative-commons', { echo: [2, 6] });
+      const t = buildTimeline(echoed.url, echoed.pages);
+      const trivial = trivialEntries(t);
+      if (trivial.length !== 2) throw new Error(`${trivial.length} trivial edits in the mock, expected 2`);
+      await mockApi(page, { data: () => echoed });
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
+      const dots = await page.locator('.rb-dot').count();
+      if (dots !== t.trivialCaptures.length) throw new Error(`${dots} hollow dots for ${t.trivialCaptures.length} trivial captures`);
+      const told = await expectText(page, '.changes-trivial', /^2 captures only changed dates or counters\. Show them$/);
+      await page.locator('.changes-trivial button', { hasText: 'Show them' }).click();
+      await page.locator('.changes-trivial button', { hasText: 'Hide them' }).waitFor({ timeout: 2_000 });
+      const marks = await page.locator('.rb-slider .rb-dot[data-index]').count();
+      const items = await page.locator('.changes li').count();
+      if (marks !== trivial.length || items !== t.entries.length + trivial.length) throw new Error(`${marks} trivial dots on the slider, ${items} list items`);
+      await page.locator('.change', { hasText: 'trivial' }).last().click();
+      await page.locator('.change[aria-current="true"]', { hasText: 'trivial' }).waitFor({ timeout: 2_000 });
+      if (!page.url().includes(`change=${trivial[0]!.from}-${trivial[0]!.to}`)) throw new Error(`trivial entry not selected: ${page.url()}`);
+      return { notes: [`${dots} hollow dots; "${told}"`, `${marks} trivial entries shown and selectable; ${page.url().split('?')[1]}`] };
     },
   },
   {
@@ -570,7 +598,7 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await mockApi(page, { captures: 'archive_unavailable' });
-      await openLive(page, baseUrl, 'git-scm.com', 'error');
+      await openLive(page, baseUrl, 'creativecommons.org', 'error');
       await expectActions(page, ['Try again', 'Open a sample']);
       if (await page.getByRole('button', { name: 'Try again' }).getAttribute('aria-disabled')) throw new Error('Try again disabled without a wait');
       return { notes: [await expectText(page, '.state-card', /^The Archive is not answering The Internet Archive is not responding right now\./)] };
@@ -584,7 +612,7 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { captures: 'rate_limited' });
-      await openLive(page, baseUrl, 'git-scm.com', 'error');
+      await openLive(page, baseUrl, 'creativecommons.org', 'error');
       const text = await expectText(page, '.state-card', /^Too many lookups at once You started many new lookups in a short time\. Try again in (60|59) s\./);
       const retry = page.getByRole('button', { name: 'Try again' });
       if ((await retry.getAttribute('aria-disabled')) !== 'true') throw new Error('Try again is not aria-disabled during the countdown');
@@ -600,14 +628,14 @@ export const liveFlows: readonly Flow[] = [
     description: 'Live pane: no Archive request before a run; after it, selecting a change mounts exactly one sandboxed replay frame, >= 400 ms later',
     cvd: true,
     async run({ page, baseUrl }) {
-      if (gitEntries < 3) throw new Error('the flow needs >= 3 changes');
+      if (ccEntries < 3) throw new Error('the flow needs >= 3 changes');
       // Snapshots answer slowly (600 ms each), so the newest change rests well past 400 ms many times during the run.
       const api = await mockApi(page, { snapshot: () => ({ delay: 600 }) });
       await openReady(page, baseUrl);
       await sleep(500);
       if (api.frames.length) throw new Error(`${api.frames.length} Archive requests on the first view`);
       const input = page.getByRole('combobox', { name: 'Page address' });
-      await input.fill('git-scm.com');
+      await input.fill('creativecommons.org');
       await input.press('Enter');
       // During the run, with no user input: the silhouette and its tag's note, never a frame.
       const hold = await expectText(page, '.vp-hold', /^Loads after the run, or pick a change$/);
@@ -626,7 +654,7 @@ export const liveFlows: readonly Flow[] = [
       await page.keyboard.press('Home');
       await page.locator('.lf iframe[data-loaded]:not([data-hidden])').first().waitFor({ timeout: 5000 });
       await sleep(300);
-      const want = replayFrameUrl('internet-archive', git.captures.captures.find((c) => c.ts === buildTimeline(git.url, git.pages).entries[0]!.to)!.ts, 'https://git-scm.com/');
+      const want = replayFrameUrl('internet-archive', cc.captures.captures.find((c) => c.ts === buildTimeline(cc.url, cc.pages).entries[0]!.to)!.ts, 'https://creativecommons.org/');
       const got = api.framesSince(t0);
       if (got.length !== 1 || got[0]!.url !== want) throw new Error(`frame requests after Home: ${got.map((f) => f.url).join(', ') || 'none'}, expected ${want}`);
       const dwell = got[0]!.start - t0;
@@ -659,8 +687,8 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const api = await mockApi(page);
-      const entries = buildTimeline(git.url, git.pages).entries;
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      const entries = buildTimeline(cc.url, cc.pages).entries;
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
       await page.locator('.rb-slider').focus();
       await page.keyboard.press('Home');
       await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });
@@ -696,8 +724,8 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const api = await mockApi(page);
-      const entries = buildTimeline(git.url, git.pages).entries;
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      const entries = buildTimeline(cc.url, cc.pages).entries;
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
       await page.locator('.lf iframe[data-loaded]:not([data-hidden])').waitFor({ timeout: 5000 });
       const t0 = Date.now();
       await sleep(1500);
@@ -723,10 +751,10 @@ export const liveFlows: readonly Flow[] = [
     description: 'A frame that never loads (a blocked-framing stand-in) shows its silhouette, then at 8 s the honest "still loading" note with a link out; a slow one shows the silhouette until it loads',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      const entries = buildTimeline(git.url, git.pages).entries;
+      const entries = buildTimeline(cc.url, cc.pages).entries;
       const latest = entries.at(-1)!.to;
       await mockApi(page, { frame: (ts) => (ts === latest ? null : 2500) });
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
       await page.locator('.lf iframe').waitFor({ state: 'attached', timeout: 5000 });
       const t0 = Date.now();
       if (!(await page.locator('.lf .sil').isVisible()) || (await page.locator('.lf-note p').count())) throw new Error('no silhouette while loading, or a note too early');
@@ -735,7 +763,7 @@ export const liveFlows: readonly Flow[] = [
       const after = Date.now() - t0;
       const text = await expectText(page, '.lf-note p', /^◷ Still loading from the Internet Archive\. Archived pages can be slow, and some sites block being shown in a frame\. Open capture/);
       const href = await note.getByRole('link').getAttribute('href');
-      if (href !== `https://web.archive.org/web/${latest}/https://git-scm.com/`) throw new Error(`link out ${href}`);
+      if (href !== `https://web.archive.org/web/${latest}/https://creativecommons.org/`) throw new Error(`link out ${href}`);
       if (!(await page.locator('.lf .sil').isVisible())) throw new Error('the silhouette went away while still loading');
       // A slow frame (2.5 s): its silhouette shows until it loads, and no note.
       await page.locator('.rb-slider').focus();
@@ -759,9 +787,9 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['mobile'],
     async run({ page, baseUrl }) {
       await page.setViewportSize({ width: 320, height: 640 });
-      const latest = buildTimeline(git.url, git.pages).entries.at(-1)!.to;
+      const latest = buildTimeline(cc.url, cc.pages).entries.at(-1)!.to;
       await mockApi(page, { frame: (ts) => (ts === latest ? null : 0) });
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
       const note = page.locator('.lf-note p');
       await note.waitFor({ timeout: 12_000 });
       await note.scrollIntoViewIfNeeded();
@@ -795,7 +823,7 @@ export const liveFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       await mockApi(page);
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
       await page.getByRole('radio', { name: 'Slider' }).check();
       await page.locator('.vp-cmp iframe[data-loaded]').nth(1).waitFor({ timeout: 5000 });
       const frames = await page.locator('iframe').evaluateAll((els) => els.map((el) => (el as HTMLIFrameElement).inert));
@@ -820,7 +848,7 @@ export const liveFlows: readonly Flow[] = [
       const images: string[] = [];
       await mockApi(page);
       // From the start of the run (the sample first view's own pictures before it do not count).
-      await openLive(page, baseUrl, 'git-scm.com');
+      await openLive(page, baseUrl, 'creativecommons.org');
       page.on('request', (r) => r.resourceType() === 'image' && images.push(r.url()));
       await page.locator('[data-live="done"]').waitFor({ timeout: 20_000 });
       if (await page.locator('.rb-strip img').count()) throw new Error('<img> thumbnails in the live ribbon');
@@ -839,12 +867,12 @@ export const liveFlows: readonly Flow[] = [
 ];
 
 /**
- * A git-scm run with mocked Workers AI lines: asked for every 4 changes and at the end (<= 8 pairs, never twice); the
+ * A Creative Commons run with mocked Workers AI lines: asked for every 4 changes and at the end (<= 8 pairs, never twice); the
  * text swaps in labelled "AI summary", focus stays put, and no live region mentions it.
  */
 async function aiSummaries({ page, baseUrl }: { page: Page; baseUrl: string }) {
   const api = await mockApi(page, { summaries: 'ai' });
-  await openLive(page, baseUrl, 'git-scm.com');
+  await openLive(page, baseUrl, 'creativecommons.org');
   await page.evaluate(() => {
     const w = window as unknown as { live: string[] };
     w.live = [];
@@ -856,7 +884,7 @@ async function aiSummaries({ page, baseUrl }: { page: Page; baseUrl: string }) {
   const prev = page.getByRole('button', { name: 'Previous' });
   await prev.focus();
   // The change's summary, then its source tag.
-  const last = `${GIT_AI_SUMMARIES.at(-1)} AI summary`;
+  const last = `${CC_AI_SUMMARIES.at(-1)} AI summary`;
   const read = (want: string) => {
     const said = [document.querySelector('#change-heading')?.textContent, document.querySelector('.cs-side .tag')?.textContent];
     return said.join(' ').replace(/\s+/g, ' ').trim() === want;
@@ -864,15 +892,15 @@ async function aiSummaries({ page, baseUrl }: { page: Page; baseUrl: string }) {
   await page.waitForFunction(read, last, { timeout: 10_000 });
   // Every change lists newest first.
   const listed = await page.locator('.changes .change-sum').evaluateAll((els) => els.map((e) => e.textContent));
-  if (listed.join('|') !== [...GIT_AI_SUMMARIES].reverse().join('|')) throw new Error(`list shows ${listed.join(' | ')}`);
+  if (listed.join('|') !== [...CC_AI_SUMMARIES].reverse().join('|')) throw new Error(`list shows ${listed.join(' | ')}`);
   if (!(await prev.evaluate((el) => el === document.activeElement))) throw new Error(`focus moved to ${await focusAt(page)}`);
   await sleep(2500); // past the progress announcer's 2 s throttle, so a late update would be caught
   const said = await page.evaluate(() => (window as unknown as { live: string[] }).live);
-  if (said.some((t) => GIT_AI_SUMMARIES.some((l) => t.includes(l)))) throw new Error(`a live region read an AI line: ${said.join(' | ')}`);
+  if (said.some((t) => CC_AI_SUMMARIES.some((l) => t.includes(l)))) throw new Error(`a live region read an AI line: ${said.join(' | ')}`);
   await page.evaluate(() => scrollTo(0, 0)); // the runner's `clip` box is measured from the top of the page
   const asked = api.sums().map((l) => l.pairs ?? []);
   const all = asked.flat();
-  if (asked.some((p) => p.length > 8) || new Set(all).size !== all.length || all.length !== gitEntries) throw new Error(`summary requests ${JSON.stringify(asked)}`);
+  if (asked.some((p) => p.length > 8) || new Set(all).size !== all.length || all.length !== ccEntries) throw new Error(`summary requests ${JSON.stringify(asked)}`);
   return { notes: [`summary requests (pairs each): ${asked.map((p) => p.length).join(', ')}`, `panel: "${last}"`, `focus kept on Previous; ${said.length} live-region updates, none with AI text`] };
 }
 
@@ -887,11 +915,11 @@ export const summaryFlows: readonly Flow[] = [
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
       const api = await mockApi(page, { summaries: 'error' });
-      await openLive(page, baseUrl, 'git-scm.com', 'done');
+      await openLive(page, baseUrl, 'creativecommons.org', 'done');
       for (let i = 0; i < 40 && api.sums().some((l) => !l.end); i++) await sleep(100);
       await sleep(300);
       if (!api.sums().length) throw new Error('no /api/summaries request');
-      const want = `${shownSummary(gitTimeline.at(-1)!)} Auto summary`;
+      const want = `${shownSummary(ccTimeline.at(-1)!)} Auto summary`;
       const shown = [await page.locator('#change-heading').textContent(), await page.locator('.cs-side .tag').textContent()].join(' ').replace(/\s+/g, ' ').trim();
       if (shown !== want) throw new Error(`panel "${shown}", expected "${want}"`);
       const alerts = (await page.locator('[role="alert"]').allTextContents()).filter((t) => t.trim());

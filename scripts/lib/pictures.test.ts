@@ -44,17 +44,30 @@ describe('committed sample pictures', () => {
     expect(checkPictures(root).firstView).toBe(want);
   });
 
-  it.each(['git-scm', 'rust-lang', 'wikipedia-internet-archive'])('%s features a meaningful change with two good pictures', (id) => {
+  it.each(['wikipedia-internet-archive', 'nasa', 'creative-commons'])('%s features a meaningful change with two pictures', (id) => {
     const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', `${id}.json`), 'utf8')));
     const pairs = buildTimeline(f.url, fixtureToSnapshots(f)).entries.map((e) => `${e.from}-${e.to}`);
     expect(pairs).toContain(f.featured);
-    const shot = (ts?: string) => f.snapshots.find((s) => s.ts === ts)?.shot?.status;
-    expect(f.featured!.split('-').map(shot)).toEqual(['ok', 'ok']);
+    const shot = (ts?: string) => f.snapshots.find((s) => s.ts === ts)?.shot;
+    // Both sides pictured (NASA's 2000 capture is a partial copy: its images are missing, its layout is not).
+    for (const s of f.featured!.split('-').map(shot)) expect([s?.status !== 'failed', !!s?.file]).toEqual([true, true]);
     expect(f.visual).toMatchObject({ archive: 'arquivo-pt', format: 'webp' });
   });
 
-  it('opens the default sample on its decade compare: the first capture against the latest, both complete', () => {
-    const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', 'git-scm.json'), 'utf8')));
-    expect(overviewPair(f.snapshots)).toEqual({ from: f.snapshots[0]!.ts, to: f.snapshots.at(-1)!.ts, skipped: 0 });
+  it('drops the pictures samples.config.json lists in visualDrop: no file, the reason on the capture', () => {
+    const config = JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as { id: string; visualDrop?: Record<string, string> }[];
+    const drops = config.flatMap((c) => Object.entries(c.visualDrop ?? {}).map(([ts, reason]) => [c.id, ts, reason] as const));
+    // Creative Commons' 2011 capture shows a fundraising price in its slider caption (CLAUDE.md: nothing finance-related).
+    expect(drops).toContainEqual(['creative-commons', '20111209164214', 'fundraising price in the slider caption']);
+    for (const [id, ts, reason] of drops) {
+      const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', `${id}.json`), 'utf8')));
+      expect(f.snapshots.find((s) => s.ts === ts)?.shot).toEqual({ status: 'failed', settle: expect.any(String), reason });
+    }
+  });
+
+  it('opens the default sample on its decade compare: its earliest complete capture against the latest', () => {
+    const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', 'wikipedia-internet-archive.json'), 'utf8')));
+    // The 2014 and 2015 captures are partial copies, so the compare starts in 2018 (examples/README.md says so too).
+    expect(overviewPair(f.snapshots)).toEqual({ from: '20180425033645', to: f.snapshots.at(-1)!.ts, skipped: 2 });
   });
 });

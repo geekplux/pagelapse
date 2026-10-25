@@ -124,7 +124,7 @@ export function showingText(captures: readonly string[], e: Pair, at: string, tr
   return `capture ${frameNo(captures.indexOf(at))}, ${formatTimestampLong(at)}${trivial ? ', trivial edit' : ''}`;
 }
 
-/** Alt text of the pane's picture: `git-scm.com home page as captured 18 December 2025 (After), top of page`. */
+/** Alt text of the pane's picture: `nasa.gov home page as captured 15 February 2008 (After), top of page`. */
 export const shotAlt = (label: string, e: Pair, at: string, what = 'top of page') => {
   const side = sideOf(e, at);
   return `${label} as captured ${formatTimestampLong(at)}${side ? ` (${SIDE_WORD[side]})` : ''}, ${what}`;

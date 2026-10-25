@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { fixtureToSnapshots, parseSampleFixture } from '../../../src/core/fixture.ts';
 import type { SnapshotPage } from '../../../src/core/types.ts';
+import { withEchoes } from '../echo.ts';
 
 export interface MockApi {
   url: string;
@@ -13,11 +14,14 @@ export interface MockApi {
   snapshot: (ts: string) => { ts: string; title: string; blocks: SnapshotPage['blocks']; truncated?: boolean } | undefined;
 }
 
-/** The API's answers for sample `id`, as if the Worker had fetched its captures from the Internet Archive. */
-export function mockFromSample(id: string, opts: { same?: boolean } = {}): MockApi {
+/**
+ * The API's answers for sample `id`, as if the Worker had fetched its captures from the Internet Archive. `same`: every
+ * capture says what the first one said (a page where nothing meaningful changed). `echo`: the captures at these
+ * indexes are each followed by a copy a minute later, a trivial edit (no built-in sample has one of its own).
+ */
+export function mockFromSample(id: string, opts: { same?: boolean; echo?: number[] } = {}): MockApi {
   const fixture = parseSampleFixture(JSON.parse(readFileSync(new URL(`../../../src/samples/${id}.json`, import.meta.url), 'utf8')));
-  const all = fixtureToSnapshots(fixture);
-  // `same`: every capture says what the first one said (a page where nothing meaningful changed).
+  const all = withEchoes(fixtureToSnapshots(fixture), opts.echo ?? []);
   const pages = opts.same ? all.map((p) => ({ ...all[0]!, ts: p.ts, digest: p.digest })) : all;
   const caps = pages.map((p) => ({ ts: p.ts, digest: p.digest, length: 0 }));
   return {
@@ -40,15 +44,19 @@ export const API_ERRORS = {
   rate_limited: { status: 429, body: { error: 'rate_limited', message: 'Too many new lookups from your connection. Try again in a minute.', retryAfter: 60 } },
 } as const;
 
-/** Mock Workers AI lines for the git-scm sample's meaningful changes, in timeline order (the smoke's AI flows). */
-export const GIT_AI_SUMMARIES = [
-  'Announced Git 2.1.0 and renamed the release box to "Latest source Release"',
-  'Credited a second Pro Git author and announced Git 2.2.0',
-  'Added bug reporting to "Get involved" and announced Git 2.7.0',
-  'Announced Git 2.13.1 and dropped a passage from the front page',
-  'Announced Git 2.21.0 and trimmed a passage',
-  'Announced Git 2.24.1 and added a passage',
-  'Announced Git 2.30.0 and removed a passage',
-  'Replaced the list of companies using Git with Git hosting products',
-  'Reorganised the home page into Learn, Tools, Reference and Install',
+/** Mock Workers AI lines for the Creative Commons sample's meaningful changes, in timeline order (the smoke's AI flows). */
+export const CC_AI_SUMMARIES = [
+  'Replaced the shared-culture feature with a video library banner and new news items',
+  'Redesigned the page around a slider and Mission, License and Explore boxes',
+  'Replaced the "I Love to Share" slide with Vimeo adding CC browse and search',
+  'Featured Wattpad adopting CC 4.0 and named Ryan Merkley as CEO',
+  'Announced the 2015 Global Summit and added a "Find CC material" section',
+  'Redesigned the page around "When we share, everyone wins"',
+  'Announced the 2019 Global Summit in Lisbon',
+  'Introduced the new CC Search and a leadership transition',
+  'Marked twenty years of Creative Commons and trimmed the news',
+  'Redesigned the page with "Better Sharing, Brighter Future" and a 20-year video',
+  'Listed CC legal tools as digital public goods and added AI news',
+  'Redesigned the page around "The commons belongs to us all"',
+  'Retitled the page "Building tools for shared knowledge"',
 ];

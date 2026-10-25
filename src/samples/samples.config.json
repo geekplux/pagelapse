@@ -28,7 +28,8 @@
       "selector": "main p, main li, main h2, main h3, main a",
       "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bfiscal year\\b|\\bFY ?\\d{2,4}\\b",
       "note": "Paragraphs, list items and links stating monetary figures or budgets were hidden before the screenshot."
-    }
+    },
+    "featured": "20000815052806-20080215055318"
   },
   {
     "id": "creative-commons",
@@ -43,30 +44,10 @@
       "selector": "p, li, a, button, h2, h3",
       "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bfundrais(?:er|ers|ing)\\b|\\bmake a gift\\b|\\bgive today\\b",
       "note": "Donate buttons and links, and paragraphs about donations or stating monetary figures, were hidden before the screenshot."
-    }
-  },
-  {
-    "id": "git-scm",
-    "label": "git-scm.com home page",
-    "url": "https://git-scm.com/",
-    "description": "The Git project's home page: the tagline, the latest release number and the links to docs and downloads, through a decade of releases and redesigns.",
-    "maxChars": 6000,
-    "license": "MIT",
-    "attribution": "Trimmed text excerpt from git-scm.com by the Git project contributors; the site source is MIT-licensed (github.com/git/git-scm.com).",
-    "featured": "20250404010448-20251218145830"
-  },
-  {
-    "id": "rust-lang",
-    "label": "rust-lang.org home page",
-    "url": "https://www.rust-lang.org/",
-    "description": "The Rust programming language's home page, from the 2018 redesign through later rewrites of its pitch, sections and calls to action.",
-    "maxChars": 6000,
-    "license": "MIT",
-    "attribution": "Trimmed text excerpt from www.rust-lang.org by the Rust project contributors; the site source is dual-licensed MIT or Apache-2.0 (github.com/rust-lang/www.rust-lang.org).",
-    "visualDrop": {
-      "20200621153000": "unstyled: the archive's copy lacks the main stylesheet",
-      "20260310222111": "unstyled: the archive's copy lacks the main stylesheet"
     },
-    "featured": "20181220082130-20190624102109"
+    "visualDrop": {
+      "20111209164214": "fundraising price in the slider caption"
+    },
+    "featured": "20220217002410-20231019221042"
   }
 ]
