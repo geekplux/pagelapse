@@ -70,6 +70,9 @@ describe('committed samples', () => {
     expect(drops('nasa', 'The fiscal year 2025 request')).toBe(true);
     for (const t of ['Donate', 'Make a donation today', 'Our fundraising campaign']) expect([drops('creative-commons', t), hides('creative-commons', t)]).toEqual([true, true]);
     expect(drops('creative-commons', 'Share your work under a CC licence')).toBe(false);
+    for (const t of ['Donate to Wikipedia', 'Donate']) expect(hides('wikipedia-internet-archive', t)).toBe(true);
+    expect(hides('wikipedia-internet-archive', 'The Internet Archive is a nonprofit digital library')).toBe(false);
+    expect(cfg('wikipedia-internet-archive').visualRedact!.selector).toMatch(/n-sitesupport.*pt-sitesupport/);
   });
 
   it.each(Object.entries(RAW))('%s is real, chronological, unique and small', (file, raw) => {

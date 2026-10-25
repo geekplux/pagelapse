@@ -9,9 +9,9 @@
     "license": "CC-BY-SA-4.0",
     "attribution": "Trimmed text excerpt, not the full article (blocks stating monetary figures are omitted), from the Wikipedia article “Internet Archive” by Wikipedia contributors (see the article history); revisions before June 2023 were published under CC BY-SA 3.0.",
     "visualRedact": {
-      "selector": ".infobox tr, #mw-content-text p, #mw-content-text li",
-      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b",
-      "note": "Infobox rows and paragraphs stating monetary figures were hidden before the screenshot."
+      "selector": ".infobox tr, #mw-content-text p, #mw-content-text li, [id^=\"n-sitesupport\"], [id^=\"pt-sitesupport\"], #centralNotice",
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonate\\b",
+      "note": "Infobox rows and paragraphs stating monetary figures, and Donate links, were hidden before the screenshot."
     },
     "featured": "20220202204805-20230326224104"
   },
