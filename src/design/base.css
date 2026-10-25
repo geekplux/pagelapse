@@ -60,7 +60,7 @@ main:focus { outline: none; }
 /* The footer always starts below the first viewport, so a short state view shows only its message. */
 main { flex: 1; min-height: 100vh; }
 .sheet-head { display: grid; gap: var(--space-1); }
-.sheet h2 { font: 700 var(--fs-40) / var(--lh-40) var(--font-ui); letter-spacing: var(--track-40); }
+.sheet h2 { font: 700 var(--fs-40) / var(--lh-40) var(--font-ui); letter-spacing: var(--track-40); overflow-wrap: anywhere; }
 .sheet-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); min-height: var(--lh-14); color: var(--sand-11); }
 @media (min-width: 40rem) { .sheet-meta { gap: 0 calc(5 * var(--space-1)); } }
 .sheet-meta b { color: var(--sand-12); font-family: var(--font-mono); font-weight: 500; }

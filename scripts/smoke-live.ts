@@ -7,7 +7,7 @@ import type { Page } from 'playwright-core';
 import { shownSummary } from '../src/app/describe.ts';
 import { buildTimeline, trivialEntries } from '../src/core/timeline.ts';
 import { API_ERRORS, CC_AI_SUMMARIES, type MockApi, mockFromSample } from '../test/fixtures/api/live.ts';
-import { DEFAULT_ID, type Flow, openReady } from './smoke-flows.ts';
+import { DEFAULT_ID, type Flow, noPageOverflow, openReady } from './smoke-flows.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 
 /** Live runs replay Creative Commons (14 captures) as if fetched from the Archive; NASA is the first run that gets replaced. */
@@ -552,6 +552,25 @@ export const liveFlows: readonly Flow[] = [
       await page.locator('.change[aria-current="true"]', { hasText: 'trivial' }).waitFor({ timeout: 2_000 });
       if (!page.url().includes(`change=${trivial[0]!.from}-${trivial[0]!.to}`)) throw new Error(`trivial entry not selected: ${page.url()}`);
       return { notes: [`${dots} hollow dots; "${told}"`, `${marks} trivial entries shown and selectable; ${page.url().split('?')[1]}`] };
+    },
+  },
+  {
+    name: 'live-long-host',
+    apiErrors: true,
+    description: 'At 320 px a live run of a long host name, done and as an error card, never scrolls the page sideways',
+    viewports: ['mobile'],
+    async run({ page, baseUrl }) {
+      await page.setViewportSize({ width: 320, height: 640 });
+      const host = 'collections.internationalcommonsfoundation-archive.example.org';
+      await mockApi(page);
+      await openLive(page, baseUrl, host, 'done');
+      await expectText(page, '#live-label', new RegExp(`^${host.replaceAll('.', '\\.')}$`));
+      await noPageOverflow(page);
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+      await mockApi(page, { captures: 'no_captures' });
+      await openLive(page, baseUrl, `${host}/a-rather-long-path/without-any-spaces-in-it`, 'error');
+      await noPageOverflow(page);
+      return { notes: [`${host} at 320 px: done and error card, no page overflow`] };
     },
   },
   {

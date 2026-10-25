@@ -114,9 +114,16 @@ async function barAt(page: Page, i: number, scroll = true): Promise<{ x: number;
   return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 }
 
-async function noPageOverflow(page: Page): Promise<void> {
+export async function noPageOverflow(page: Page): Promise<void> {
   const wide = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  if (wide > 0) throw new Error(`page scrolls sideways by ${wide}px (only the ribbon may)`);
+  if (wide <= 0) return;
+  // Name the innermost elements that stick out past the right edge, so a failure says what to fix.
+  const culprits = await page.evaluate(() => {
+    const vw = document.documentElement.clientWidth;
+    const out = [...document.body.querySelectorAll<HTMLElement>('*')].filter((el) => el.getBoundingClientRect().right > vw + 0.5 && !el.closest('.rb-strip'));
+    return out.filter((el) => !out.some((o) => o !== el && el.contains(o))).slice(0, 4).map((el) => `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? `.${el.className.split(' ').join('.')}` : ''} "${(el.textContent ?? '').trim().slice(0, 40)}"`);
+  });
+  throw new Error(`page scrolls sideways by ${wide}px (only the ribbon may): ${culprits.join(', ')}`);
 }
 
 /** The page shows `theme`: the ground, `data-theme` (only while `stored`), localStorage, color-scheme, theme-color, the button. */
@@ -353,6 +360,26 @@ export const flows: readonly Flow[] = [
       },
     }),
   ),
+  {
+    name: 'samples-narrow',
+    description: 'Every sample at 390, 360 and 320 px: no sideways page scroll (a long host name such as creativecommons.org wraps in the title)',
+    viewports: ['mobile'],
+    async run({ page, baseUrl }) {
+      const notes: string[] = [];
+      for (const width of [390, 360, 320]) {
+        await page.setViewportSize({ width, height: 800 });
+        for (const f of fixtures) {
+          await openReady(page, baseUrl, `/?sample=${f.id}`);
+          await noPageOverflow(page).catch((e: Error) => {
+            throw new Error(`${f.id} at ${width} px: ${e.message}`);
+          });
+          const lines = await page.locator('#sample-label').evaluate((h) => Math.round(h.getBoundingClientRect().height / parseFloat(getComputedStyle(h).lineHeight)));
+          notes.push(`${f.id} at ${width}: no overflow, title on ${lines} line(s)`);
+        }
+      }
+      return { notes };
+    },
+  },
   {
     name: 'sample-unrecorded',
     description: 'A config entry without a recorded fixture, or a retired sample (git-scm, rust-lang), is never offered: not a hero option, not in the address menu, and its deep link opens the default sample',

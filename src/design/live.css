@@ -27,7 +27,7 @@
 @media (max-width: 39.99rem) { .live-act { margin-left: auto; } }
 
 /* Empty and error states: the message is the view's focal point, as plain text and its next actions (no frame). */
-.state-card { display: grid; gap: var(--space-2); max-width: 40rem; }
+.state-card { display: grid; gap: var(--space-2); max-width: 40rem; overflow-wrap: anywhere; }
 .sheet .state-card h3 { font: 600 var(--fs-20) / var(--lh-20) var(--font-ui); color: var(--sand-12); }
 .sheet .state-card h3:focus { outline: none; }
 .state-card p { color: var(--sand-11); }
