@@ -11,7 +11,7 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - **The time ribbon:** a thumbnail per capture joined by a hairline to its date on a year axis, a bar per change sized by how much changed, hollow dots for trivial captures, and keyboard and drag scrubbing. It is one slider with a text alternative for screen readers.
 - **The change section:** the change's two dates, its one-line summary and source, word counts, new, gone and renamed sections and archive links, beside a text diff with hanging `+` / `−` / `~` markers, underline and strike-through. A long diff shows its first changes with "Show n more changes".
 - **Every change:** one row per meaningful change, newest first, with a line for the captures that only changed dates or counters and "Show them".
-- **Built-in samples** that work offline: Wikipedia "Internet Archive" (the default and the first view's deck), git-scm.com and rust-lang.org, recorded from Arquivo.pt with pictures of each capture. NASA (nasa.gov) and Creative Commons (creativecommons.org) are configured with their licences and money-figure filters; an entry is offered only once its fixture is recorded ([docs/EXTENDING.md](docs/EXTENDING.md#recording-nasa-and-creative-commons)).
+- **Built-in samples** that work offline: Wikipedia "Internet Archive" (the default and the first view's deck), the NASA home page (nasa.gov, 1997 to 2026) and the Creative Commons home page (creativecommons.org, 2009 to 2026), recorded from Arquivo.pt with pictures of each capture. All three are open-licensed or public, and both text and pictures leave out monetary figures. A config entry is offered only once its fixture is recorded ([docs/EXTENDING.md](docs/EXTENDING.md#add-a-sample-text-and-pictures)).
 - **Live mode:** paste any URL to look it up in the Internet Archive. The run's progress (`n of N`, a bar) and Cancel take the title's meta line, captures arrive as text outlines and pending slots, and the selected capture shows the archive's own replay in a sandboxed frame, loaded only when you rest on it.
 - **One-line summaries** of each meaningful change: Workers AI on a deployment (batched, cached per pair of captures, capped per day), with a labelled deterministic fallback.
 - **Change detection:** readable-text extraction, a word-level diff, significance scoring and a trivial-edit filter (whitespace, dates, counters, tracking parameters), tuned against an evaluation set.
@@ -29,6 +29,10 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - The redesign replaced the paper palette and serif type, the sample tabs (now options of the address field and the first view), the filmstrip and timeline (now the time ribbon), the side card and "Change details" (now the controls row and the change section) and the list of changes (now "Every change").
 - Onion skin was removed; an old `view=onion` link opens Slider.
 - Wikipedia "Internet Archive" replaced git-scm.com as the default sample; an unknown or unrecorded `?sample=` opens it.
+
+### Removed
+
+- The git-scm.com and rust-lang.org samples, replaced by NASA and Creative Commons. An old `?sample=git-scm` or `?sample=rust-lang` link opens the default sample.
 
 ### Fixed
 

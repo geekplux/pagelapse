@@ -51,7 +51,7 @@ The built-in samples are committed so the first view works offline. Re-recording
 - `pnpm record:samples [--only <id>,<id>]` records the text from an archive's raw captures into `src/samples/<id>.json`. Settings live in `src/samples/samples.config.json`.
 - `pnpm record:visuals [--only <id>,<id>]` screenshots the same captures in headless Chrome into `public/samples/<id>/` and writes each picture's status into the fixture. One capture at a time, at least 5 s apart, with only the archive's hosts allowed.
 - Both cache everything under `.cache/record/` (gitignored), and `--offline` rebuilds from that cache with no network at all. Use `--dry-run` first.
-- **Image budget**, checked by `pnpm size` and `scripts/lib/pictures.test.ts`: each full picture (960×600 WebP) at most 64 KB, each thumbnail (320×200) at most 8 KB, all sample pictures together at most 2.2 MB, and the first view's pictures at most 160 KB.
+- **Image budget**, checked by `pnpm size` and `scripts/lib/pictures.test.ts`: each full picture (960×600 WebP) at most 64 KB, each thumbnail (320×200) at most 8 KB, all sample pictures together at most 2.2 MB, the first view's pictures at most 160 KB, and at least 85% of captures with a picture.
 - Samples must be openly licensed and attributed, and stay away from finance topics. Blocks that state monetary figures are trimmed from text and hidden in pictures, and the fixture says so.
 
 ## Being kind to the archives

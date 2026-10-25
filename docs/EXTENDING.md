@@ -11,40 +11,22 @@ The options come from `src/samples/samples.config.json`, in its order; the first
 1. Add an entry to the config: `id`, `label` (the option shows it without " home page"), `url`, `description`, `maxChars`, `license` (an SPDX id, or a `LicenseRef-` id explained in the attribution) and `attribution`. Optional fields:
    - `dropBlocks`: a regular expression for text blocks to trim (the samples use it to drop monetary figures and donation appeals);
    - `visualRedact`: elements to hide before screenshotting, and the note that says so;
-   - `visualDrop`: captures whose picture misrepresents the page (for example, unstyled), marked as no picture with a reason;
+   - `visualDrop`: captures whose picture must not ship (it misrepresents the page, for example unstyled, or it shows a price or a donation amount), marked as no picture with a reason;
    - `featured`: the change a sample other than the default opens on, `"<fromTs>-<toTs>"` (the default opens on its decade compare).
 2. Record the text: `pnpm record:samples --only <id> --dry-run`, then without `--dry-run`. `--only` takes a comma-separated list. It reads from the Internet Archive by default; `--archive arquivo-pt` uses Arquivo.pt, which is what the current samples were recorded from.
-3. Record the pictures: `pnpm record:visuals --only <id>`. It replays the fixture's captures from Arquivo.pt only, one at a time, and prints each picture's status plus a visual-delta table. Pick `featured` from that table (a meaningful change whose two pictures differ visibly, both `ok`), set it in the config, and re-run with `--offline` to write it into the fixture without any network.
+3. Record the pictures: `pnpm record:visuals --only <id>`. It replays the fixture's captures from Arquivo.pt only, one at a time, and prints each picture's status plus a visual-delta table. Pick `featured` from that table (a meaningful change whose two pictures differ visibly, both pictured and ideally `ok`), set it in the config, and re-run with `--offline` to write it into the fixture without any network.
 4. Run `pnpm test` (`samples.test.ts` validates the fixture and its money filter; `scripts/lib/pictures.test.ts` the pictures, their sizes and orphans) and `pnpm build && pnpm size` (the image budget is in [CONTRIBUTING.md](../CONTRIBUTING.md#samples-pictures-and-the-image-budget)).
 
 Both recorders cache everything under `.cache/record/`, so a re-run never refetches a capture.
 
-### Recording NASA and Creative Commons
+### Before you commit a new sample
 
-`nasa` (www.nasa.gov, a US government work) and `creative-commons` (creativecommons.org, CC BY 4.0) are in the config with their licences, attributions and money filters, but not recorded: the archives could not be reached from the machine that built them. On a machine with network access and Chrome:
+The recorders need network access to the archives and Chrome (`CHROME_PATH` if it is not in its standard place). Run the steps above on such a machine, then:
 
-```sh
-pnpm i
-# Text: the same captures the pictures replay (Arquivo.pt), checked first with a dry run
-pnpm record:samples --only nasa,creative-commons --archive arquivo-pt --dry-run
-pnpm record:samples --only nasa,creative-commons --archive arquivo-pt
-# Pictures (one capture every 5 s or more); set CHROME_PATH only if Chrome is not in its standard place
-pnpm record:visuals --only nasa,creative-commons
-# Set "featured" for each from the delta table in samples.config.json, then write it in without the network
-pnpm record:visuals --only nasa,creative-commons --offline
-pnpm check && pnpm size && pnpm check:docs
-```
-
-Then review both samples in `pnpm dev` (hidden money figures, `partial` or `failed` pictures) and commit:
-
-- `src/samples/nasa.json` and `src/samples/creative-commons.json`;
-- `public/samples/nasa/` and `public/samples/creative-commons/`;
-- `src/samples/samples.config.json` (the `featured` pairs, and any `visualDrop`).
-
-They appear right after Wikipedia in the hero and the address menu. Two things to settle at the same time:
-
-- **The image budget.** All sample pictures together may take 2.2 MB, and the three current samples use about 1.7 MB, so five samples will not fit. Removing git-scm and rust-lang (their config entries, fixtures and `public/samples/` folders) makes room; several unit tests and smoke flows also use `git-scm.json` as a fixture, so move those to another sample in the same change.
-- **The credits.** Add the two pages to the README's Credits and to `public/samples/README.md`.
+- **Look at every picture.** Open the sample in `pnpm dev` and step through it: money figures and donation amounts must be hidden or the picture dropped with `visualDrop` (re-run `pnpm record:visuals --only <id> --offline` to apply it), and `partial` or `failed` pictures should still tell the story.
+- **The image budget.** All sample pictures together may take 2.2 MB, and the three current samples (Wikipedia, NASA, Creative Commons) use about 1.6 MB, so a fourth sample of the same size will not fit without retiring or trimming one. At least 85% of all captures must have a picture.
+- **The credits.** Add the page to the README's Credits and to `public/samples/README.md`.
+- **Commit together:** `src/samples/<id>.json`, `public/samples/<id>/` and the config entry (with its `featured` pair and any `visualDrop`). The option appears in config order in the hero and the address menu.
 
 ## The summariser interface
 

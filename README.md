@@ -21,7 +21,7 @@ git clone https://github.com/geekplux/pagelapse.git && cd pagelapse
 pnpm i && pnpm dev
 ```
 
-Open the address `pnpm dev` prints (usually http://localhost:5173). The first view deals the captures of the built-in Wikipedia sample. Open a card or a sample (Wikipedia, git-scm.com or rust-lang.org): their text and pictures ship with the app, so they need no network, no account and no key. Or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
+Open the address `pnpm dev` prints (usually http://localhost:5173). The first view deals the captures of the built-in Wikipedia sample. Open a card or a sample (Wikipedia, nasa.gov or creativecommons.org): their text and pictures ship with the app, so they need no network, no account and no key. Or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
 
 ## Features
 
@@ -95,7 +95,6 @@ pnpm build && pnpm run check:deploy
 
 ## Roadmap
 
-- Open-licensed samples from nasa.gov and creativecommons.org: configured, waiting to be recorded ([how](docs/EXTENDING.md#recording-nasa-and-creative-commons)).
 - Re-recording the samples from the Internet Archive itself.
 - An optional screenshot provider for live thumbnails (Cloudflare Browser Rendering). It is designed but not built: see [EXTENDING](docs/EXTENDING.md#optional-screenshot-provider-designed-not-built).
 - Smaller ideas are listed in [good first issues](docs/GOOD_FIRST_ISSUES.md).
@@ -110,8 +109,8 @@ Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers 
 - [Arquivo.pt](https://arquivo.pt/) served the captures that the built-in samples were recorded from.
 - Sample texts and pictures:
   - the Wikipedia article "Internet Archive" by Wikipedia contributors (CC BY-SA 4.0, CC BY-SA 3.0 before June 2023; a trimmed excerpt, without the blocks that state monetary figures);
-  - git-scm.com by the Git project contributors (site source MIT);
-  - www.rust-lang.org by the Rust project contributors (site source MIT or Apache-2.0).
+  - www.nasa.gov by NASA (a US government work, generally not subject to copyright in the United States; the NASA insignia and logos are protected, and third-party images on the site may not be in the public domain; a trimmed excerpt, without the blocks that state monetary figures or budgets);
+  - creativecommons.org by Creative Commons (CC BY 4.0; a trimmed excerpt, without the blocks about donations or that state monetary figures; Creative Commons and the CC logos are trademarks of Creative Commons).
 
   The pictures are screenshots of archived captures. The page designs, logos and text belong to their authors. Details are in each sample's "About these captures" and in [`public/samples/README.md`](public/samples/README.md).
 - [Schibsted Grotesk](https://github.com/schibsted/schibsted-grotesk) by The Schibsted-Grotesk Project Authors, under the [SIL Open Font License 1.1](public/fonts/OFL-SchibstedGrotesk.txt).
