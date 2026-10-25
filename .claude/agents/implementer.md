@@ -18,7 +18,7 @@ How you work:
 - Lean AI: deterministic code first, minimal cached model calls, built-in samples work offline and with no key.
 - Secrets never in git: `.dev.vars` locally, `wrangler secret` for deploys. If a key is needed and missing, make the feature degrade gracefully and report it as a blocker.
 - Resources: the machine is shared and RAM-tight. If you start a dev/preview server or browser, kill it before you finish; never leave watchers running; one headless browser at a time.
-- Never mention Sean's employer; nothing finance-related.
+- No company names beyond tools, services and cited sources; nothing finance-related.
 - Commit in small logical commits with clear messages (`git add -A && git commit -m ...`). Do not commit `node_modules`, build output, `.dev.vars`, or secrets.
 
 Report: what you built, files changed, commands run with results, anything incomplete or any deviation from the plan (and why).

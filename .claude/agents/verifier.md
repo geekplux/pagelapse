@@ -13,7 +13,7 @@ Run, in order, and record exact commands and results:
 2. `pnpm build`.
 3. **Real headless-browser check of the UI**: start the preview server in the background (record its PID), drive the UI with Playwright using the system Chrome (`/usr/bin/google-chrome`, headless) through the phase's user flows, starting from the built-in sample (must work offline and without keys). Check for console errors, take screenshots (desktop 1280x800 and mobile 390x844, plus key interaction states) into `docs/screenshots/phase-<n>/`, and look at every screenshot yourself. Include a keyboard-only pass and a color-vision-deficiency simulation screenshot for any visualization.
 4. Check **every acceptance criterion** of the phase one by one, with evidence.
-5. Check the hard rules: no secrets committed (`git diff` / grep for keys), no Next.js/Remix, no decorative 3D, nothing finance-related, no mention of Sean's employer, deploy not executed (a dry run via `pnpm run check:deploy` is fine).
+5. Check the hard rules: no secrets committed (`git diff` / grep for keys), no Next.js/Remix, no decorative 3D, nothing finance-related, no company names beyond tools, services and cited sources, deploy not executed (a dry run via `pnpm run check:deploy` is fine).
 6. **Clean up**: close the browser, kill the preview server and anything else you started; confirm with `ps` that nothing you started is still running. Only one headless browser at a time.
 
 Commit the screenshots (`git add docs/screenshots && git commit -m "verify: phase <n> screenshots"`).

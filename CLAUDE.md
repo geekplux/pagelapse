@@ -71,7 +71,7 @@ Keep it current so an outside monitor can read progress. **The first line is alw
 - Accessibility: never rely on color alone; palettes must pass color-vision-deficiency checks (protanopia, deuteranopia, tritanopia); keyboard-operable; reduced motion respected.
 - No decorative 3D.
 - Nothing finance-related (no prices, trading, crypto, payments features or sample data).
-- Never mention Sean's employer anywhere (code, docs, commits, PRs).
+- No company names in project content, samples, docs, commits or PRs, apart from tools, services and cited sources.
 
 ## CI
 CI lives in `.github/workflows/ci.yml` (the `gh` token now has `workflow` scope). Keep it in step with `pnpm check` and `pnpm size`.
