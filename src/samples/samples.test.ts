@@ -97,7 +97,7 @@ describe('committed samples', () => {
 
   it('the Creative Commons filter drops fundraising, sponsor and store lines, not harmless words', () => {
     const drop = new RegExp(config.find((c) => c.id === 'creative-commons')!.dropBlocks!, 'iu');
-    for (const t of ['Help support the Commons.', 'Creative Commons 2011 Annual Campaign', 'Invest in open', 'please consider making a gift', 'our lead sponsor', 'CC Store', 'Buy Swag and Goodies', 'Shop CC Merch', 'Support CC In Style']) expect([t, drop.test(t)]).toEqual([t, true]);
+    for (const t of ['Help support the Commons.', 'Creative Commons 2011 Annual Campaign', 'Invest in open', 'please consider making a gift', 'our lead sponsor', 'CC Store', 'Buy Swag and Goodies', 'Shop CC Merch', 'Support CC In Style', 'Thank you to Private Internet Access']) expect([t, drop.test(t)]).toEqual([t, true]);
     for (const t of ['Free cloud storage for openly licensed works', 'Restore the original', 'Supporting open access in education', 'Shopify', 'Share your work']) expect([t, drop.test(t)]).toEqual([t, false]);
   });
 
