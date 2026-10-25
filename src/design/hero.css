@@ -1,7 +1,7 @@
 /* The header row, the address field with its samples menu, and the hero: headline, field, sample options and the deck
    of captures (docs/redesign/target/V3Hero.html, V3HeroPhone.html, V3Menu.html, V3Motion.html). */
 
-/* Header: the wordmark, the address field (workspace) and the GitHub link in one 72 px row; the workspace's row sits
+/* Header: the wordmark, the address field (workspace), the theme button and the GitHub link in one 72 px row; the workspace's row sits
    on a full-width hairline. */
 .site-header.is-work { border-bottom: var(--line) solid var(--sand-6); }
 .head-row { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0 calc(2 * var(--space-3)); min-height: 4.5rem; }
@@ -9,16 +9,19 @@
 .home-link { display: inline-block; padding-block: calc(1.5 * var(--space-1)); text-decoration: none; }
 .wordmark { display: inline-flex; align-items: center; gap: calc(2.5 * var(--space-1)); }
 .wm-text { font-size: var(--fs-20); line-height: var(--lh-20); font-weight: 700; letter-spacing: -0.02em; }
-.gh-link {
-  display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; margin-left: auto;
-  border-radius: var(--radius-8); color: var(--sand-11); transition: color var(--dur) var(--ease);
+/* The theme button and the GitHub link: 20 px icons on 40 px targets, side by side at the row's end. */
+.head-tools { display: flex; align-items: center; margin-left: auto; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; padding: 0;
+  border: 0; border-radius: var(--radius-8); background: none; color: var(--sand-11); font: inherit; cursor: pointer;
+  transition: color var(--dur) var(--ease);
 }
-.gh-link:hover { color: var(--sand-12); }
+.icon-btn:hover { color: var(--sand-12); }
 /* On the hero the icon's glyph, not its 40 px target, lines up with the column edge (V3Hero). */
-.site-header:not(.is-work) .gh-link { margin-right: calc(-2.5 * var(--space-1)); }
+.site-header:not(.is-work) .head-tools { margin-right: calc(-2.5 * var(--space-1)); }
 @media (min-width: 48rem) {
   .is-work .addr { flex: 0 1 32.5rem; margin-left: auto; }
-  .is-work .gh-link { margin-left: 0; }
+  .is-work .head-tools { margin-left: 0; }
 }
 @media (max-width: 47.99rem) {
   /* V3WorkPhone: the field over a full-width button, both 44 px, under the 56 px logo row. */

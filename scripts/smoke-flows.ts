@@ -119,6 +119,43 @@ async function noPageOverflow(page: Page): Promise<void> {
   if (wide > 0) throw new Error(`page scrolls sideways by ${wide}px (only the ribbon may)`);
 }
 
+/** The page shows `theme`: the ground, `data-theme` (only while `stored`), localStorage, color-scheme, theme-color, the button. */
+async function expectTheme(page: Page, theme: Theme, stored: Theme | null, when: string): Promise<void> {
+  const want = {
+    bg: `rgb(${palette[theme].bg.match(/[0-9a-f]{2}/gi)!.map((h) => parseInt(h, 16)).join(', ')})`,
+    token: palette[theme].bg,
+    dataTheme: stored,
+    storage: stored,
+    scheme: theme,
+    metas: stored ? [palette[stored].bg, palette[stored].bg] : [palette.light.bg, palette.dark.bg],
+    label: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`,
+    icon: theme === 'dark' ? 'sun' : 'moon',
+  };
+  // matchMedia's change event fires at the next rendering update, so a system change is polled for (up to 2 s).
+  const read = () => page.evaluate(() => {
+    const root = document.documentElement;
+    const btn = document.querySelector('.theme-btn');
+    // The build minifies #FFFFFF to #FFF.
+    const hex = getComputedStyle(root).getPropertyValue('--bg').trim().toUpperCase();
+    return {
+      bg: getComputedStyle(document.body).backgroundColor,
+      token: hex.length === 4 ? `#${[...hex.slice(1)].map((c) => c + c).join('')}` : hex,
+      dataTheme: root.getAttribute('data-theme'),
+      storage: localStorage.getItem('pagelapse-theme'),
+      scheme: getComputedStyle(root).colorScheme,
+      metas: [...document.querySelectorAll('meta[name="theme-color"]')].map((m) => m.getAttribute('content')?.toUpperCase()),
+      label: btn?.getAttribute('aria-label'),
+      icon: btn?.querySelector('svg')?.getAttribute('data-icon'),
+    };
+  });
+  let got = await read();
+  for (let i = 0; i < 20 && JSON.stringify(got) !== JSON.stringify(want); i++) {
+    await page.waitForTimeout(100);
+    got = await read();
+  }
+  if (JSON.stringify(got) !== JSON.stringify(want)) throw new Error(`${when}: got ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);
+}
+
 /** The pane shows capture `ts` of `f` (its picture, or the "no picture" card), and the ribbon marks that thumbnail. */
 async function expectShown(page: Page, f: Fixture, ts: string): Promise<void> {
   const file = f.snapshots.find((s) => s.ts === ts)?.shot?.file;
@@ -367,7 +404,7 @@ export const flows: readonly Flow[] = [
   },
   {
     name: 'keyboard-tab-order',
-    description: 'Workspace Tab order header (address field, button) -> content -> footer, a visible ring on every stop',
+    description: 'Workspace Tab order header (address field, button, theme, GitHub) -> content -> footer, a visible ring on every stop',
     suffix: '-kbd',
     async run({ page, baseUrl }) {
       await openReady(page, baseUrl);
@@ -398,7 +435,7 @@ export const flows: readonly Flow[] = [
         throw new Error(`tab order: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`);
       }
       const head = stops.filter((s) => s.region === 'header').map((s) => s.name);
-      if (head.join('|') !== 'Skip to content|Skip to diff|Pagelapse|Page address|Show its history|Source on GitHub') throw new Error(`header stops: ${head.join(' | ')}`);
+      if (head.join('|') !== 'Skip to content|Skip to diff|Pagelapse|Page address|Show its history|Switch to dark theme|Source on GitHub') throw new Error(`header stops: ${head.join(' | ')}`);
       const ringless = stops.filter((s) => !s.ring);
       if (ringless.length) throw new Error(`no focus ring on: ${ringless.map((s) => s.name).join(', ')}`);
       return { notes: [`${stops.length} stops: ${stops.map((s) => `${s.region}:${s.name}`).join(' | ')}`] };
@@ -1031,6 +1068,101 @@ export const flows: readonly Flow[] = [
       );
       if (loaded !== sizes.length * 2) throw new Error(`${loaded} of ${sizes.length * 2} favicons rendered`);
       return { notes: [`favicon.svg rendered at ${sizes.join(', ')} px on the light and the dark ground`] };
+    },
+  },
+  {
+    name: 'theme-toggle',
+    description: 'The header theme button: flips the ground, its icon and name, persists with no flash (data-theme before the app runs), follows a live system change while nothing is stored, and clears storage when set back to the system',
+    schemes: ['light', 'dark'],
+    async run({ page, baseUrl, scheme }) {
+      const other: Theme = scheme === 'dark' ? 'light' : 'dark';
+      const notes: string[] = [];
+      await openHero(page, baseUrl);
+      await expectTheme(page, scheme, null, 'on load');
+      // A live system change while nothing is stored moves the page, the icon and the name; then back.
+      await page.emulateMedia({ colorScheme: other });
+      await expectTheme(page, other, null, 'after the system changed');
+      await page.emulateMedia({ colorScheme: scheme });
+      await expectTheme(page, scheme, null, 'after the system changed back');
+      notes.push(`system ${scheme} -> ${other} -> ${scheme} followed live`);
+      // The toggle: no view transition (openTransition.ts stays for Open).
+      await page.evaluate(() => {
+        const w = window as unknown as { __vt: number };
+        w.__vt = 0;
+        const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+        if (doc.startViewTransition) {
+          const real = doc.startViewTransition.bind(doc);
+          doc.startViewTransition = (cb) => (w.__vt++, real(cb));
+        }
+      });
+      await page.locator('.theme-btn').click();
+      await expectTheme(page, other, other, 'after the toggle');
+      if ((await page.evaluate(() => (window as unknown as { __vt: number }).__vt)) !== 0) throw new Error('the toggle started a view transition');
+      notes.push(`toggle: ${scheme} -> ${other}, stored "${other}", no view transition`);
+      // Reload: theme.js sets data-theme before the body is parsed (so before the app's module runs and before first
+      // paint) and it is still there at DOMContentLoaded.
+      await page.addInitScript(() => {
+        const w = window as unknown as { __atBody?: string | null; __atDcl?: string | null };
+        document.addEventListener('DOMContentLoaded', () => (w.__atDcl = document.documentElement.getAttribute('data-theme')));
+        // The init script runs before <html> exists: watch the whole document for <body>.
+        new MutationObserver((_, obs) => {
+          if (!document.body) return;
+          w.__atBody = document.documentElement.getAttribute('data-theme');
+          obs.disconnect();
+        }).observe(document, { childList: true, subtree: true });
+      });
+      await openHero(page, baseUrl);
+      const early = await page.evaluate(() => {
+        const w = window as unknown as { __atBody?: string | null; __atDcl?: string | null };
+        return [w.__atBody, w.__atDcl];
+      });
+      if (early.join() !== `${other},${other}`) throw new Error(`after reload data-theme was ${early[0]} when <body> began and ${early[1]} at DOMContentLoaded, expected ${other}`);
+      await expectTheme(page, other, other, 'after reload');
+      notes.push(`reload: data-theme="${other}" when <body> began and at DOMContentLoaded`);
+      // The workspace header has the same button and state; back to the system's theme clears the stored value.
+      await openReady(page, baseUrl);
+      await expectTheme(page, other, other, 'in the workspace');
+      await page.locator('.theme-btn').click();
+      await expectTheme(page, scheme, null, 'after toggling back to the system theme');
+      notes.push(`workspace: back to ${scheme}, storage cleared, data-theme removed`);
+      // On every width the button is the GitHub link's size, in the header row, and the page does not scroll sideways.
+      const boxes = await page.evaluate(() => ['.theme-btn', '.gh-link'].map((sel) => document.querySelector(sel)!.getBoundingClientRect()).map((r) => [Math.round(r.width), Math.round(r.height), Math.round(r.top)]));
+      if (JSON.stringify(boxes[0]) !== JSON.stringify(boxes[1]) || boxes[0]![0] !== 40) throw new Error(`theme button ${boxes[0]} vs GitHub link ${boxes[1]}`);
+      await noPageOverflow(page);
+      notes.push(`button ${boxes[0]![0]}x${boxes[0]![1]} beside the GitHub link`);
+      return { notes };
+    },
+  },
+  {
+    name: 'theme-hero',
+    description: 'The hero at 1440 with a light system and the toggle switched to dark (PR shot)',
+    viewports: ['wide'],
+    widthTag: true,
+    firstView: true,
+    async run({ page, baseUrl }) {
+      await openHero(page, baseUrl);
+      await page.locator('.theme-btn').click();
+      await expectTheme(page, 'dark', 'dark', 'after the toggle');
+      await page.evaluate(() => document.fonts.ready);
+      return { notes: ['light system, dark chosen'] };
+    },
+  },
+  {
+    name: 'theme-header',
+    description: 'The hero header at 390 with the theme button beside the GitHub link (PR shot)',
+    viewports: ['mobile'],
+    widthTag: true,
+    clip: '.site-header',
+    async run({ page, baseUrl }) {
+      await openHero(page, baseUrl);
+      await expectTheme(page, 'light', null, 'on load');
+      const inRow = await page.evaluate(() => {
+        const [t, g, b] = ['.theme-btn', '.gh-link', '.home-link'].map((sel) => document.querySelector(sel)!.getBoundingClientRect());
+        return Math.abs(t!.top + t!.height / 2 - (b!.top + b!.height / 2)) < 2 && t!.right <= g!.left + 0.5 && g!.right <= innerWidth;
+      });
+      if (!inRow) throw new Error('the theme button is not in the header row before the GitHub link');
+      await page.evaluate(() => document.fonts.ready);
+      return { notes: ['theme button and GitHub link share the logo row at 390'] };
     },
   },
   {

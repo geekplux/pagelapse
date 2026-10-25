@@ -82,7 +82,7 @@ The recorders accept the new archive right away. The Worker (`worker/routes/capt
 - Colours are Radix sand (neutral), cyan (Before, removed) and amber (After, added, the selected change) in `src/design/palette.ts` (light and dark), mirrored in `src/design/tokens.css`. `palette.test.ts` keeps the two equal and checks text contrast (4.5:1), graphic contrast (3:1), and the separation of Before and After under protanopia, deuteranopia and tritanopia.
 - `accent.test.ts` keeps cyan and amber to the places that pair them with a word, a symbol, a ring or a text style. `design.test.ts` keeps the four type sizes (12, 14, 20, 40), the two families and the 0.5px hairlines.
 - Spacing uses `--space-1` to `--space-6` (4, 8, 16, 24, 40, 64 px). `spacing.test.ts` fails on any other margin, padding, gap or offset.
-- The dark theme follows `prefers-color-scheme`.
+- The dark theme follows `prefers-color-scheme` unless the header's theme button stored a choice (`data-theme` on `<html>`); `tokens.css` holds the dark values twice, for both cases, and `palette.test.ts` keeps both equal to `palette.ts`.
 
 ## Optional screenshot provider (designed, not built)
 

@@ -36,7 +36,9 @@ const sample = JSON.stringify(JSON.parse(readFileSync(join(root, `src/samples/${
 const pictures = checkPictures(root);
 
 const rows: [string, number, number][] = [
+  // Includes public/theme.js, the blocking pre-paint script (a plain <script src>), which also has its own row.
   ['initial JS (gzip)', initialJs.reduce((n, f) => n + gz(read(f)), 0), 100 * KB],
+  ['theme.js (gzip)', initialJs.includes('/theme.js') ? gz(read('/theme.js')) : Infinity, 1 * KB],
   ['CSS (gzip, all files)', cssFiles.reduce((n, f) => n + gz(read(`assets/${f}`)), 0), 15 * KB],
   // Schibsted Grotesk (variable, 400 to 700) and IBM Plex Mono 400 + 500, latin subsets: about 76 KB.
   [`fonts (${fonts.length} woff2)`, fonts.reduce((n, f) => n + read(`fonts/${f}`).length, 0), 80 * KB],
@@ -47,7 +49,11 @@ const rows: [string, number, number][] = [
   ['first-view pictures', pictures.firstView, PICTURE_BUDGET.firstView],
 ];
 
-const problems: string[] = [...(initialJs.length ? [] : ['no entry <script> found in dist/client/index.html']), ...pictures.problems];
+const problems: string[] = [
+  ...(initialJs.length ? [] : ['no entry <script> found in dist/client/index.html']),
+  ...(initialJs.includes('/theme.js') ? [] : ['no <script src="/theme.js"> in dist/client/index.html']),
+  ...pictures.problems,
+];
 console.log(`${'budget'.padEnd(24)}${'actual'.padStart(11)}${'limit'.padStart(11)}  status`);
 for (const [name, bytes, limit] of rows) {
   const ok = bytes <= limit;

@@ -1,7 +1,7 @@
 /* Design tokens (docs/DESIGN.md). Colours mirror src/design/palette.ts (palette.test.ts keeps them equal);
    design.test.ts holds every other stylesheet to these tokens. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   /* Radix Colors: sand (neutral), cyan (Before, removed), amber (After, added, selected). Steps by role:
      1-2 backgrounds, 3-5 component backgrounds, 6-8 borders, 9-10 solids, 11-12 text. */
   --sand-1: #FDFDFC; --sand-2: #F9F9F8; --sand-3: #F1F0EF; --sand-4: #E9E8E6; --sand-5: #E2E1DE; --sand-6: #DAD9D6; --sand-7: #CFCECA; --sand-8: #BCBBB5; --sand-9: #8D8D86; --sand-10: #82827C; --sand-11: #63635E; --sand-12: #21201C;
@@ -61,11 +61,22 @@
   --replay-bg: white;
 }
 
+/* Dark: the system's choice unless the header's toggle stored light, or the stored choice (src/app/theme.ts sets
+   data-theme only while a choice is stored). CSS cannot share one rule between a media query and a plain selector,
+   so the two blocks repeat the same values; palette.test.ts holds both equal to palette.ts. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --sand-1: #111110; --sand-2: #191918; --sand-3: #222221; --sand-4: #2A2A28; --sand-5: #31312E; --sand-6: #3B3A37; --sand-7: #494844; --sand-8: #62605B; --sand-9: #6F6D66; --sand-10: #7C7B74; --sand-11: #B5B3AD; --sand-12: #EEEEEC;
     --cyan-1: #0B161A; --cyan-2: #101B20; --cyan-3: #082C36; --cyan-4: #003848; --cyan-5: #004558; --cyan-6: #045468; --cyan-7: #12677E; --cyan-8: #11809C; --cyan-9: #00A2C7; --cyan-10: #23AFD0; --cyan-11: #4CCCE6; --cyan-12: #B6ECF7;
     --amber-1: #16120C; --amber-2: #1D180F; --amber-3: #302008; --amber-4: #3F2700; --amber-5: #4D3000; --amber-6: #5C3D05; --amber-7: #714F19; --amber-8: #8F6424; --amber-9: #FFC53D; --amber-10: #FFD60A; --amber-11: #FFCA16; --amber-12: #FFE7B3;
     --bg: #111110; --frame: #191918;
   }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --sand-1: #111110; --sand-2: #191918; --sand-3: #222221; --sand-4: #2A2A28; --sand-5: #31312E; --sand-6: #3B3A37; --sand-7: #494844; --sand-8: #62605B; --sand-9: #6F6D66; --sand-10: #7C7B74; --sand-11: #B5B3AD; --sand-12: #EEEEEC;
+  --cyan-1: #0B161A; --cyan-2: #101B20; --cyan-3: #082C36; --cyan-4: #003848; --cyan-5: #004558; --cyan-6: #045468; --cyan-7: #12677E; --cyan-8: #11809C; --cyan-9: #00A2C7; --cyan-10: #23AFD0; --cyan-11: #4CCCE6; --cyan-12: #B6ECF7;
+  --amber-1: #16120C; --amber-2: #1D180F; --amber-3: #302008; --amber-4: #3F2700; --amber-5: #4D3000; --amber-6: #5C3D05; --amber-7: #714F19; --amber-8: #8F6424; --amber-9: #FFC53D; --amber-10: #FFD60A; --amber-11: #FFCA16; --amber-12: #FFE7B3;
+  --bg: #111110; --frame: #191918;
 }

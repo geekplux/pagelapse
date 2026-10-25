@@ -215,6 +215,7 @@ const INVENTORY: Item[] = [
   // The samples are options of the address field's menu (a combobox): reached through the field, not by Tab.
   { name: 'Address field (samples menu)', sel: '#url-input[role="combobox"]' },
   { name: 'Show its history', sel: '.btn-go' },
+  { name: 'Theme button (header)', sel: '.theme-btn' },
   { name: 'GitHub link (header)', sel: '.gh-link' },
   { name: 'compare modes (segmented radio group)', sel: 'input[name="vp-mode"]' },
   { name: 'Play', sel: '.vp-play' },

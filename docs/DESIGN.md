@@ -30,10 +30,12 @@ Plus the repo's own rules: never colour alone (cyan/amber always come with a wor
 
 One page, two states. No separate landing page and no sample tabs.
 
-1. **Hero** (no `?sample=`/`?url=` in the address): header (logo + wordmark, GitHub icon); centred 40px headline "See how any web page changed over the years", 20px lede, 48px address field with "Show its history", then "Or open a sample" with one option button per sample. Under it the **deck**: every capture of the default hero sample (Wikipedia) as a card whose left edge sits at its capture date (latest whole on the right with a "Latest" tag), a year axis with a bar per meaningful change under the slivers, and a one-line caption. Footer.
-2. **Workspace** (a sample or a URL is open): header with the address field (holds the page address; focusing it opens a menu listing the samples, current one checked). Title = sample label (live: the host), meta line (captures, span, changes, trivial edits hidden, "Sample" tag). Stage 1200x750, controls, time ribbon, change section, "Every change", footer.
+1. **Hero** (no `?sample=`/`?url=` in the address): header (logo + wordmark, theme button, GitHub icon); centred 40px headline "See how any web page changed over the years", 20px lede, 48px address field with "Show its history", then "Or open a sample" with one option button per sample. Under it the **deck**: every capture of the default hero sample (Wikipedia) as a card whose left edge sits at its capture date (latest whole on the right with a "Latest" tag), a year axis with a bar per meaningful change under the slivers, and a one-line caption. Footer.
+2. **Workspace** (a sample or a URL is open): header with the address field (holds the page address; focusing it opens a menu listing the samples, current one checked), the theme button and the GitHub icon. Title = sample label (live: the host), meta line (captures, span, changes, trivial edits hidden, "Sample" tag). Stage 1200x750, controls, time ribbon, change section, "Every change", footer.
 
 ## Components
+
+- **Theme button** (header, before the GitHub icon, same 40px target and 20px icon): a moon while light shows, a sun while dark shows, named "Switch to dark theme" / "Switch to light theme", no text. The page follows the system until a click picks the other theme (stored in localStorage, applied before first paint by `public/theme.js`); picking the system's theme again clears it. No transition beyond the existing colour fades.
 
 - **Stage**: Slider (default), Side by side, Single. Onion skin is removed. Phone offers Slider and Single. Before/After tags on the picture: ring dot + "Before" in cyan-11 + mono date; filled dot + "After" in amber-11 + mono date. Divider: 3px white line with a 0.5px dark outline, 40px round knob with chevrons.
 - **Controls row**: Play (line button), previous/next change with "Change n of N" (or "First and latest"), segmented compare control, "Copy link" flush right.

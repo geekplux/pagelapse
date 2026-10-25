@@ -21,6 +21,7 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - **A Cloudflare Worker API** for captures, extracted pages and summaries, with caching, per-visitor rate limits and a global cooldown when the archive asks to slow down.
 - **Deployment preparation:** a production Wrangler config for Workers Builds with the custom domain pagelapse.geekplux.com, security headers (a Content Security Policy that allows only the archive's replay frames), long caching for hashed assets and sample pictures, and a dry run (`pnpm run check:deploy`). See [docs/DEPLOY.md](docs/DEPLOY.md). The site is not deployed yet.
 - **Open-source packaging:** README, CONTRIBUTING, Code of Conduct (Contributor Covenant 2.1), security policy, issue and pull request templates, an extension guide ([docs/EXTENDING.md](docs/EXTENDING.md)), good first issues, an [examples gallery](examples/README.md), a social preview, launch drafts ([docs/LAUNCH.md](docs/LAUNCH.md)) and a docs link check that runs with the tests.
+- **A light / dark theme button** in the header (a moon or a sun, named for the switch it makes). The page follows the system theme until you pick the other one; the choice is remembered and applies before the first paint, and picking the system's theme again forgets it.
 - **The toolchain:** React, Vite, TypeScript, Vitest, oxlint, headless-browser smoke tests, a calm-layout audit and size budgets.
 
 ### Changed

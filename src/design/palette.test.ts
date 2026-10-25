@@ -72,12 +72,29 @@ it('the ground is white in light and sand-1 in dark; pictures sit on white and s
 describe('tokens.css mirrors palette.ts', () => {
   const read = (block: string) =>
     Object.fromEntries([...block.matchAll(/--([a-z0-9-]+):\s*(#[0-9A-Fa-f]{6})\s*;/g)].map((m) => [m[1], m[2]!.toUpperCase()]));
-  const darkStart = tokensCss.indexOf('@media (prefers-color-scheme: dark)');
-  const blocks: Record<Theme, string> = { light: tokensCss.slice(0, darkStart), dark: tokensCss.slice(darkStart) };
+  // Light on :root; dark twice, for the system (unless light is stored) and for a stored dark (src/app/theme.ts).
+  const systemStart = tokensCss.indexOf('@media (prefers-color-scheme: dark) {\n  :root:not([data-theme="light"]) {');
+  const storedStart = tokensCss.indexOf(':root[data-theme="dark"] {');
+  const blocks = {
+    light: tokensCss.slice(0, systemStart),
+    'dark (system)': tokensCss.slice(systemStart, storedStart),
+    'dark (stored)': tokensCss.slice(storedStart),
+  };
+  const themeOf = (name: keyof typeof blocks): Theme => (name === 'light' ? 'light' : 'dark');
 
-  it.each(THEMES)('%s values are equal', (theme) => {
-    expect(darkStart).toBeGreaterThan(0);
+  it('has the light block, then the system dark block, then the stored dark block', () => {
+    expect(systemStart).toBeGreaterThan(0);
+    expect(storedStart).toBeGreaterThan(systemStart);
+    expect(tokensCss.match(/prefers-color-scheme/g)).toHaveLength(1);
+  });
+
+  it.each(Object.keys(blocks) as (keyof typeof blocks)[])('%s values are equal', (name) => {
+    const theme = themeOf(name);
     const expected = Object.fromEntries(TOKENS.map((t) => [t, palette[theme][t].toUpperCase()]));
-    expect(read(blocks[theme])).toEqual(expected);
+    expect(read(blocks[name])).toEqual(expected);
+  });
+
+  it.each(Object.keys(blocks) as (keyof typeof blocks)[])('%s sets its color-scheme, so form controls and scrollbars follow', (name) => {
+    expect(blocks[name].match(/color-scheme:\s*(light|dark);/g)).toEqual([`color-scheme: ${themeOf(name)};`]);
   });
 });

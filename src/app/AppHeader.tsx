@@ -1,5 +1,6 @@
 import { Wordmark } from '../design/Wordmark.tsx';
 import type { SampleEntry } from '../samples/index.ts';
+import { PageThemeToggle } from './ThemeToggle.tsx';
 import { UrlForm } from './UrlForm.tsx';
 
 type Props =
@@ -27,8 +28,8 @@ const GitHub = () => (
 );
 
 /**
- * Skip links, then one row: the wordmark, the address field (workspace only; its menu lists the samples) and the
- * GitHub link. On the hero the headline is the page's h1, so the wordmark is a plain link there.
+ * Skip links, then one row: the wordmark, the address field (workspace only; its menu lists the samples), the theme
+ * button and the GitHub link. On the hero the headline is the page's h1, so the wordmark is a plain link there.
  */
 export function AppHeader(props: Props) {
   const Brand = props.hero ? 'div' : 'h1';
@@ -49,9 +50,12 @@ export function AppHeader(props: Props) {
           </a>
         </Brand>
         {!props.hero && <UrlForm value={props.url} onSubmit={props.onUrl} menu={{ samples: props.samples, currentId: props.selectedId, onPick: props.onSelect }} />}
-        <a className="gh-link" href="https://github.com/geekplux/pagelapse" aria-label="Source on GitHub">
-          <GitHub />
-        </a>
+        <div className="head-tools">
+          <PageThemeToggle />
+          <a className="icon-btn gh-link" href="https://github.com/geekplux/pagelapse" aria-label="Source on GitHub">
+            <GitHub />
+          </a>
+        </div>
       </div>
     </header>
   );
