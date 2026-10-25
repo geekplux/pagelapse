@@ -744,7 +744,7 @@ Carry-overs recorded in DECISIONS.md and PR bodies move with their phases:
    - no `next`/`remix` deps;
    - no `.github/workflows/`;
    - nothing finance-related (including in pictures: inspect the contact sheets);
-   - no employer mention;
+   - no company names;
    - nothing deployed.
 5. Cleanup: `ps -ef | grep -E "vite|workerd|chrome|wrangler"` shows nothing the verifier started.
 6. Screenshot naming: `docs/screenshots/phase-<n>/<flow>-<desktop|mobile>[-dark|-reduced|-protan|-deutan|-tritan|-gray|-kbd].webp`. Desktop is 1280×800, mobile 390×844. Commit **only** the files the phase lists (D27).
@@ -1287,7 +1287,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 - **Acceptance criteria:**
   1. The README's first screen has the pitch, the hero picture and the "try it" path. Every link resolves (`scripts/check-docs.ts`, run in tests).
   2. All listed files exist, and the templates are valid YAML.
-  3. No employer mention, nothing finance-related, no `.github/workflows/`.
+  3. No company names, nothing finance-related, no `.github/workflows/`.
   4. The app is unchanged (smoke regression).
 - **Verifier:** SV + `readme-preview.webp`. Cross-check every README claim against behaviour.
 - **Risks:** the README overclaiming (for example, live pictures depend on the IA's replay). About 400 lines, excluding the verbatim Code of Conduct.
@@ -1315,7 +1315,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
   1. The social preview is 1280×640, < 1 MB, legible at 50%, and its text passes AA contrast.
   2. `docs/hero.gif` is <= 3 MB, or a skip note is present.
   3. Every gallery deep link opens the stated change and mode (smoke `examples-deeplinks`).
-  4. LAUNCH.md has all parts. The X draft is <= 280 chars (test). No prices, finance or employer.
+  4. LAUNCH.md has all parts. The X draft is <= 280 chars (test). No prices, finance or company names.
   5. Smoke regression passes. The render scripts leave no Chrome or ffmpeg running.
   6. Carry-overs:
      - the first view's Slider shows the decade pair (smoke asserts both `src` timestamps), and `data-visual-ready` ≤ 1,500 ms and CLS < 0.02 still hold;
