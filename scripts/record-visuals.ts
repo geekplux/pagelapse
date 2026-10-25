@@ -4,7 +4,7 @@
 // and is never imported by tests.
 //
 // Usage: pnpm record:visuals [--only <id>[,<id>…]] [--max <captures to load this run>] [--offline] [--dry-run]
-// Chrome: /usr/bin/google-chrome, or set CHROME_PATH (macOS: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome").
+// Chrome: CHROME_PATH if set, else the standard install (/Applications/Google Chrome.app on macOS, /usr/bin/google-chrome elsewhere).
 // It pictures recorded samples only: run `pnpm record:samples` for a new entry first (an entry without its fixture is skipped).
 // The capture's `mp_` replay is loaded in an iframe of a local page: framed, pywb's top-frame
 // redirect into Arquivo.pt's own viewer does not fire. Only arquivo.pt hosts load (pages still
@@ -138,12 +138,13 @@ const table = (rows: string[][]) => {
   const widths = rows[0]!.map((_, i) => Math.max(...rows.map((r) => r[i]!.length)));
   for (const r of rows) console.log(r.map((c, i) => c.padEnd(widths[i]!)).join('  '));
 };
+const DEFAULT_CHROME = process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : '/usr/bin/google-chrome';
 const shots = [['id', 'ts', 'status', 'settle', 'full KB', 'thumb KB', 'missing css/img', 'redacted']];
 const deltas = [['id', 'change', 'visual delta', 'shots']];
 
 try {
   if (!args['dry-run']) {
-    browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? '/usr/bin/google-chrome', headless: true, args: ['--disable-dev-shm-usage', '--no-sandbox'] });
+    browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? DEFAULT_CHROME, headless: true, args: ['--disable-dev-shm-usage', '--no-sandbox'] });
   }
   const context = await browser?.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, reducedMotion: 'reduce', timezoneId: 'UTC', userAgent: USER_AGENT });
   await context?.route('**/*', (route) => {

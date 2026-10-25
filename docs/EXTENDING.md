@@ -28,8 +28,7 @@ pnpm i
 # Text: the same captures the pictures replay (Arquivo.pt), checked first with a dry run
 pnpm record:samples --only nasa,creative-commons --archive arquivo-pt --dry-run
 pnpm record:samples --only nasa,creative-commons --archive arquivo-pt
-# Pictures (one capture every 5 s or more); on macOS point at Chrome first:
-# export CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# Pictures (one capture every 5 s or more); set CHROME_PATH only if Chrome is not in its standard place
 pnpm record:visuals --only nasa,creative-commons
 # Set "featured" for each from the delta table in samples.config.json, then write it in without the network
 pnpm record:visuals --only nasa,creative-commons --offline
