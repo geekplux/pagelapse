@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fixtureToSnapshots, parseSampleFixture } from '../../src/core/fixture.ts';
@@ -58,10 +58,23 @@ describe('committed sample pictures', () => {
     const config = JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as { id: string; visualDrop?: Record<string, string> }[];
     const drops = config.flatMap((c) => Object.entries(c.visualDrop ?? {}).map(([ts, reason]) => [c.id, ts, reason] as const));
     // Creative Commons' 2011 capture shows a fundraising price in its slider caption (CLAUDE.md: nothing finance-related).
-    expect(drops).toContainEqual(['creative-commons', '20111209164214', 'fundraising price in the slider caption']);
+    expect(drops).toContainEqual(['creative-commons', '20111209164214', 'Hidden: a fundraising appeal']);
     for (const [id, ts, reason] of drops) {
       const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', `${id}.json`), 'utf8')));
       expect(f.snapshots.find((s) => s.ts === ts)?.shot).toEqual({ status: 'failed', settle: expect.any(String), reason });
+    }
+  });
+
+  it('pictures both sides of every pair a sample opens on: each featured change, and the default\'s decade compare', () => {
+    const config = JSON.parse(readFileSync(join(root, 'src/samples/samples.config.json'), 'utf8')) as { id: string }[];
+    const ids = config.map((c) => c.id).filter((id) => existsSync(join(root, 'src/samples', `${id}.json`)));
+    for (const [i, id] of ids.entries()) {
+      const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', `${id}.json`), 'utf8')));
+      const pairs = [f.featured, ...(i === 0 ? [(({ from, to }) => `${from}-${to}`)(overviewPair(f.snapshots)!)] : [])];
+      for (const pair of pairs) {
+        const sides = pair!.split('-').map((ts) => f.snapshots.find((s) => s.ts === ts)?.shot);
+        expect([id, pair, sides.map((s) => !!s?.file && s.status !== 'failed')]).toEqual([id, pair, [true, true]]);
+      }
     }
   });
 

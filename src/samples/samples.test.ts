@@ -87,6 +87,20 @@ describe('committed samples', () => {
     expect(new TextEncoder().encode(raw).length).toBeLessThanOrEqual(150 * KB);
   });
 
+  it.each(Object.entries(RAW))('%s keeps no block its config drops (dropBlocks applied to the committed text)', (file, raw) => {
+    const f = parseSampleFixture(JSON.parse(raw));
+    const pattern = config.find((c) => `./${c.id}.json` === file)!.dropBlocks;
+    if (!pattern) return;
+    const drop = new RegExp(pattern, 'iu');
+    expect(f.blocks.map((b) => b.t).filter((t) => drop.test(t))).toEqual([]);
+  });
+
+  it('the Creative Commons filter drops fundraising, sponsor and store lines, not harmless words', () => {
+    const drop = new RegExp(config.find((c) => c.id === 'creative-commons')!.dropBlocks!, 'iu');
+    for (const t of ['Help support the Commons.', 'Creative Commons 2011 Annual Campaign', 'Invest in open', 'please consider making a gift', 'our lead sponsor', 'CC Store', 'Buy Swag and Goodies', 'Shop CC Merch', 'Support CC In Style']) expect([t, drop.test(t)]).toEqual([t, true]);
+    for (const t of ['Free cloud storage for openly licensed works', 'Restore the original', 'Supporting open access in education', 'Shopify', 'Share your work']) expect([t, drop.test(t)]).toEqual([t, false]);
+  });
+
   it.each(Object.entries(RAW))('%s states no monetary figures in any block', (_, raw) => {
     const f = parseSampleFixture(JSON.parse(raw));
     expect(f.blocks.map((b) => b.t).filter((t) => FINANCE.test(t))).toEqual([]);

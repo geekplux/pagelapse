@@ -37,16 +37,16 @@
     "url": "https://creativecommons.org/",
     "description": "The home page of Creative Commons, the organisation behind the CC licences: how it describes its mission and its licences, over a decade of captures and redesigns.",
     "maxChars": 6000,
-    "dropBlocks": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bfundrais(?:er|ers|ing)\\b|\\bmake a gift\\b|\\bgive today\\b",
+    "dropBlocks": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bfundrais(?:er|ers|ing)\\b|\\bgive today\\b|\\bstores?\\b|\\bshop(?:s|ping)?\\b|\\bbuy(?:s|ing)?\\b|\\bmerch(?:andise)?\\b|\\bswag\\b|\\bsupport (?:cc|us|the commons)\\b|\\binvest(?:s|ing)? in\\b|\\bmak(?:e|ing) a gift\\b|\\bannual campaign\\b|\\bsponsor(?:s|ed|ship)?\\b",
     "license": "CC-BY-4.0",
-    "attribution": "Trimmed text excerpt from creativecommons.org by Creative Commons, licensed CC BY 4.0 (blocks about donations or stating monetary figures are omitted). Creative Commons and the CC logos are trademarks of Creative Commons.",
+    "attribution": "Trimmed text excerpt from creativecommons.org by Creative Commons, licensed CC BY 4.0 (blocks about donations, fundraising, sponsors or the CC store, or stating monetary figures, are omitted). Creative Commons and the CC logos are trademarks of Creative Commons.",
     "visualRedact": {
       "selector": "p, li, a, button, h2, h3",
       "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bfundrais(?:er|ers|ing)\\b|\\bmake a gift\\b|\\bgive today\\b",
       "note": "Donate buttons and links, and paragraphs about donations or stating monetary figures, were hidden before the screenshot."
     },
     "visualDrop": {
-      "20111209164214": "fundraising price in the slider caption"
+      "20111209164214": "Hidden: a fundraising appeal"
     },
     "featured": "20220217002410-20231019221042"
   }
