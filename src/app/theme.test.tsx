@@ -99,6 +99,29 @@ describe('theme store', () => {
     expect(data.get(THEME_KEY)).toBe('light');
   });
 
+  it('follows a choice made or cleared in another tab (storage events), and stops listening on dispose', () => {
+    const listeners = new Set<(e: { key: string | null; newValue: string | null }) => void>();
+    const win = { addEventListener: (_: 'storage', l: (e: { key: string | null; newValue: string | null }) => void) => void listeners.add(l), removeEventListener: (_: 'storage', l: (e: { key: string | null; newValue: string | null }) => void) => void listeners.delete(l) };
+    const fire = (key: string | null, newValue: string | null) => listeners.forEach((l) => l({ key, newValue }));
+    const apply = vi.fn<(s: ThemeState) => void>();
+    const s = createThemeStore(memory().storage, media(false), apply, win);
+    const seen = vi.fn<() => void>();
+    s.subscribe(seen);
+    fire(THEME_KEY, 'dark');
+    expect(s.get()).toEqual({ theme: 'dark', stored: 'dark', system: 'light' });
+    expect(apply).toHaveBeenLastCalledWith({ theme: 'dark', stored: 'dark', system: 'light' });
+    fire('another-key', 'light');
+    expect(s.get().theme).toBe('dark');
+    fire(THEME_KEY, null);
+    expect(s.get()).toEqual({ theme: 'light', stored: null, system: 'light' });
+    fire(THEME_KEY, 'dark');
+    fire(null, null);
+    expect(s.get()).toEqual({ theme: 'light', stored: null, system: 'light' });
+    expect(seen).toHaveBeenCalledTimes(4);
+    s.dispose();
+    expect(listeners.size).toBe(0);
+  });
+
   it('calls apply on start and on every change', () => {
     const apply = vi.fn<(s: ThemeState) => void>();
     const q = media(false);

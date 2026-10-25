@@ -58,8 +58,17 @@ export interface ThemeStore {
   dispose(): void;
 }
 
-/** A tiny external store (for useSyncExternalStore); `apply` runs on start and on every change. */
-export function createThemeStore(storage: ThemeStorage, query: DarkQuery | null, apply?: (s: ThemeState) => void): ThemeStore {
+/** Where another tab's change of the stored choice arrives (`window`'s `storage` events). */
+export type StorageEvents = {
+  addEventListener(type: 'storage', listener: (e: Pick<StorageEvent, 'key' | 'newValue'>) => void): void;
+  removeEventListener(type: 'storage', listener: (e: Pick<StorageEvent, 'key' | 'newValue'>) => void): void;
+};
+
+/**
+ * A tiny external store (for useSyncExternalStore); `apply` runs on start and on every change. With `events`, a choice
+ * made or cleared in another tab updates this one too.
+ */
+export function createThemeStore(storage: ThemeStorage, query: DarkQuery | null, apply?: (s: ThemeState) => void, events?: StorageEvents | null): ThemeStore {
   let system: Theme = query?.matches ? 'dark' : 'light';
   let stored = parseTheme(storage.get());
   const listeners = new Set<() => void>();
@@ -74,7 +83,14 @@ export function createThemeStore(storage: ThemeStorage, query: DarkQuery | null,
     system = e.matches ? 'dark' : 'light';
     update();
   };
+  // `key` is null when another tab cleared all of the site's storage.
+  const onStorage = (e: Pick<StorageEvent, 'key' | 'newValue'>) => {
+    if (e.key !== THEME_KEY && e.key !== null) return;
+    stored = e.key === null ? null : parseTheme(e.newValue);
+    update();
+  };
   query?.addEventListener('change', onSystem);
+  events?.addEventListener('storage', onStorage);
   apply?.(state);
   return {
     get: () => state,
@@ -88,7 +104,10 @@ export function createThemeStore(storage: ThemeStorage, query: DarkQuery | null,
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    dispose: () => query?.removeEventListener('change', onSystem),
+    dispose() {
+      query?.removeEventListener('change', onSystem);
+      events?.removeEventListener('storage', onStorage);
+    },
   };
 }
 

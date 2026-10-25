@@ -1122,9 +1122,15 @@ export const flows: readonly Flow[] = [
       // The workspace header has the same button and state; back to the system's theme clears the stored value.
       await openReady(page, baseUrl);
       await expectTheme(page, other, other, 'in the workspace');
+      // A second tab shows the choice too, and follows when the first tab clears it (storage events).
+      const tab = await page.context().newPage();
+      await openHero(tab, baseUrl);
+      await expectTheme(tab, other, other, 'in a second tab');
       await page.locator('.theme-btn').click();
       await expectTheme(page, scheme, null, 'after toggling back to the system theme');
-      notes.push(`workspace: back to ${scheme}, storage cleared, data-theme removed`);
+      await expectTheme(tab, scheme, null, 'in the second tab after the first cleared the choice');
+      await tab.close();
+      notes.push(`workspace: back to ${scheme}, storage cleared, data-theme removed; a second tab followed`);
       // On every width the button is the GitHub link's size, in the header row, and the page does not scroll sideways.
       const boxes = await page.evaluate(() => ['.theme-btn', '.gh-link'].map((sel) => document.querySelector(sel)!.getBoundingClientRect()).map((r) => [Math.round(r.width), Math.round(r.height), Math.round(r.top)]));
       if (JSON.stringify(boxes[0]) !== JSON.stringify(boxes[1]) || boxes[0]![0] !== 40) throw new Error(`theme button ${boxes[0]} vs GitHub link ${boxes[1]}`);
