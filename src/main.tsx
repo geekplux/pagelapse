@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { SampleFixture } from './core/types.ts';
 import { App } from './app/App.tsx';
+import { startAnalytics } from './analytics.ts';
 import { isHeroState, parseUrlState } from './app/urlState.ts';
 import { workspace } from './app/workspace.ts';
 import { firstCaptures } from './app/visual/visualState.ts';
@@ -14,6 +15,8 @@ import './design/hero.css';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('Missing #root element');
+
+startAnalytics();
 
 // A deep link opens the workspace: fetch its chunk and its sample first, so the first paint is the workspace, not a
 // loading line, and start decoding the pictures it shows first (firstCaptures: the default sample's decade compare,

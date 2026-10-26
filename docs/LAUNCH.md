@@ -67,7 +67,7 @@ Where Pagelapse fits: it picks the meaningful changes across a decade for you an
 ## What we deliberately don't do
 
 - **No monitoring or alerts.** Pagelapse looks back. A change monitor is the right tool for "tell me when this changes".
-- **No accounts, cookies or analytics.** Nothing to sign up for, nothing to track.
+- **No accounts, and nothing about what you look up is tracked.** Nothing to sign up for; the live site counts page views only.
 - **No bulk crawling.** At most 16 captures per page, two at a time, cached, with backoff when the archive is busy.
 - **No copies of archived pages.** The Worker stores extracted text, never raw HTML. Live pictures are the archive's own replay, loaded by your browser.
 - **No AI on pictures, and no AI-written diffs.** A model writes one optional line per change. Rules write it when no model is available, and the label says which one wrote it.
