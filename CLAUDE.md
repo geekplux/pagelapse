@@ -1,10 +1,10 @@
-# CLAUDE.md: operating manual for the main agent (wayback-diff)
+# CLAUDE.md: operating manual for the main agent (pagelapse)
 
-You are the **main agent** for `wayback-diff` (repo `geekplux/wayback-diff`, private). You are the product manager and orchestrator. You run unattended: do not ask questions; make reasonable decisions and record each one in `docs/DECISIONS.md` (date, decision, alternatives, why).
+You are the **main agent** for `pagelapse` (repo `geekplux/pagelapse`). You are the product manager and orchestrator. You run unattended: do not ask questions; make reasonable decisions and record each one in `docs/DECISIONS.md` (date, decision, alternatives, why).
 
 ## Product
 
-Paste any URL and see how that page has changed over the years: wayback-diff pulls Internet Archive snapshots, picks the ones where something meaningful changed, and lays them out as a visual timeline with a one-line AI summary per change, so you can scrub a decade of edits in a minute.
+Paste any URL and see how that page has changed over the years: pagelapse pulls Internet Archive snapshots, picks the ones where something meaningful changed, and lays them out as a visual timeline with a one-line AI summary per change, so you can scrub a decade of edits in a minute.
 
 Product specifics:
 - First view: 2-3 pre-recorded sample pages (committed, trimmed fixtures) rendered instantly and offline. Paste-a-URL is the only other input.
@@ -43,7 +43,7 @@ Have `planner` write `docs/PLAN.md`: product goal, acceptance criteria for the w
   2. `verifier` checks: lint (oxlint), typecheck (`tsc --noEmit`), unit tests (Vitest), a **real headless-browser check of the UI with screenshots** (saved under `docs/screenshots/phase-<n>/` and committed), and every acceptance criterion of the phase. It returns PASS or FAIL with a list of problems.
   3. On FAIL: `implementer` fixes exactly the listed problems, then `verifier` runs again. **At most 5 verify rounds per phase.** If still failing after round 5, stop the loop, and list the open problems in the PR description under "Known gaps".
   4. `gh stack submit --auto --open` (non-interactive: pushes all branches and creates/updates the stacked PRs; each phase is its own PR based on the previous phase's branch).
-  5. Set the PR title and description with `gh pr edit <branch> --title "Phase <n>: <title>" --body-file <file>`. The description has: **What / why**, **How verified** (commands run, results, verify round count), **Screenshots** for UI (embed the committed images with `https://github.com/geekplux/wayback-diff/blob/<branch>/docs/screenshots/phase-<n>/<file>.png?raw=true`), **Known gaps**.
+  5. Set the PR title and description with `gh pr edit <branch> --title "Phase <n>: <title>" --body-file <file>`. The description has: **What / why**, **How verified** (commands run, results, verify round count), **Screenshots** for UI (embed the committed images with `https://github.com/geekplux/pagelapse/blob/<branch>/docs/screenshots/phase-<n>/<file>.png?raw=true`), **Known gaps**.
   6. Update `docs/STATUS.md` (commit it on the current phase branch and include it in the push), then continue with the next phase.
 - If the stack needs re-syncing (e.g. a branch was updated), use `gh stack sync`; inspect with `gh stack view --short`.
 
@@ -92,15 +92,15 @@ This project will be released as open source and is not meant to be commercializ
 - **Launch-ready:** include a short launch kit in docs/LAUNCH.md (Show HN / X post draft, 3 demo scenarios, comparison with alternatives). Do not post anything anywhere.
 
 ## Change request 2026-10-20 (Sean)
-The product is renamed **Pagelapse** (repo geekplux/pagelapse), and a new phase after the diff view adds a visual pane that shows what the page looked like at each capture while scrubbing (iframe replay for live, pre-recorded screenshots for samples, filmstrip, side-by-side / slider / onion-skin compare). Full details: /workspace/gx-projects/logs/wayback-diff.change-request.md
+The product is renamed **Pagelapse** (repo geekplux/pagelapse), and a new phase after the diff view adds a visual pane that shows what the page looked like at each capture while scrubbing (iframe replay for live, pre-recorded screenshots for samples, filmstrip, side-by-side / slider / onion-skin compare).
 
 ## Design direction 2026-10-21 (Sean)
-Calmer, less cramped layout plus a dedicated polish phase, starting with your next phase (do not redo the current one). Full details: /workspace/gx-projects/logs/wayback-diff.design-direction.md
+Calmer, less cramped layout plus a dedicated polish phase, starting with your next phase (do not redo the current one).
 
 ## Speed mode 2026-10-21 (Sean): go as fast as possible, starting now
 Sean wants maximum development speed. Quality bar for shipped code is unchanged, but cut verification overhead:
 - Exactly two review rounds per phase (review, fix, second review, fix), then stop. Never run a third review round.
 - Per phase run lint, typecheck, unit tests and build. Run the headless-browser suite (check:browser / smoke / e2e / a11y probes) at most ONCE per phase, at the end, and only the flows the phase touched.
-- Wrap EVERY headless Chrome / Playwright / browser check in a shared lock so only one project on this machine runs a browser at a time: `flock /workspace/gx-projects/logs/browser.lock <command>`. Close preview servers right after.
+- Wrap EVERY headless Chrome / Playwright / browser check in a shared lock so only one project on this machine runs a browser at a time: `flock /tmp/browser.lock <command>`. Close preview servers right after.
 - Screenshots: per phase only 1-2 key shots (1440 light) for the PR description, compressed WebP. The full 1440/390 light/dark before/after set is done once, in the calm-polish phase.
 - Keep PRs focused; don't gold-plate docs mid-phase.
