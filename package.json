@@ -5,6 +5,8 @@
   "description": "See how any web page looked and changed over the years, from web archive captures.",
   "homepage": "https://pagelapse.geekplux.com",
   "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/geekplux/pagelapse.git" },
+  "bugs": { "url": "https://github.com/geekplux/pagelapse/issues" },
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "engines": {
