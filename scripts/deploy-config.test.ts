@@ -65,12 +65,14 @@ describe('deploy config', () => {
     expect(local.kv_namespaces.map((k: { binding: string }) => k.binding)).toEqual(['CACHE']);
   });
 
-  it('serves the PLAN 5.4 CSP, allowing frames from the Internet Archive only, and no COEP', () => {
+  it('serves the PLAN 5.4 CSP, allowing frames from the Internet Archive only and Google Analytics (src/analytics.ts), and no COEP', () => {
     const h = headers(read('public/_headers'));
     const csp = h['/*']!['content-security-policy']!;
     const directives = Object.fromEntries(csp.split(';').map((d) => d.trim().split(/\s+/)).map(([k, ...v]) => [k, v.join(' ')]));
     expect(directives).toMatchObject({
-      'default-src': "'self'", 'script-src': "'self'", 'connect-src': "'self'", 'img-src': "'self' data:",
+      'default-src': "'self'", 'script-src': "'self' https://*.googletagmanager.com",
+      'connect-src': "'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+      'img-src': "'self' data: https://*.google-analytics.com https://*.googletagmanager.com",
       'frame-src': 'https://web.archive.org', 'child-src': 'https://web.archive.org', 'object-src': "'none'", 'frame-ancestors': "'none'",
     });
     expect(h['/*']).toMatchObject({ 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin' });

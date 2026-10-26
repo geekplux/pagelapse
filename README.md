@@ -73,7 +73,7 @@ Everything else is deterministic code: sampling, extraction, diffing, scoring, t
 
 ## Privacy
 
-Pagelapse has no accounts, cookies or analytics. A live lookup sends the URL to the Pagelapse Worker so it can query the archive, and the deployment's Cloudflare request logs may record it. Live pictures load directly from the Internet Archive in your browser, just like visiting the Wayback Machine. The built-in samples load nothing but the app's own files.
+Pagelapse has no accounts. The live site counts page views with Google Analytics: one per visit, with the page's path and nothing else, so the address you look up and the capture you pick never reach it (no events, no Google signals, no ad personalisation; Google Analytics sets its own `_ga` cookies; [src/analytics.ts](src/analytics.ts)). A self-hosted copy loads no analytics. A live lookup sends the URL to the Pagelapse Worker so it can query the archive, and the deployment's Cloudflare request logs may record it. Live pictures load directly from the Internet Archive in your browser, just like visiting the Wayback Machine. The built-in samples load nothing but the app's own files.
 
 ## Accessibility
 

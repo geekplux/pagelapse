@@ -45,7 +45,7 @@ export function AppFooter({ sample, hero = false }: { sample?: SampleFixture | u
             Pagelapse
           </span>
           <p className="foot-line">
-            Captures come from the Internet Archive. No accounts, cookies or tracking.{' '}
+            Captures come from the Internet Archive. No accounts; page views are counted, never the pages you look up.{' '}
             <a href="https://github.com/geekplux/pagelapse">Source on GitHub</a>{' '}
             {/* The cap is DAILY_CAP in worker/summarise.ts (model calls per UTC day, a KV counter; not a wrangler.jsonc var).
                 Past it, live runs show auto summaries; the samples never call the model. */}

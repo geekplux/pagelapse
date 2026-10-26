@@ -6,6 +6,7 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 
 ### Added
 
+- Page-view counts on pagelapse.geekplux.com with Google Analytics: the path only, never the address you look up. Self-hosted copies load no analytics.
 - **A first view that shows the idea at once:** the headline, the address field and one option per built-in sample, over a deck of the Wikipedia sample's captures dealt along their dates. Each card opens that capture, and opening grows the card into the stage (a 350 ms view transition). No `?sample=` or `?url=` in the address shows it; Back returns to it.
 - **The workspace:** a 1200×750 stage with three compare modes (Slider, the default; Side by side; Single) and Before / After tags, a controls row (Play, previous and next change, the compare mode, Copy link), the time ribbon, the change section and "Every change".
 - **The time ribbon:** a thumbnail per capture joined by a hairline to its date on a year axis, a bar per change sized by how much changed, hollow dots for trivial captures, and keyboard and drag scrubbing. It is one slider with a text alternative for screen readers.
