@@ -1,6 +1,6 @@
 # Pagelapse: plan
 
-Planner: `planner` sub-agent. First written 2026-10-19 under the working name wayback-diff; revised 2026-10-20 for Sean's change request (rename to **Pagelapse**, repo `geekplux/pagelapse`, and a visual pane that shows what the page looked like at each capture); revised again 2026-10-21 for Sean's design direction (a calmer layout with one focal point per view: the "Calm layout" rules in section 4, AC 49, and a dedicated polish phase 17 that moves OSS packaging, showcase and deploy to phases 18-20). This plan follows `CLAUDE.md`, which takes precedence wherever the two disagree. Open technical decisions are collected in section 5.9, each with a recommendation, for the main agent to record in `docs/DECISIONS.md`. The local folder stays `/workspace/gx-projects/wayback-diff`.
+Planner: `planner` sub-agent. First written 2026-10-19 under an earlier working name; revised 2026-10-20 for Sean's change request (rename to **Pagelapse**, repo `geekplux/pagelapse`, and a visual pane that shows what the page looked like at each capture); revised again 2026-10-21 for Sean's design direction (a calmer layout with one focal point per view: the "Calm layout" rules in section 4, AC 49, and a dedicated polish phase 17 that moves OSS packaging, showcase and deploy to phases 18-20). This plan follows `CLAUDE.md`, which takes precedence wherever the two disagree. Open technical decisions are collected in section 5.9, each with a recommendation, for the main agent to record in `docs/DECISIONS.md`. The local folder stays `/workspace/pagelapse`.
 
 Environment facts checked while planning. Several phases depend on them:
 
@@ -759,7 +759,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 ### Phase 1: toolchain and built-in sample path
 
-- **Status:** done, PR #1 (built under the working name wayback-diff).
+- **Status:** done, PR #1 (built under an earlier working name).
 - **Branch:** `phase-1-toolchain-sample`
 - **Specialist:** `implementer`
 - **Goal:** a working, lint-clean, typed, tested React + Vite app that renders a minimal committed sample instantly and offline, plus the headless smoke tool every later phase relies on.
@@ -782,7 +782,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 ### Phase 2: design system and app shell
 
-- **Status:** done, PR #2 (built under the working name wayback-diff).
+- **Status:** done, PR #2 (built under an earlier working name).
 - **Branch:** `phase-2-design-shell`
 - **Specialist:** `implementer`; `a11y-reviewer` reviews
 - **Goal:** the distinctive visual identity from section 4 in code: tokens, fonts, logo/wordmark, header with sample chips, footer with provenance, light/dark, reduced motion, plus automated palette and size checks.
@@ -799,7 +799,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 ### Phase 3: readable-text extraction and URL rules
 
-- **Status:** done, PR #4 (built under the working name wayback-diff).
+- **Status:** done, PR #4 (built under an earlier working name).
 - **Branch:** `phase-3-extract`
 - **Specialist:** `archive-integration`
 - **Goal:** a pure, deterministic, tested extractor that turns raw archived HTML into blocks and an outline, plus URL normalisation and validation shared by the UI, Worker and recorder.
@@ -816,7 +816,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 ### Phase 4: archive client, sample recorder and real samples
 
-- **Status:** done, PR #5 (built under the working name wayback-diff).
+- **Status:** done, PR #5 (built under an earlier working name).
 - **Branch:** `phase-4-recorder-samples`
 - **Specialist:** `archive-integration`
 - **Goal:** polite archive access code (CDX, sampling, fetch with backoff) shared by the recorder and the later Worker, a recorder script, and 3 real, trimmed, committed sample fixtures replacing the illustrative one.
@@ -832,7 +832,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 ### Phase 5: diff engine
 
-- **Status:** done, PR #6 (built under the working name wayback-diff).
+- **Status:** done, PR #6 (built under an earlier working name).
 - **Branch:** `phase-5-diff-engine`
 - **Specialist:** `diff-analyst`
 - **Goal:** correct, fast block-level and word-level diffs between extracted pages, with comparison normalisation.
@@ -848,7 +848,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 ### Phase 6: significance, trivial-change filtering, change records and timeline model
 
-- **Status:** done, PR #7 (built under the working name wayback-diff).
+- **Status:** done, PR #7 (built under an earlier working name).
 - **Branch:** `phase-6-significance`
 - **Specialist:** `diff-analyst`
 - **Goal:** decide what matters. Score each diff, drop trivial ones with a moving baseline, build compact change records and deterministic summaries, and assemble the `Timeline` model the UI consumes.
@@ -864,7 +864,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 ### Phase 7: timeline UI
 
-- **Status:** done, PR #8 (built under the working name wayback-diff).
+- **Status:** done, PR #8 (built under an earlier working name).
 - **Branch:** `phase-7-timeline-ui`
 - **Specialist:** `implementer`; `a11y-reviewer` reviews
 - **Goal:** the signature visual. An SVG seismograph timeline with magnitude-sized markers, keyboard scrubbing, pointer drag, tooltips, and a synced changes list as its text alternative.
@@ -879,7 +879,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
 
 ### Phase 8: diff view
 
-- **Status:** done, PR #9 (built under the working name wayback-diff).
+- **Status:** done, PR #9 (built under an earlier working name).
 - **Branch:** `phase-8-diff-view`
 - **Specialist:** `implementer`; `a11y-reviewer` reviews
 - **Goal:** show exactly what changed, readable and accessible, with links to the source captures.
@@ -912,7 +912,7 @@ Phases 1-8 below are kept as specified, as history. Product identifiers in them 
   - Smoke flow `brand` renders `favicon.svg` at 16, 32 and 64 px on `--paper` and `--ink`.
   - **Not touched:** `CLAUDE.md`, `.claude/**`, `docs/KICKOFF.md`, history rows in `docs/DECISIONS.md`, committed screenshots of earlier phases, and the local folder name.
 - **Acceptance criteria:**
-  1. `git grep -n -i "wayback-diff" -- . ':!CLAUDE.md' ':!.claude' ':!docs/KICKOFF.md' ':!docs/DECISIONS.md' ':!docs/PLAN.md' ':!docs/screenshots'` returns nothing. (PLAN.md keeps only history notes.)
+  1. A `git grep -n -i` for the earlier working name (outside `CLAUDE.md`, `.claude`, `docs/DECISIONS.md`, `docs/PLAN.md` and `docs/screenshots`) returns nothing. (PLAN.md keeps only history notes.)
   2. The UA test asserts exactly `pagelapse/${APP_VERSION} (+https://github.com/geekplux/pagelapse)`.
   3. The wordmark's accessible name is "Pagelapse" (a11y snapshot). The mark reads in greyscale and at 16 px. Palette and contrast tests pass. axe is clean.
   4. The page title and meta are updated; the smoke check reads `document.title`.
