@@ -11,7 +11,7 @@
 
 export const ANALYTICS_HOST = 'pagelapse.geekplux.com';
 /** The GA4 web stream for {@link ANALYTICS_HOST}; empty keeps analytics off. */
-export const MEASUREMENT_ID = '';
+export const MEASUREMENT_ID = 'G-NCM3H83H6X';
 const PAGE_TITLE = 'Pagelapse';
 const PATHS = new Set(['/']);
 
