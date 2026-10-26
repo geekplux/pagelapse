@@ -57,9 +57,8 @@ describe('social preview', () => {
     expect(statSync(join(root, 'assets/social-preview.png')).size).toBeLessThan(1_000_000);
   });
 
-  it('is also the site\'s og:image: public/social-preview.png is the same file, linked from index.html', () => {
+  it('is served as public/social-preview.png, the same file', () => {
     expect(readFileSync(join(root, 'public/social-preview.png')).equals(readFileSync(join(root, 'assets/social-preview.png')))).toBe(true);
-    expect(read('index.html')).toContain('<meta property="og:image" content="https://pagelapse.geekplux.com/social-preview.png" />');
   });
 
   it('sets its text in the light theme\'s colours, each passing AA on the ground and on the picture tags', () => {
@@ -76,5 +75,18 @@ describe('social preview', () => {
     expect(svg).toContain('../public/fonts/SchibstedGrotesk-Variable-latin.woff2');
     expect(svg).toContain('../public/fonts/IBMPlexMono-Regular-latin.woff2');
     expect(svg).not.toContain('\u00B7');
+  });
+});
+
+describe('link-preview card', () => {
+  it('is a 1200×630 JPEG og:image with the same card moving as og:video', () => {
+    const jpg = readFileSync(join(root, 'public/og.jpg'));
+    expect(jpg.readUInt16BE(0)).toBe(0xffd8);
+    expect(jpg.length).toBeLessThan(300_000);
+    expect(statSync(join(root, 'public/og.mp4')).size).toBeLessThan(1_000_000);
+    const html = read('index.html');
+    expect(html).toContain('<meta property="og:image" content="https://pagelapse.geekplux.com/og.jpg" />');
+    expect(html).toContain('<meta property="og:video" content="https://pagelapse.geekplux.com/og.mp4" />');
+    expect(html).toContain('<meta property="og:video:type" content="video/mp4" />');
   });
 });
