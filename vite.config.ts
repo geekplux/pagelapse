@@ -57,7 +57,7 @@ export default defineConfig(({ command, isPreview }) => ({
     setupFiles: ['test/setup/no-network.ts'],
     // Let the design tests read src/design/*.css?raw (Vitest blanks CSS by default).
     css: { include: [/src\/design\/[a-z]+\.css/] },
-    // Shared, RAM-tight machine: keep the worker pool small.
+    // Keep the worker pool small so the tests fit on modest machines.
     maxWorkers: 2,
   },
 }));

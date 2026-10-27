@@ -1,8 +1,8 @@
-# Pagelapse design (v3, approved 2026-10-24)
+# Pagelapse design (v3)
 
 The v3 design boards are kept in [redesign/target/](redesign/target/) as static HTML (`V3*.html`, open them in a browser) and as screenshots ([redesign/target/shots/](redesign/target/shots/)). `V1Live.html` is the reference for the live-run state and `V1System.html` for the logo (option A, Sun path) and colour swatches. When this spec and a board disagree, the board wins for looks and this spec wins for behaviour.
 
-## Binding UI rules (Sean)
+## Binding UI rules
 
 1. Never use the middle dot "·" as a copy separator.
 2. No redundant explanatory text.
@@ -79,4 +79,4 @@ New controls go where the user already means to choose (the address menu, the co
 
 Wikipedia: Internet Archive is the default and the hero deck. The options come from `src/samples/samples.config.json`, in its order, and only entries with a recorded fixture are offered: a hero option, an address-menu item or a `?sample=` link to an unrecorded entry never appears (the link opens the default). Today the options are Wikipedia, NASA and Creative Commons, in that order.
 
-NASA (nasa.gov, US government work) and Creative Commons (creativecommons.org, CC BY 4.0) replaced git-scm.com and rust-lang.org on 2026-10-25: all three samples are open-licensed or public, with the same money-figure filtering in text and pictures. NASA opens on its 2000 to 2008 redesign, Creative Commons on its 2022 to 2023 one. Recording needs network access to the archives ([EXTENDING.md](EXTENDING.md#add-a-sample-text-and-pictures) has the steps).
+NASA (nasa.gov, US government work) and Creative Commons (creativecommons.org, CC BY 4.0) replaced git-scm.com and rust-lang.org: all three samples are open-licensed or public, with the same money-figure filtering in text and pictures. NASA opens on its 2000 to 2008 redesign, Creative Commons on its 2022 to 2023 one. Recording needs network access to the archives ([EXTENDING.md](EXTENDING.md#add-a-sample-text-and-pictures) has the steps).
