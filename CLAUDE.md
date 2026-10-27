@@ -1,106 +1,47 @@
-# CLAUDE.md: operating manual for the main agent (pagelapse)
+# CLAUDE.md
 
-You are the **main agent** for `pagelapse` (repo `geekplux/pagelapse`). You are the product manager and orchestrator. You run unattended: do not ask questions; make reasonable decisions and record each one in `docs/DECISIONS.md` (date, decision, alternatives, why).
+A short guide for maintainers and coding agents working on this repository.
 
-## Product
+## What Pagelapse is
 
-Paste any URL and see how that page has changed over the years: pagelapse pulls Internet Archive snapshots, picks the ones where something meaningful changed, and lays them out as a visual timeline with a one-line AI summary per change, so you can scrub a decade of edits in a minute.
+Pagelapse shows how a web page looked and changed over the years. Paste a URL: a Cloudflare Worker reads the page's Internet Archive captures, the app keeps the ones where something meaningful changed and lays them out as a time-lapse, with a word-level diff and a one-line summary per change. Three built-in samples ship with the app and work offline, and the live site is https://pagelapse.geekplux.com.
 
-Product specifics:
-- First view: 2-3 pre-recorded sample pages (committed, trimmed fixtures) rendered instantly and offline. Paste-a-URL is the only other input.
-- Pipeline: CDX query with `collapse=digest` and a sensible sampling (e.g. at most N snapshots spread over time) -> fetch raw snapshots politely (concurrency 1-2, backoff, identify the client) -> extract main text + structural outline -> diff consecutive snapshots -> score change significance and drop trivial ones (whitespace, dates, tracking params) -> one short LLM summary per meaningful change, batched and cached.
-- Timeline: snapshot markers sized by change magnitude, a diff view with additions/removals marked by symbols and text styles (+/- , strike/underline), not color alone.
-- Be a good citizen to the Internet Archive: cache aggressively, never hammer the API, respect rate limits and errors.
+Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code fits together, [CONTRIBUTING.md](CONTRIBUTING.md) for the setup and the checks, [docs/DESIGN.md](docs/DESIGN.md) before any UI change, and [docs/DEPLOY.md](docs/DEPLOY.md) for hosting.
 
-Initial stack: React + Vite + TypeScript, Vitest, oxlint; timeline UI in SVG/DOM; a Cloudflare Worker that queries the Wayback CDX API and fetches raw snapshots (`id_` URLs), extracts readable text/structure, computes diffs, and caches in KV/R2; Workers AI for one-line change summaries; built-in sample pages pre-recorded and committed so the first view is free and offline.
+## Stack and commands
 
-## Your role
+React 19, Vite 8, TypeScript 7, Vitest, oxlint and pnpm 9 (it fetches the Node 24 pinned in `.npmrc`). One Cloudflare Worker with Workers Static Assets, KV, Rate Limiting and Workers AI, built and run through `@cloudflare/vite-plugin`.
 
-- You **do not write feature code**. Delegate as much as possible to the sub-agents in `.claude/agents/`. You write only orchestration artefacts: `docs/STATUS.md`, `docs/DECISIONS.md`, PR descriptions, and small glue fixes if a sub-agent is unavailable (record that in DECISIONS.md).
-- Give each sub-agent a self-contained task message: the phase goal, the acceptance criteria, relevant file paths, and the rules from this file that matter for the task (sub-agents do load CLAUDE.md, but restate the critical ones).
-- Wait for each sub-agent's report before starting the next dependent step. Run at most one implementer and one verifier at a time (shared, RAM-tight machine).
+```sh
+pnpm dev               # app and Worker locally (wrangler.local.jsonc: no AI, no login)
+pnpm lint              # oxlint
+pnpm typecheck         # tsc --noEmit for the app, the scripts and the Worker
+pnpm test              # Vitest, offline; includes the design rules and the docs link check
+pnpm build             # production build into dist/
+pnpm size              # after a build: JS, CSS, font, sample and picture budgets
+pnpm check:docs        # every relative link and anchor in the docs resolves
+pnpm run check:deploy  # wrangler deploy --dry-run --outdir .wrangler/dry-run
+pnpm check             # lint, typecheck, test and build
+pnpm smoke             # after a build: user flows, axe-core and layout audits in headless Chrome
+pnpm preview           # serve the production build on port 4173
+```
 
-Sub-agents:
-- `planner`: writes `docs/PLAN.md`.
-- `implementer`: builds one phase.
-- `verifier`: checks one phase; never edits feature code.
-- `archive-integration`: Owns Internet Archive access: CDX queries, snapshot sampling, polite fetching, text extraction, caching, and the recorded sample fixtures. Use for any work touching the Wayback Machine.
-- `diff-analyst`: Designs and implements change detection: text/structure diffing, significance scoring, filtering of trivial edits, and the compact input for one-line AI summaries. Use for diffing and summary work.
-- `a11y-reviewer`: Reviews UI for accessibility: keyboard timeline scrubbing, screen-reader text for diffs, contrast, reduced motion, color-vision-deficiency safety. Use proactively on every UI phase before the verifier signs off.
+Maintenance scripts that need the network or Chrome: `pnpm record:samples`, `pnpm record:visuals`, `pnpm bake:summaries`, `pnpm render:social` and `pnpm render:gif` (see CONTRIBUTING.md and docs/EXTENDING.md).
 
-Models: `implementer` and `verifier` (and the other sub-agents) run on **Claude Opus 5.5 at high effort** (`model: claude-opus-5-5`, `effort: high` in their frontmatter). Do not override the model or effort when invoking them.
+## Rules
 
-## Workflow
-
-### Step 1: plan
-Have `planner` write `docs/PLAN.md`: product goal, acceptance criteria for the whole product, and the work split into **phases**. Each phase = **exactly one PR**, reviewable in about 20 minutes (roughly <= 400 changed lines excluding lockfiles/fixtures), with its own goal, acceptance criteria, and verification steps. Phase 1 sets up the toolchain (Vite + React + TS, Vitest, oxlint, typecheck, headless-browser check script) and the built-in sample path. The **final phase is deployment** to Cloudflare. Commit PLAN.md on `main` and push (`git push origin main`) before any phase starts. Update `docs/STATUS.md`.
-
-### Step 2: phases (stacked PRs with `gh stack`)
-- Before the first phase: `gh stack init <phase-1-branch>` (this initialises the stack on top of `main` and creates/checks out the phase-1 branch; passing the branch name keeps it non-interactive).
-- Every later phase: from the top of the stack, `gh stack add <branch>` creates the next branch stacked on the previous one. Branch names: `phase-<n>-<short-slug>`.
-- Per phase loop:
-  1. `implementer` builds the phase on the current branch and commits.
-  2. `verifier` checks: lint (oxlint), typecheck (`tsc --noEmit`), unit tests (Vitest), a **real headless-browser check of the UI with screenshots** (saved under `docs/screenshots/phase-<n>/` and committed), and every acceptance criterion of the phase. It returns PASS or FAIL with a list of problems.
-  3. On FAIL: `implementer` fixes exactly the listed problems, then `verifier` runs again. **At most 5 verify rounds per phase.** If still failing after round 5, stop the loop, and list the open problems in the PR description under "Known gaps".
-  4. `gh stack submit --auto --open` (non-interactive: pushes all branches and creates/updates the stacked PRs; each phase is its own PR based on the previous phase's branch).
-  5. Set the PR title and description with `gh pr edit <branch> --title "Phase <n>: <title>" --body-file <file>`. The description has: **What / why**, **How verified** (commands run, results, verify round count), **Screenshots** for UI (embed the committed images with `https://github.com/geekplux/pagelapse/blob/<branch>/docs/screenshots/phase-<n>/<file>.png?raw=true`), **Known gaps**.
-  6. Update `docs/STATUS.md` (commit it on the current phase branch and include it in the push), then continue with the next phase.
-- If the stack needs re-syncing (e.g. a branch was updated), use `gh stack sync`; inspect with `gh stack view --short`.
-
-### Never merge
-**Never merge PRs** (no `gh pr merge`, no `gh stack merge`, no pushing phase work directly to `main`). Sean reviews and merges on GitHub. Only planning docs go to `main` before phase 1.
-
-### Progress file: `docs/STATUS.md`
-Keep it current so an outside monitor can read progress. **The first line is always `STATE: <state>`**, one of `PLANNING`, `IN-PROGRESS`, `BLOCKED`, `DONE`. Below it: current phase, a table of phases (branch, PR link, state, verify rounds), blockers, and last-updated time. When everything (up to the deployment phase's approval stop) is done, the first line is `STATE: DONE`. If you cannot continue, first line `STATE: BLOCKED` and the reason right below. Push STATUS.md updates with each phase.
-
-## Hard rules: stack
-- Web UI = **pure React + Vite**. Use the VoidZero ecosystem: Vite, Vitest, Oxc/oxlint, Rolldown where sensible. **No Next.js, no Remix**, no other meta-framework.
-- Package manager: pnpm.
-- Anything deployed runs on **Cloudflare** (Workers / Pages, Workers AI, D1, R2, KV). Use `wrangler` for local dev.
-- **Deployment is the final phase and stops for Sean's approval.** Prepare everything (wrangler config, build, and a dry run via the package script `pnpm run check:deploy`, defined as `wrangler deploy --dry-run --outdir .wrangler/dry-run`), document the exact deploy command in the PR, set `STATE: DONE` with a note "awaiting Sean's approval to deploy". **Never deploy without that approval.** `.claude/settings.json` denies `wrangler deploy`, `wrangler pages deploy`, `pnpm run deploy`, `gh pr merge` and `gh stack merge` as a backstop; do not try to work around those rules, and do not edit `.claude/settings.json`.
-
-## Hard rules: resources (shared, RAM-tight machine: ~2 GB free, 8 cores, other agents running)
-- Never leave dev servers, preview servers, wrangler dev, or browsers running after a verify step. Start them in the background, record the PID, and kill them when done; check with `ps` that nothing you started is left.
-- Use **one headless browser at a time**. Prefer the system Chrome (`/usr/bin/google-chrome`) with Playwright (`playwright-core`, `channel`/`executablePath`) rather than downloading browsers.
-- Avoid parallel heavy builds; no watch modes left running; keep test runs single-process if memory is tight.
-
-## Hard rules: product (binding)
-- The first step must cost the user almost nothing: paste a URL, type, or pick a built-in sample. Built-in samples work offline and without any API key.
-- Lean AI: use the model only where it adds real value; deterministic code first; cache results; minimal calls.
-- Any agent skill must meet the wheresryan22/anatomy bar: SKILL.md + kit + references + audit scripts + evals.
-- Accessibility: never rely on color alone; palettes must pass color-vision-deficiency checks (protanopia, deuteranopia, tritanopia); keyboard-operable; reduced motion respected.
-- No decorative 3D.
-- Nothing finance-related (no prices, trading, crypto, payments features or sample data).
+- Pure React + Vite with the VoidZero tools (Vite, Vitest, oxlint, Rolldown where sensible). No Next.js, no Remix, no other meta-framework. Use pnpm.
+- Everything deployed runs on Cloudflare (Workers, Static Assets, KV, Workers AI).
+- Deployment happens only through Workers Builds on merge to `main`. Never run `wrangler deploy`; the dry run `pnpm run check:deploy` is fine. Merging is the maintainer's call, so a merged pull request is a deploy.
+- `.claude/settings.json` denies `wrangler deploy`, `wrangler pages deploy`, `pnpm run deploy` (and their variants), `gh pr merge`, `gh stack merge` and force pushes to `main`. Do not work around it, and do not edit it.
+- Never merge pull requests. The maintainer reviews and merges them on GitHub.
+- Never commit secrets. Local ones go in `.dev.vars` (gitignored), deployed ones through `wrangler secret put`. Pagelapse itself needs none.
+- The built-in samples work offline and without any key, and tests never touch the network.
+- Lean AI: deterministic code first. The model writes only the one-line change summaries: batched, cached per capture pair, limited per visitor and capped per day (`DAILY_CAP` in `worker/summarise.ts`), with a rule-based fallback.
+- Be kind to the archives: upstream requests go through `politeFetch`, at most 2 at a time, and everything is cached.
+- Accessibility: never rely on colour alone; palettes pass protanopia, deuteranopia and tritanopia checks; everything is keyboard operable; reduced motion is respected.
+- UI changes follow the binding rules and the calm layout caps in docs/DESIGN.md. The design tests enforce most of them.
+- No decorative 3D. Nothing finance-related (no prices, trading, crypto, payments features or sample data).
 - No company names in project content, samples, docs, commits or PRs, apart from tools, services and cited sources.
-
-## CI
-CI lives in `.github/workflows/ci.yml` (the `gh` token now has `workflow` scope). Keep it in step with `pnpm check` and `pnpm size`.
-
-## Hard rules: secrets
-- Never commit secrets. Local secrets go in `.dev.vars` (gitignored); deployed secrets via `wrangler secret put`.
-- If an API key is needed, design so the built-in sample works without it, and mark the missing key as a blocker in `docs/STATUS.md` (the rest of the work continues).
-
-## North star: a star-worthy open-source project (added by Sean, 2026-10-19)
-
-This project will be released as open source and is not meant to be commercialized. Build and package it to the standard of a top open-source project that people star, share, and recommend.
-
-- **User first.** Before features, write down who the user is, the moment they would reach for this, and the fastest path to their first "wow". Zero install for the web app, no account, no API key for the first run (built-in sample works offline). If there is a CLI or skill, one command to try it.
-- **Value, then convenience.** Every feature must answer: what does the user get, and how does this save them time or effort? Cut anything that doesn't.
-- **Its own design.** Beautiful, distinctive visual identity specific to this project (not a generic template, not a copy of Sean's other sites): a design-direction section in PLAN.md with type, color (color-vision-deficiency safe, never color alone), layout, motion, and a simple logo/wordmark. Polish empty, loading, and error states.
-- **Open-source packaging is part of the product,** planned as real phases: README that sells in 10 seconds (one-line pitch, hero GIF or screenshot, live demo link placeholder, quick start, how it works, roadmap), LICENSE (MIT), CONTRIBUTING.md, CODE_OF_CONDUCT.md, issue/PR templates, a CHANGELOG, good-first-issue candidates listed in docs, a social preview image, and an examples/ gallery.
-- **Quality signals:** tests and CI config (`.github/workflows/ci.yml`), typed public APIs, small dependency footprint, fast load, accessible (keyboard + screen reader), docs for extending it.
-- **Launch-ready:** include a short launch kit in docs/LAUNCH.md (Show HN / X post draft, 3 demo scenarios, comparison with alternatives). Do not post anything anywhere.
-
-## Change request 2026-10-20 (Sean)
-The product is renamed **Pagelapse** (repo geekplux/pagelapse), and a new phase after the diff view adds a visual pane that shows what the page looked like at each capture while scrubbing (iframe replay for live, pre-recorded screenshots for samples, filmstrip, side-by-side / slider / onion-skin compare).
-
-## Design direction 2026-10-21 (Sean)
-Calmer, less cramped layout plus a dedicated polish phase, starting with your next phase (do not redo the current one).
-
-## Speed mode 2026-10-21 (Sean): go as fast as possible, starting now
-Sean wants maximum development speed. Quality bar for shipped code is unchanged, but cut verification overhead:
-- Exactly two review rounds per phase (review, fix, second review, fix), then stop. Never run a third review round.
-- Per phase run lint, typecheck, unit tests and build. Run the headless-browser suite (check:browser / smoke / e2e / a11y probes) at most ONCE per phase, at the end, and only the flows the phase touched.
-- Wrap EVERY headless Chrome / Playwright / browser check in a shared lock so only one project on this machine runs a browser at a time: `flock /tmp/browser.lock <command>`. Close preview servers right after.
-- Screenshots: per phase only 1-2 key shots (1440 light) for the PR description, compressed WebP. The full 1440/390 light/dark before/after set is done once, in the calm-polish phase.
-- Keep PRs focused; don't gold-plate docs mid-phase.
+- CI (`.github/workflows/ci.yml`) runs lint, typecheck, test, build and size on every push to `main` and every pull request. Keep it in step with the checks contributors run locally.
+- Record design and behaviour decisions in the pull request description.
