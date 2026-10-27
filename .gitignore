@@ -49,4 +49,4 @@ pnpm-debug.log*
 
 # local caches and ad-hoc smoke output
 .cache/
-docs/screenshots/latest/
+docs/screenshots/
