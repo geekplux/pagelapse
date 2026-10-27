@@ -1,6 +1,6 @@
 # Pagelapse design (v3, approved 2026-10-24)
 
-Source of truth: the design canvas https://claude.ai/artifact/2E5U8fwzodW4f3JCkrZcHE (rows v1 to v3). The v3 boards are kept in [redesign/target/](redesign/target/) as static HTML (`V3*.html`, open them in a browser; they load the sample pictures from `public/samples/`) and as screenshots ([redesign/target/shots/](redesign/target/shots/)). `V1Live.html` is the reference for the live-run state and `V1System.html` for the logo (option A, Sun path) and colour swatches. The phase plan that built it is [redesign/PLAN.md](redesign/PLAN.md). When this spec and a board disagree, the board wins for looks and this spec wins for behaviour.
+The v3 design boards are kept in [redesign/target/](redesign/target/) as static HTML (`V3*.html`, open them in a browser) and as screenshots ([redesign/target/shots/](redesign/target/shots/)). `V1Live.html` is the reference for the live-run state and `V1System.html` for the logo (option A, Sun path) and colour swatches. When this spec and a board disagree, the board wins for looks and this spec wins for behaviour.
 
 ## Binding UI rules (Sean)
 

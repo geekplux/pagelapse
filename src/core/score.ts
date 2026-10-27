@@ -2,7 +2,7 @@ import { diffWords, tokenizeWords } from './diff.ts';
 import { normalizeForCompare } from './normalize.ts';
 import type { ExtractedPage, Magnitude, PageDiff, Significance, WordOp } from './types.ts';
 
-/** Per-word weights (PLAN 5.6). `cosmetic` covers case-only and version-number-only edits ("2.1.0" -> "2.2.0"). */
+/** Per-word weights. `cosmetic` covers case-only and version-number-only edits ("2.1.0" -> "2.2.0"). */
 export const WEIGHTS = { heading: 3, title: 3, word: 1, cosmetic: 0.2, move: 0.1 } as const;
 /** Lowest score of each magnitude; below `minor` a change is trivial. Tuned on `src/core/__eval__`. */
 export const MAGNITUDE_THRESHOLDS = { minor: 0.07, moderate: 0.3, major: 0.7 } as const;

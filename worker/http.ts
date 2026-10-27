@@ -1,6 +1,6 @@
 import { readCapped } from '../src/archive/politeFetch.ts';
 
-/** Machine-readable API error codes; the UI maps each to a specific, actionable message (AC 14). */
+/** Machine-readable API error codes; the UI maps each to a specific, actionable message. */
 export type ErrorCode =
   | 'invalid_url' | 'no_captures' | 'excluded' | 'archive_rate_limited'
   | 'archive_unavailable' | 'too_large' | 'rate_limited' | 'not_found' | 'bad_request';

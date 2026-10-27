@@ -1,12 +1,12 @@
 // Server-side entry (Worker, recorder): imports htmlparser2, so it is deliberately not
-// re-exported from ./index.ts and must never be imported by the browser app (D4, AC 32).
+// re-exported from ./index.ts and must never be imported by the browser app (the client bundle holds only React).
 import { Parser } from 'htmlparser2';
 import type { Block, BlockKind, ExtractedPage, HeadingLevel } from './types.ts';
 
-/** Version of the extraction rules; bump it to invalidate cached extractions (PLAN 5.7). */
+/** Version of the extraction rules; bump it to invalidate cached extractions (it is part of the KV key). */
 export const EXTRACTOR_VERSION = 2;
 
-/** Size caps for {@link extractPage}; defaults are 400 blocks and 30,000 characters (AC 19). */
+/** Size caps for {@link extractPage}; defaults are 400 blocks and 30,000 characters. */
 export interface ExtractOptions {
   maxBlocks?: number;
   maxChars?: number;

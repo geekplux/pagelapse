@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** A selection mounts its frame(s) once it has rested this long, so fast scrubbing loads only where it stops (AC 45). */
+/** A selection mounts its frame(s) once it has rested this long, so fast scrubbing loads only where it stops. */
 export const REST_MS = 400;
 /** A neighbour preloads once the shown frame has loaded and everything has rested this long. */
 export const PRELOAD_MS = 2000;
@@ -29,7 +29,7 @@ export interface PoolInput {
 }
 
 /**
- * Which archive frames to keep mounted (least recently used first), per D24: nothing new while the selection only
+ * Which archive frames to keep mounted (least recently used first): nothing new while the selection only
  * follows a live run (each rest would load an archived page nobody asked for), nor until it has rested 400 ms; then the wanted frame(s); then, 2 s after they loaded, the one next capture in the direction of travel,
  * hidden, never in compare modes, under Save-Data or while a run fetches. The pool keeps at most 3, evicting the oldest.
  */

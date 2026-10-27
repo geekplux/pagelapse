@@ -3,7 +3,7 @@ import type { Env, Io } from './env.ts';
 import { apiError } from './http.ts';
 
 const COOLDOWN_KEY = 'ia:cooldown';
-/** A 429 from the archive stops all uncached upstream requests for at least this long (AC 17). */
+/** A 429 from the archive stops all uncached upstream requests for at least this long. */
 export const COOLDOWN_S = 60;
 /** Per-attempt upstream timeout: with 3 attempts and backoff, a dead archive fails in ~40 s instead of ~60 s. */
 export const UPSTREAM_TIMEOUT_MS = 12_000;

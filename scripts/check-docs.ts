@@ -18,7 +18,6 @@ export const DOC_FILES = [
   '.github/pull_request_template.md',
   'public/samples/README.md',
   'examples/README.md',
-  'docs/LAUNCH.md',
   'docs/DEPLOY.md',
 ];
 

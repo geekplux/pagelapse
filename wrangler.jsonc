@@ -1,4 +1,4 @@
-// Pagelapse: one Worker + Static Assets (D1). Static files (including sample pictures) never invoke the Worker;
+// Pagelapse: one Worker + Static Assets. Static files (including sample pictures) never invoke the Worker;
 // only /api/* does. This file is PRODUCTION only (no named environments) plus the `previews` block for Workers
 // Builds branch previews. Workers Builds runs `pnpm run build`, then `npx wrangler deploy`. `pnpm dev` uses
 // wrangler.local.jsonc (no AI, local KV). Deploying: docs/DEPLOY.md.
@@ -16,7 +16,7 @@
   "assets": { "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
   // Workers Logs: request logs and `console.error` from API errors, sampled at 100%.
   "observability": { "enabled": true, "head_sampling_rate": 1 },
-  // Workers AI: one-line change summaries (D11). No key or secret; without it the app writes rule summaries.
+  // Workers AI: one-line change summaries. No key or secret; without it the app writes rule summaries.
   "ai": { "binding": "AI" },
   // KV `CACHE`: the namespace titled PAGELAPSE_CACHE (docs/DEPLOY.md, step 3). Not a secret.
   "kv_namespaces": [{ "binding": "CACHE", "id": "d1881ba046b74f8bbd26b6d7164f555f" }],

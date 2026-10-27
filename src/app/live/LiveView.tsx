@@ -103,7 +103,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const hold = running && !asked;
   const text = progressText(state);
 
-  // Progress for screen readers, without the note on fetching slowly (AC 22).
+  // Progress for screen readers, without the note on fetching slowly.
   useEffect(() => announce(announced(text)), [announce, text]);
 
   // Focus (WCAG 2.4.3). `target` is the status text, the meta line once the run is done, or the empty / error card's

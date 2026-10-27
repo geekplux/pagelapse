@@ -4,7 +4,7 @@ import type { Capture } from './types.ts';
 const ms = (ts: string) => Date.parse(timestampToIso(ts));
 
 /**
- * Picks at most `max` captures spread over the whole time range (D8), deterministically.
+ * Picks at most `max` captures spread over the whole time range, deterministically.
  * The first and last captures are always kept. The interior range is split into `max - 2`
  * equal time buckets and each bucket keeps its capture with the largest relative size change
  * from the capture before it (a likely edit). Slots left by empty buckets go to the largest

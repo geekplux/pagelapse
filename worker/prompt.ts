@@ -1,4 +1,4 @@
-// The summariser's prompt v1, output parsing and batching (PLAN 5.5): pure, shared by the Worker (worker/summarise.ts,
+// The summariser's prompt v1, output parsing and batching: pure, shared by the Worker (worker/summarise.ts,
 // the only code that calls the model) and the optional sample baker (scripts/bake-sample-summaries.ts).
 import { ruleSummary } from '../src/core/ruleSummary.ts';
 import type { ChangeRecord } from '../src/core/types.ts';

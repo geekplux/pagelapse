@@ -1,4 +1,4 @@
-// Optional: bakes Workers AI one-liners into the built-in samples (PLAN 5.5), so their first view can read "AI summary"
+// Optional: bakes Workers AI one-liners into the built-in samples, so their first view can read "AI summary"
 // offline. Same prompt, batching and validation as the Worker (worker/prompt.ts), through the REST API, with the
 // credentials in .dev.vars only. Pairs already baked are skipped; a line that fails validation is left out (the app
 // falls back to the rule summary). Without credentials it prints how to add them and exits 0.

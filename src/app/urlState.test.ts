@@ -37,7 +37,7 @@ describe('urlState', () => {
 });
 
 describe('describeChange', () => {
-  it('reads like the slider valuetext in AC 22', () => {
+  it('reads like the slider valuetext', () => {
     const e = { ...entries[0]!, significance: { magnitude: 'major' }, ruleSummary: 'Added section "Downloads"' } as unknown as TimelineEntry;
     expect(describeChange(e, 3, 11)).toBe('Change 4 of 11: 1 January 2014 to 1 January 2015, major: Added section "Downloads"');
   });

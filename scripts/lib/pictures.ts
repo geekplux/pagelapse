@@ -1,4 +1,4 @@
-// Sample picture budgets (PLAN AC 39/40), shared by scripts/check-size.ts and the tests. Reads files only.
+// Sample picture budgets, shared by scripts/check-size.ts and the tests. Reads files only.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseSampleFixture } from '../../src/core/fixture.ts';

@@ -7,7 +7,7 @@ import type { Env, Io } from '../env.ts';
 import { apiError, json } from '../http.ts';
 import { fetchUpstream } from '../limits.ts';
 
-/** Default and hard maximum number of sampled captures (AC 5). */
+/** Default and hard maximum number of sampled captures. */
 export const DEFAULT_MAX = 16;
 export const HARD_MAX = 24;
 

@@ -43,7 +43,7 @@ async function get<T>(path: string, signal: AbortSignal, init?: RequestInit): Pr
   throw new ApiError(body?.error ?? 'archive_unavailable', body?.message ?? 'The server sent an answer we could not read.', body?.retryAfter);
 }
 
-/** The default number of sampled captures (AC 5). */
+/** The default number of sampled captures. */
 export const MAX_CAPTURES = 16;
 
 export const fetchCaptures = (url: string, signal: AbortSignal) =>

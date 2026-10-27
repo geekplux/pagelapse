@@ -172,7 +172,7 @@ async function expectShown(page: Page, f: Fixture, ts: string): Promise<void> {
   if (current !== ts) throw new Error(`ribbon marks ${current}, expected ${ts}`);
 }
 
-/** The default sample's first view: the decade compare, its first complete capture against its latest (D-phase 19). */
+/** The default sample's first view: the decade compare, its first complete capture against its latest. */
 const hero = (() => {
   const { from, to } = overviewPair(defaultFixture.snapshots)!;
   return { from, to };
@@ -527,7 +527,7 @@ export const flows: readonly Flow[] = [
     async run({ page, baseUrl, viewport }) {
       await openHero(page, baseUrl);
       const notes: string[] = [];
-      // The first view's pictures (the deck's thumbnails and its latest capture) stay within their budget (AC 40).
+      // The first view's pictures (the deck's thumbnails and its latest capture) stay within their budget.
       await page.evaluate(() => Promise.all([...document.images].map((img) => img.decode().catch(() => undefined))));
       const pics = await page.evaluate(() => (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).filter((r) => r.name.includes('/samples/')).map((r) => r.encodedBodySize));
       const bytes = pics.reduce((n, b) => n + b, 0);
@@ -915,7 +915,7 @@ export const flows: readonly Flow[] = [
       const last = defaultTimeline.entries.at(-1)!;
       const timeToReadyMs = await openReady(page, baseUrl, `/?change=${last.from}-${last.to}`);
       const notes = await checkDiff(page, defaultFixture, defaultTimeline.entries.length - 1);
-      // Every change: open at every width (redesign phase 5), one row per change, newest first.
+      // Every change: open at every width, one row per change, newest first.
       const heading = (await page.locator('#changes-heading').textContent())?.trim();
       const rows = await page.locator('.changes .change-sum').allTextContents();
       const want = defaultTimeline.entries.map(shownSummary).reverse();
@@ -1236,7 +1236,7 @@ export const flows: readonly Flow[] = [
       const { from, to } = hero;
       const said = await expectSlider(page, 50);
       // Honest about the pair: the step label and the change line say first and latest capture, not one change.
-      // (The change section's heading is the summary since phase 5; its Before and After dates name the pair.)
+      // (The change section's heading is the summary; its Before and After dates name the pair.)
       const named = await page.evaluate(() => [document.querySelector('.step-label [aria-hidden]')?.textContent ?? '', [...document.querySelectorAll('.cs-when time [aria-hidden="true"]')].map((t) => t.textContent?.trim()).join(' to ')] as const);
       const pair = [from, to].map((ts) => formatTimestampShort(ts)).join(' to ');
       if (named[0] !== 'First and latest' || named[1] !== pair) throw new Error(`pair not named: step "${named[0]}", dates "${named[1]}", expected "${pair}"`);
@@ -1767,7 +1767,7 @@ export const flows: readonly Flow[] = [
         await openReady(page, baseUrl, path);
         const m = await page.evaluate(() => ({
           label: document.querySelector('#sample-label')?.textContent?.trim(),
-          // The change section's Before and After dates (the summary heading holds no dates since phase 5).
+          // The change section's Before and After dates (the summary heading holds no dates).
           dates: [...document.querySelectorAll('.cs-when time [aria-hidden="true"]')].map((t) => t.textContent?.trim()),
           mode: document.querySelector<HTMLInputElement>('input[name="vp-mode"]:checked')?.value,
         }));

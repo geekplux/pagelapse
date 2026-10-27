@@ -32,7 +32,7 @@ const Check = () => (
 );
 
 /**
- * The address field and "Show its history". Validated here first, so a bad address never reaches the API (AC 4). With
+ * The address field and "Show its history". Validated here first, so a bad address never reaches the API. With
  * `menu`, it is a combobox: focus opens the samples list, arrow keys move through it, Enter picks, Escape closes.
  */
 export function UrlForm({ value, onSubmit, hero = false, menu }: Props) {

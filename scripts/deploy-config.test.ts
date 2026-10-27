@@ -1,6 +1,6 @@
-// Guards the deploy setup (PLAN phase 20): the dry-run script, the production-only wrangler.jsonc (no named
-// environments, custom domain, previews without production KV), the local config without AI (D11), the static
-// headers (PLAN 5.4) and the build metadata kept out of the upload.
+// Guards the deploy setup: the dry-run script, the production-only wrangler.jsonc (no named environments, custom
+// domain, previews without production KV), the local config without AI, the static headers and the build metadata
+// kept out of the upload.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
@@ -65,7 +65,7 @@ describe('deploy config', () => {
     expect(local.kv_namespaces.map((k: { binding: string }) => k.binding)).toEqual(['CACHE']);
   });
 
-  it('serves the PLAN 5.4 CSP, allowing frames from the Internet Archive only and Google Analytics (src/analytics.ts), and no COEP', () => {
+  it('serves the CSP, allowing frames from the Internet Archive only and Google Analytics (src/analytics.ts), and no COEP', () => {
     const h = headers(read('public/_headers'));
     const csp = h['/*']!['content-security-policy']!;
     const directives = Object.fromEntries(csp.split(';').map((d) => d.trim().split(/\s+/)).map(([k, ...v]) => [k, v.join(' ')]));

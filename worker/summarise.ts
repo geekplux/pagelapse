@@ -1,4 +1,4 @@
-// The only place a model is used (PLAN 5.5, AC 10, 48): one short line per meaningful change, from its compact
+// The only place a model is used: one short line per meaningful change, from its compact
 // change record (never a page, never a picture), batched, cached per capture pair forever, capped per day.
 import { ruleSummary } from '../src/core/ruleSummary.ts';
 import type { ChangeRecord } from '../src/core/types.ts';
@@ -9,7 +9,7 @@ import { MODEL, PROMPT_VERSION, type Summary, batches, messages, parseSummaries 
 /** Approximate: a KV counter, read then written. */
 export const DAILY_CAP = 3000;
 
-/** Whether this Worker has Workers AI (production only, D11). */
+/** Whether this Worker has Workers AI (production only). */
 export const aiAvailable = (env: Env): boolean => !!env.AI;
 
 const sumKey = async (url: string, pair: string) => `sum:v1:${MODEL}:p${PROMPT_VERSION}:${await sha256(url)}:${pair}`;

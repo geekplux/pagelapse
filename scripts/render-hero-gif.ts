@@ -3,7 +3,7 @@
 // (palettegen / paletteuse). Skips with a note when ffmpeg is missing. Needs `pnpm build` first; run it under the shared
 // browser lock: `flock /tmp/browser.lock pnpm render:gif --port 4199`.
 //
-// Usage: pnpm render:gif [--port 4173] [--frame docs/screenshots/phase-19/hero-gif-frame.webp]
+// Usage: pnpm render:gif [--port 4173] [--frame <file>.webp]   (--frame also writes the first Play step as WebP)
 import { spawnSync } from 'node:child_process';
 import { readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';

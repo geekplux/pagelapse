@@ -4,7 +4,7 @@
 // report, and always tears down the server and browser (even on SIGINT).
 //
 // Usage: pnpm build && pnpm smoke [--out dir] [--flows a,b] [--port 4173] [--cvd] [--format png|webp]
-// --format webp encodes screenshots with Chrome's WebP encoder (quality 0.8; committed shots, D27).
+// --format webp encodes screenshots with Chrome's WebP encoder (quality 0.8), small enough for a pull request.
 // --cvd also saves protan/deutan/tritan/gray screenshots for flows marked `cvd`.
 import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -23,7 +23,7 @@ const CHROME = '/usr/bin/google-chrome';
 const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
   mobile: { width: 390, height: 844 },
-  /** The calm-layout audit's desktop size (D35); only flows that ask for it run here. */
+  /** The calm-layout audit's desktop size; only flows that ask for it run here. */
   wide: { width: 1440, height: 900 },
 } as const;
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost']);
@@ -287,7 +287,7 @@ async function main(): Promise<number> {
     baseUrl,
     outDir: relative(root, outDir),
     flows: reports,
-    // Unmocked external requests (must be 0); stubbed replay frames are counted apart (samples: 0, AC 3).
+    // Unmocked external requests (must be 0); stubbed replay frames are counted apart (samples: 0).
     blockedRequests: { count: blocked.length, urls: blocked },
     stubbedRequests: { count: replayLog.length, sampleFlows: reports.filter((r) => !r.flow.startsWith('live')).reduce((n, r) => n + r.stubbed, 0), log: replayLog },
     consoleErrors,

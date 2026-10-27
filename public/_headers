@@ -1,4 +1,4 @@
-# Static asset headers for Workers Static Assets (PLAN 5.4). API responses set their own headers in worker/http.ts.
+# Static asset headers for Workers Static Assets. API responses set their own headers in worker/http.ts.
 # Live replay frames load from web.archive.org (frame-src / child-src); everything else is same-origin.
 # No Cross-Origin-Embedder-Policy: require-corp would block the archive frames.
 /*

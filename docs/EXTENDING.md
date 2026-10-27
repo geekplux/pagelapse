@@ -67,7 +67,7 @@ The recorders accept the new archive right away. The Worker (`worker/routes/capt
 
 ## Optional screenshot provider (designed, not built)
 
-Live thumbnails are text outlines, and the live pane shows the Internet Archive's own replay in a frame. A screenshot provider could give live runs real thumbnails. It is designed (D25 in [DECISIONS.md](DECISIONS.md)) but not built, and it must stay optional:
+Live thumbnails are text outlines, and the live pane shows the Internet Archive's own replay in a frame. A screenshot provider could give live runs real thumbnails. It is designed but not built, and it must stay optional:
 
 - A route `GET /api/shot?url=&ts=` in the Worker, active only when a `BROWSER` binding (Cloudflare Browser Rendering) and a `SHOTS` R2 bucket are configured.
 - It renders the archived capture at 1280×800, encodes a 320×200 WebP, and stores it in R2 forever (captures never change). It is rate-limited per visitor and covered by the archive cooldown.

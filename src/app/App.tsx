@@ -73,7 +73,7 @@ export function App() {
   // Polite announcement on sample switch; focus stays where it is. Empty on first load.
   const [announcement, setAnnouncement] = useState('');
   const wanted = useRef(current?.id);
-  // Live-run progress reaches the polite region at most once every 2 s, across runs too (AC 22).
+  // Live-run progress reaches the polite region at most once every 2 s, across runs too.
   const [progress] = useState(() => throttleLatest<string>(2000, setAnnouncement));
   useEffect(() => () => progress.cancel(), [progress]);
 

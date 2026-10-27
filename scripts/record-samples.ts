@@ -1,5 +1,5 @@
 // Records the built-in samples from a web archive into trimmed, block-interned fixtures.
-// The only code that touches the live network (AC 20); never imported by tests.
+// The only code that touches the live network; never imported by tests.
 //
 // Usage: pnpm record:samples [--archive internet-archive|arquivo-pt] [--only <id>[,<id>…]] [--max 14] [--dry-run] [--offline]
 // --only takes one id or a comma-separated list (`--only nasa,creative-commons`); without it every config entry is recorded.

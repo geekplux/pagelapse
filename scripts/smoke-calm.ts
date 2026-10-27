@@ -1,4 +1,4 @@
-// Calm-layout smoke flows (phase 17, PLAN section 4 "Calm layout", D35). `calm-audit:<view>` measures the first
+// Calm-layout smoke flows (docs/DESIGN.md, "Calm layout caps"). `calm-audit:<view>` measures the first
 // viewport of each audited view at 1440×900 and 390×844 against the caps and saves a first-view shot of it (the
 // "calm shots"). Set CALM_BASELINE=1 to report without failing (the before/after baseline run).
 import { fileURLToPath } from 'node:url';
@@ -10,7 +10,7 @@ import { type Flow, type FlowContext, openReady } from './smoke-flows.ts';
 import { framesPainted, mockApi, openLive } from './smoke-live.ts';
 
 const baseline = !!process.env.CALM_BASELINE;
-/** First-load caps per width: regions, tab stops, framed boxes, eyebrow labels, solid accent fills (section 4 §3). */
+/** First-load caps per width: regions, tab stops, framed boxes, eyebrow labels, solid accent fills (docs/DESIGN.md). */
 const CAPS = { wide: [3, 13, 2, 2, 1], mobile: [3, 12, 2, 1, 1] } as const;
 const HEROES = new Set(['hero', 'hero-nasa', 'single', 'live-done']);
 
@@ -204,7 +204,7 @@ async function audit(view: View, { page, baseUrl, viewport }: FlowContext) {
   return { notes: problems.length ? [...notes, `over caps (baseline run): ${problems.join('; ')}`] : notes };
 }
 
-/** Every feature reachable by Tab, Enter and Space only, opening at most one disclosure (AC 5). */
+/** Every feature reachable by Tab, Enter and Space only, opening at most one disclosure. */
 /** `wide`: a feature phones do not have (the ribbon's thumbnails, target/V3WorkPhone.html). */
 type Item = { name: string; sel: string; path?: string; via?: string; wide?: boolean; open?: (page: Page, baseUrl: string) => Promise<unknown> };
 /** Every offered sample (the recorded entries of samples.config.json), the default first. */
@@ -303,7 +303,7 @@ async function inventory({ page, baseUrl }: FlowContext) {
   return { notes };
 }
 
-/** Phones: the sticky Previous / Next bar is not stuck on first view and never covers the stage (AC 9d). */
+/** Phones: the sticky Previous / Next bar is not stuck on first view and never covers the stage. */
 async function sticky(page: Page, scroll: boolean) {
   await settled(page);
   const m = () =>
