@@ -11,6 +11,7 @@ export const DOC_FILES = [
   'CODE_OF_CONDUCT.md',
   'SECURITY.md',
   'CHANGELOG.md',
+  'docs/ARCHITECTURE.md',
   'docs/DESIGN.md',
   'docs/EXTENDING.md',
   'docs/GOOD_FIRST_ISSUES.md',
