@@ -11,13 +11,13 @@ export const DOC_FILES = [
   'CODE_OF_CONDUCT.md',
   'SECURITY.md',
   'CHANGELOG.md',
+  'docs/ARCHITECTURE.md',
   'docs/DESIGN.md',
   'docs/EXTENDING.md',
   'docs/GOOD_FIRST_ISSUES.md',
   '.github/pull_request_template.md',
   'public/samples/README.md',
   'examples/README.md',
-  'docs/LAUNCH.md',
   'docs/DEPLOY.md',
 ];
 

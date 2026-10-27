@@ -1,4 +1,4 @@
-// Pure state of a live run: captures arrive in any order, join the timeline in time order (AC 5, 6, 14).
+// Pure state of a live run: captures arrive in any order, join the timeline in time order.
 import { formatTimestampShort } from '../../core/timestamp.ts';
 import { appendSnapshot, emptyTimeline } from '../../core/timeline.ts';
 import type { Capture, SnapshotPage, Timeline } from '../../core/types.ts';

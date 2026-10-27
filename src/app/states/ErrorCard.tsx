@@ -31,7 +31,7 @@ interface Props {
   headingRef?: ((el: HTMLElement | null) => void) | undefined;
 }
 
-/** A failed live run, in plain words: what happened, why, and what to do next (AC 14). */
+/** A failed live run, in plain words: what happened, why, and what to do next. */
 export function ErrorCard({ error, onRetry, onSample, announce, headingRef }: Props) {
   const [heading, cause] = COPY[error.code] ?? FALLBACK;
   const left = useCountdown(error.retryAfter);

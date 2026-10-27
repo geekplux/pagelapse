@@ -1,6 +1,6 @@
 /** App version sent in the User-Agent; a unit test keeps it equal to package.json. */
 export const APP_VERSION = '0.1.0';
-/** Identifies us to archives on every upstream request (AC 16). */
+/** Identifies us to archives on every upstream request. */
 export const USER_AGENT = `pagelapse/${APP_VERSION} (+https://github.com/geekplux/pagelapse)`;
 
 const RETRY_STATUS = new Set([429, 502, 503, 504]);
@@ -94,7 +94,7 @@ export async function readCapped(res: Pick<Response, 'body'>, maxBytes: number):
 }
 
 /**
- * GET with manners (AC 16, 17, 19): identified User-Agent, retries only on 429/502/503/504 and
+ * GET with manners: identified User-Agent, retries only on 429/502/503/504 and
  * network errors with 1/2/4 s (±20%) backoff, honours `Retry-After` (as a floor) up to 30 s (longer throws
  * {@link RateLimitedError}), never retries other statuses, caps the body, decodes the charset.
  */

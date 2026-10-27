@@ -101,7 +101,7 @@ pnpm build && pnpm run check:deploy
 
 ## Contributing
 
-Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the setup, the checks and the design rules (crowding the screen counts as a bug). [docs/EXTENDING.md](docs/EXTENDING.md) shows how to add a sample, a summariser or an archive. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and report security problems as described in [SECURITY.md](SECURITY.md). Changes are listed in the [CHANGELOG](CHANGELOG.md).
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the setup, the checks and the design rules (crowding the screen counts as a bug). [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the app, the core and the Worker fit together, and [docs/EXTENDING.md](docs/EXTENDING.md) shows how to add a sample, a summariser or an archive. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md), and report security problems as described in [SECURITY.md](SECURITY.md). Changes are listed in the [CHANGELOG](CHANGELOG.md).
 
 ## Credits
 

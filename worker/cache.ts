@@ -1,6 +1,6 @@
 import { EXTRACTOR_VERSION } from '../src/core/extract.ts';
 
-/** CDX listings are cached for a day: new captures appear daily at most (PLAN 5.7). */
+/** CDX listings are cached for a day: new captures appear daily at most. */
 export const CDX_TTL_S = 86_400;
 
 export async function sha256(text: string): Promise<string> {
@@ -29,7 +29,7 @@ export async function cached<T>(kv: KVNamespace, key: string, ttlS: number | und
 export const MEMORY_MAX = 200;
 
 /**
- * A stand-in for KV when the Worker has no `CACHE` binding (Workers Builds previews, D11): per isolate, at most
+ * A stand-in for KV when the Worker has no `CACHE` binding (Workers Builds previews): per isolate, at most
  * `max` keys (oldest dropped first), `expirationTtl` honoured. Only the `get`/`put` calls the Worker makes.
  */
 export function memoryKv(max = MEMORY_MAX, now = () => Date.now()): KVNamespace {

@@ -98,7 +98,7 @@ Set `SITE=https://pagelapse.geekplux.com` first.
 
 ## Live-demo links
 
-The README, the [examples gallery](../examples/README.md) deep links, `docs/LAUNCH.md`, the page's canonical and Open Graph tags (`index.html`), `public/robots.txt` and `public/sitemap.xml` point at https://pagelapse.geekplux.com. If you deploy your own copy elsewhere, replace that origin in those files and in the `examples-deeplinks` regexes of `scripts/smoke-flows.ts`, then run `pnpm build && pnpm smoke --flows examples-deeplinks` (the flow opens each link's path on the local preview).
+The README, the [examples gallery](../examples/README.md) deep links, the page's canonical and Open Graph tags (`index.html`), `public/robots.txt` and `public/sitemap.xml` point at https://pagelapse.geekplux.com. If you deploy your own copy elsewhere, replace that origin in those files and in the `examples-deeplinks` regexes of `scripts/smoke-flows.ts`, then run `pnpm build && pnpm smoke --flows examples-deeplinks` (the flow opens each link's path on the local preview).
 
 ## Rollback
 
@@ -114,7 +114,7 @@ A rollback changes code and static assets only. KV data stays; if an extraction 
 
 Figures are Cloudflare's published limits at the time of writing; check the current Workers, KV and Workers AI limits pages before relying on them.
 
-- **Workers Paid recommended.** Text extraction measured about **20 ms CPU warm and about 96 ms cold** on a 682 KB page (phase 13). The free plan allows 10 ms of CPU per request, so large pages would fail there with error 1102. Small pages and everything static work on the free plan. Responses are capped at 2 MB and parsed with a streaming parser to keep CPU bounded.
+- **Workers Paid recommended.** Text extraction measured about **20 ms CPU warm and about 96 ms cold** on a 682 KB page. The free plan allows 10 ms of CPU per request, so large pages would fail there with error 1102. Small pages and everything static work on the free plan. Responses are capped at 2 MB and parsed with a streaming parser to keep CPU bounded.
 - **Static files are free.** Requests for the app, fonts and sample pictures do not run the Worker and do not count against Worker request limits. The first view of a sample costs no Worker invocation at all.
 - **Requests.** One fresh live run makes about 18 API requests (1 listing, up to 16 captures, 1-2 summary batches). A repeat of a cached page makes the same number of requests but no archive fetches.
 - **KV.** A fresh page writes up to about 35 keys (listing, up to 16 captures, summaries, counters); a cached page only reads. The free plan's 1,000 writes per day is roughly 30 fresh pages a day; the paid plan raises it far beyond what this app needs. Captures are stored without expiry, so storage grows slowly with the number of distinct pages looked up.

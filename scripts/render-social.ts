@@ -1,9 +1,9 @@
 // Renders assets/social-preview.svg to assets/social-preview.png (1280×640, the size GitHub's social preview wants),
 // and copies it to public/social-preview.png (the site's og:image, index.html),
 // in system Chrome. The SVG's relative pictures and fonts are inlined as data: URLs first, so nothing loads from the
-// network. Run it under the shared browser lock: `flock /tmp/browser.lock pnpm render:social`.
+// network.
 //
-// Usage: pnpm render:social [--webp docs/screenshots/phase-19/social-preview.webp]
+// Usage: pnpm render:social [--webp <file>.webp]   (--webp also writes a WebP copy, e.g. for a pull request)
 import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';

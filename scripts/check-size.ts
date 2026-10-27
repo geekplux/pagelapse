@@ -1,4 +1,4 @@
-// Size budgets (PLAN AC 30, 32 and 40). Run after `pnpm build`: prints a table and exits
+// Size budgets (bundle, fonts, default sample, pictures). Run after `pnpm build`: prints a table and exits
 // non-zero if any budget is exceeded or a non-allowed package reached a client chunk.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -61,7 +61,7 @@ for (const [name, bytes, limit] of rows) {
   console.log(`${name.padEnd(24)}${`${(bytes / KB).toFixed(1)} KB`.padStart(11)}${`${limit / KB} KB`.padStart(11)}  ${ok ? 'ok' : 'OVER'}`);
 }
 
-// AC 32: only react/react-dom in client chunks; htmlparser2 (Worker-only) must never leak in.
+// Only react/react-dom in client chunks; htmlparser2 (Worker-only) must never leak in.
 for (const [chunk, ids] of Object.entries(chunks)) {
   for (const id of ids) {
     const pkg = /.*node_modules\/((?:@[^/]+\/)?[^/]+)\//.exec(id)?.[1];

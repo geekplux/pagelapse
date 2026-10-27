@@ -1,4 +1,4 @@
-// Live-mode smoke flows (phases 14-15). The Worker API is mocked with page.route('**/api/**') from
+// Live-mode smoke flows. The Worker API is mocked with page.route('**/api/**') from
 // test/fixtures/api/live.ts, and the Internet Archive's replay frames (https://web.archive.org/web/**) are stubbed with
 // test/fixtures/replay/stub.html, so no flow reaches the Worker or the Archive. Each mock keeps a request log (start/end
 // times per request) that the flows assert on: concurrency, cancel, stale runs, caching, frame dwell, pool and preload.

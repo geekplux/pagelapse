@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-/** One capture per 1.2 s (D28). */
+/** One capture per 1.2 s. */
 export const PLAY_MS = 1200;
 
 /**

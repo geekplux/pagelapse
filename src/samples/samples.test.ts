@@ -109,7 +109,7 @@ describe('committed samples', () => {
     expect(f.snapshots.map((s) => s.title).filter((t) => FINANCE.test(t))).toEqual([]);
   });
 
-  it('default sample is <= 40 KB gzip (AC 30)', async () => {
+  it('default sample is <= 40 KB gzip', async () => {
     expect(await gzipBytes(RAW[`./${defaultEntry.id}.json`]!)).toBeLessThanOrEqual(40 * KB);
   });
 

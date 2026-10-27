@@ -1,9 +1,8 @@
 // Renders docs/hero.gif: the default sample's decade compare, then its time-lapse (one frame per Play step), captured
 // at 1440×900 by the smoke runner's `hero-gif-frames` flow and turned into a looping GIF at 960×600 by ffmpeg
-// (palettegen / paletteuse). Skips with a note when ffmpeg is missing. Needs `pnpm build` first; run it under the shared
-// browser lock: `flock /tmp/browser.lock pnpm render:gif --port 4199`.
+// (palettegen / paletteuse). Skips with a note when ffmpeg is missing. Needs `pnpm build` first.
 //
-// Usage: pnpm render:gif [--port 4173] [--frame docs/screenshots/phase-19/hero-gif-frame.webp]
+// Usage: pnpm render:gif [--port 4173] [--frame <file>.webp]   (--frame also writes the first Play step as WebP)
 import { spawnSync } from 'node:child_process';
 import { readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';

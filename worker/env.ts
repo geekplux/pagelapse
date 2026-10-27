@@ -1,6 +1,6 @@
 /**
  * Bindings from wrangler.jsonc, as the routes see them. Only `CACHE` is required, so local runs and tests work
- * without the rest; `AI` exists in production only (D11) and is read only by `summarise.ts`.
+ * without the rest; `AI` exists in production only and is read only by `summarise.ts`.
  */
 export interface Env {
   CACHE: KVNamespace;

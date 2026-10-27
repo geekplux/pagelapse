@@ -10,7 +10,7 @@ async function once<T>(key: string, load: () => Promise<T>): Promise<T> {
   return cache.get(key) as T;
 }
 
-/** At most this many snapshot requests in flight (AC 5). */
+/** At most this many snapshot requests in flight. */
 const CONCURRENCY = 2;
 
 /**

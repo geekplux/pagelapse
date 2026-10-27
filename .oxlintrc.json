@@ -16,9 +16,9 @@
       "rules": {
         "no-restricted-globals": [
           "error",
-          { "name": "fetch", "message": "src/core is pure (AC 36): inject IO instead." },
-          { "name": "window", "message": "src/core is pure (AC 36): no DOM." },
-          { "name": "document", "message": "src/core is pure (AC 36): no DOM." }
+          { "name": "fetch", "message": "src/core is pure: inject IO instead." },
+          { "name": "window", "message": "src/core is pure: no DOM." },
+          { "name": "document", "message": "src/core is pure: no DOM." }
         ]
       }
     }

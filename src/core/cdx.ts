@@ -3,7 +3,7 @@ import { isValidTimestamp } from './timestamp.ts';
 import type { ArchiveId, Capture } from './types.ts';
 
 /**
- * CDX query for a URL's HTML captures (D7): status 200, `text/html`, collapsed to at most one
+ * CDX query for a URL's HTML captures: status 200, `text/html`, collapsed to at most one
  * row per month and per digest, returning only `timestamp,digest,length`.
  */
 export function buildCdxUrl(archive: ArchiveId, url: string): string {

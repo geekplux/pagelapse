@@ -16,7 +16,7 @@ const LINE = 64;
 
 /**
  * A text outline of a page's top: a title bar, one bar per heading (thicker for higher levels) and a few thin lines per
- * paragraph, list items indented, each as wide as its text. Deterministic and network-free (live thumbnails, D25).
+ * paragraph, list items indented, each as wide as its text. Deterministic and network-free (live thumbnails).
  */
 export function silhouette(page: Pick<ExtractedPage, 'title' | 'blocks'>): SilhouetteBar[] {
   const span = (chars: number, x: number) => Math.max(12, Math.min(W - M - x, chars * 3.2));

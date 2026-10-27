@@ -12,7 +12,7 @@ const known = new Map<string, string>();
 /**
  * AI one-liners for a live run's meaningful changes, by pair. It asks the Worker every `SUMMARY_EVERY` (4) new
  * changes and once the run ends (done, cancelled or failed), never twice for a pair. Any failure is silent: the
- * entries keep their rule summaries (AC 11).
+ * entries keep their rule summaries.
  */
 export function useSummaries(url: string, entries: readonly TimelineEntry[], status: LiveStatus): ReadonlyMap<string, string> {
   const [ai, setAi] = useState(() => new Map<string, string>());

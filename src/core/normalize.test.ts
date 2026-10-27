@@ -39,7 +39,7 @@ const CASES: [string, string, string, boolean][] = [
   ['nfc', 'Café', 'Café', true],
   ['nfc', 'Å ring', 'Å ring', true],
   ['nfc', 'Café', 'Cafe', false],
-  // Round-1 verifier regressions: content that must not be masked.
+  // Regressions: content that must not be masked.
   ['dotted date', 'Due 03.10.2012', 'Due 04.11.2013', true],
   ['version', 'Node 18.17.10', 'Node 20.11.10', false],
   ['version', 'Python 3.10.12', 'Python 3.11.10', false],
@@ -51,7 +51,7 @@ const CASES: [string, string, string, boolean][] = [
   ['counter', '100 people died', '2,000 people died', false],
   ['tracking', 'Watch youtube.com/watch?v=abc123', 'Watch youtube.com/watch?v=xyz789', false],
   ['cache-buster', 'Font a.woff2?t=1&v=2', 'Font a.woff2?t=9', true],
-  // Phase 5 leftovers: ratings, ratios and room names are content.
+  // Ratings, ratios and room names are content, not counters or times.
   ['rating', 'Rated 2 stars by readers', 'Rated 5 stars by readers', false],
   ['rating', 'Rating: 2 stars', 'Rating: 4 stars', false],
   ['counter', 'Repo has 12 stars', 'Repo has 340 stars', true],

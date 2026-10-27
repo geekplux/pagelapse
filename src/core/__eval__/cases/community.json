@@ -39,7 +39,7 @@
   {
     "id": "review-rating-change",
     "label": "minor",
-    "note": "Phase 5 leftover: 'Rated 2 stars' -> 'Rated 5 stars' is a changed verdict, not a counter",
+    "note": "'Rated 2 stars' -> 'Rated 5 stars' is a changed verdict, not a counter",
     "before": { "title": "The Lighthouse Keeper's Daughter - reader reviews", "blocks": [
       "# The Lighthouse Keeper's Daughter",
       "Rated 2 stars by the reading circle",

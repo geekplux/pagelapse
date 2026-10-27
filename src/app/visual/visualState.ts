@@ -41,14 +41,14 @@ export function initialView(entries: readonly Pair[], captures: readonly string[
   return { index, at: at ?? entries[index]?.to ?? captures.at(-1) ?? '' };
 }
 
-/** How the pane compares a change's two captures, in the segmented control's order. Slider is the first view (D23). */
+/** How the pane compares a change's two captures, in the segmented control's order. Slider is the first view. */
 export type Mode = 'slider' | 'side' | 'single';
 export const MODES: readonly [Mode, string][] = [['slider', 'Slider'], ['side', 'Side by side'], ['single', 'Single']];
 export const DEFAULT_MODE: Mode = 'slider';
 /** A known mode, else undefined (the caller falls back to its default; a retired `onion` link opens Slider). */
 export const parseMode = (v?: string): Mode | undefined => MODES.find(([m]) => m === v)?.[0];
 
-/** Live runs open in Single: one archived page per selection, a compare mode on request (D24). */
+/** Live runs open in Single: one archived page per selection, a compare mode on request. */
 export const LIVE_MODE: Mode = 'single';
 
 /**

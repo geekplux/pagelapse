@@ -138,6 +138,6 @@ describe('buildTimeline', () => {
   it('each committed sample yields 4-15 meaningful changes', () => {
     const counts = Object.fromEntries(samples.map((f) => [f.id, buildTimeline(f.url, fixtureToSnapshots(f)).entries.length]));
     expect(Object.values(counts).every((n) => n >= 4 && n <= 15)).toBe(true);
-    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, nasa: 10, 'creative-commons': 13 }); // Wikipedia recorded in phase 6, NASA and Creative Commons on 2026-10-25
+    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, nasa: 10, 'creative-commons': 13 }); // as recorded; re-recording a sample changes its count
   });
 });

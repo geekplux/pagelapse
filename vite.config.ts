@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
-/** Records which modules went into each client chunk, for scripts/check-size.ts (AC 32). */
+/** Records which modules went into each client chunk, for scripts/check-size.ts. */
 function chunkModules(): Plugin {
   return {
     name: 'wd-chunk-modules',
@@ -42,14 +42,14 @@ function sampleCatalog(): Plugin {
 /**
  * `vite build` reads wrangler.jsonc (production, what Workers Builds deploys). `vite dev` reads wrangler.local.jsonc
  * (no AI binding, so no Cloudflare login). `vite preview` serves the production build with remote bindings off, so it
- * needs no login either: the `AI` binding is present but unreachable, and summaries fall back to rules (D11).
+ * needs no login either: the `AI` binding is present but unreachable, and summaries fall back to rules.
  */
 const workerConfig = (command: 'build' | 'serve', isPreview?: boolean) =>
   command === 'build' ? {} : isPreview ? { remoteBindings: false } : { configPath: './wrangler.local.jsonc' };
 
 export default defineConfig(({ command, isPreview }) => ({
-  // The Cloudflare plugin builds the Worker next to the client and runs `vite dev`/`preview` in workerd (D1).
-  // Tests use a fake Env instead (D15), so Vitest skips it.
+  // The Cloudflare plugin builds the Worker next to the client and runs `vite dev`/`preview` in workerd.
+  // Tests use a fake Env instead, so Vitest skips it.
   plugins: [react(), chunkModules(), sampleCatalog(), process.env.VITEST ? [] : cloudflare(workerConfig(command, isPreview))],
   test: {
     environment: 'node',
@@ -57,7 +57,7 @@ export default defineConfig(({ command, isPreview }) => ({
     setupFiles: ['test/setup/no-network.ts'],
     // Let the design tests read src/design/*.css?raw (Vitest blanks CSS by default).
     css: { include: [/src\/design\/[a-z]+\.css/] },
-    // Shared, RAM-tight machine: keep the worker pool small.
+    // Keep the worker pool small so the tests fit on modest machines.
     maxWorkers: 2,
   },
 }));

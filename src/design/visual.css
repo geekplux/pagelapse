@@ -204,7 +204,7 @@
   :is(.vp-label, .vp-tag)[data-side="after"] .vp-dot, .vp-dot[data-side="after"] { background: CanvasText; }
 }
 
-/* Live replay (phase 15): the archive's 1280×800 page scaled into the mat (`--k` from a ResizeObserver), its text
+/* Live replay: the archive's 1280×800 page scaled into the mat (`--k` from a ResizeObserver), its text
    silhouette underneath until it loads, preloading neighbours hidden in the same box. */
 .lf { position: relative; overflow: hidden; }
 .lf iframe { position: absolute; top: 0; left: 0; width: 1280px; height: 800px; border: 0; background: var(--replay-bg); transform: scale(var(--k, 0.5)); transform-origin: 0 0; }
