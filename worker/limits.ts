@@ -11,6 +11,11 @@ export const STREAK_TTL_S = 86_400;
 export const UPSTREAM_TIMEOUT_MS = 12_000;
 
 const SLOW_DOWN = 'The Internet Archive is turning new lookups away for now. Pages looked up before still open.';
+/**
+ * Cloudflare's codes for an origin that refused or dropped the connection (521, 522, 523). The archive answers the
+ * Worker's shared egress this way as well as with 429s, so these start the cooldown too (politeFetch never retries them).
+ */
+const REFUSED = new Set([521, 522, 523]);
 
 /** What `ia:cooldown` holds: when the cooldown ends, and when the current run of 429s began (epoch ms). */
 interface Cooldown {
@@ -42,8 +47,8 @@ const seconds = (ms: number) => Math.ceil(ms / 1000);
 
 /**
  * The only way the Worker reaches the archive. Checks the global cooldown, then the per-IP
- * `UPSTREAM_LIMIT`, then politeFetches (identified UA, backoff, 2 MB cap). A 429 is not retried:
- * it starts the cooldown. Failures come back as API error responses, and archive trouble is logged.
+ * `UPSTREAM_LIMIT`, then politeFetches (identified UA, backoff, 2 MB cap). A 429 or a refused connection (`REFUSED`)
+ * is not retried: it starts the cooldown. Failures come back as API error responses, and archive trouble is logged.
  */
 export async function fetchUpstream(req: Request, env: Env, io: Io, url: string): Promise<PoliteResponse | Response> {
   const kind = url.includes('/cdx/') ? 'cdx' : 'capture';
@@ -75,12 +80,15 @@ export async function fetchUpstream(req: Request, env: Env, io: Io, url: string)
     }
     return res;
   } catch (err) {
-    if (err instanceof RateLimitedError) {
-      const s = Math.max(COOLDOWN_S, err.retryAfter);
+    const refused = err instanceof HttpError && REFUSED.has(err.status);
+    if (err instanceof RateLimitedError || refused) {
+      const s = refused ? COOLDOWN_S : Math.max(COOLDOWN_S, (err as RateLimitedError).retryAfter);
       const since = cooldown?.since ?? Date.now();
       await env.CACHE.put(COOLDOWN_KEY, JSON.stringify({ until: Date.now() + s * 1000, since }), { expirationTtl: STREAK_TTL_S });
-      // `retryAfter` null means the archive gave no hint and the cooldown is our default; `streak` is how long it has refused.
-      log('archive_cooldown_start', { kind, cooldown: s, retryAfter, streak: seconds(Date.now() - since) });
+      // `status` is 429 or the refused-connection code; `retryAfter` null means the archive gave no hint and the cooldown
+      // is our default; `streak` is how long it has refused.
+      const status = refused ? (err as HttpError).status : 429;
+      log('archive_cooldown_start', { kind, status, cooldown: s, retryAfter, streak: seconds(Date.now() - since) });
       return apiError('archive_rate_limited', SLOW_DOWN, s);
     }
     if (err instanceof HttpError && err.status === 403) return apiError('excluded', 'This site is excluded from the Internet Archive.');

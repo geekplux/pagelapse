@@ -151,13 +151,27 @@ describe('worker API', () => {
     expect((await t.get('/api/captures?url=example.org')).res.status).toBe(200);
     expect(logged()).toEqual([
       { event: 'archive_failure', kind: 'cdx', status: 429, retryAfter: '90', attempt: 1 },
-      { event: 'archive_cooldown_start', kind: 'cdx', cooldown: 90, retryAfter: '90', streak: 0 },
+      { event: 'archive_cooldown_start', kind: 'cdx', status: 429, cooldown: 90, retryAfter: '90', streak: 0 },
       { event: 'archive_cooldown_hit', kind: 'cdx', wait: 90 },
       { event: 'archive_failure', kind: 'cdx', status: 429, retryAfter: null, attempt: 1 },
-      { event: 'archive_cooldown_start', kind: 'cdx', cooldown: 60, retryAfter: null, streak: 91 },
+      { event: 'archive_cooldown_start', kind: 'cdx', status: 429, cooldown: 60, retryAfter: null, streak: 91 },
       { event: 'archive_recovered', kind: 'cdx', after: 152 },
     ]);
     expect(JSON.stringify(logged())).not.toMatch(/example\.org|203\.0\.113/);
+  });
+
+  it.each([521, 522, 523])('a refused connection (%i) is not retried and starts the cooldown, like a 429', async (status) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const t = setup();
+    t.respond = () => new Response(null, { status });
+    const { res, body } = await t.get('/api/captures?url=example.org');
+    expect([res.status, body.error, body.retryAfter, t.calls.length]).toEqual([503, 'archive_rate_limited', 60, 1]);
+    expect(t.puts.at(-1)).toMatchObject({ key: 'ia:cooldown', ttl: 86_400 });
+    expect(warn.mock.calls.map(([l]) => JSON.parse(String(l)).event)).toEqual(['archive_failure', 'archive_cooldown_start']);
+    expect(JSON.parse(String(warn.mock.calls[1]![0]))).toMatchObject({ status, cooldown: 60 });
+    // The next lookup is turned away by the cooldown without reaching the archive.
+    expect((await t.get('/api/captures?url=other.org')).body.error).toBe('archive_rate_limited');
+    expect(t.calls).toHaveLength(1);
   });
 
   it('reads a cooldown stored by an older deploy as a bare end time', async () => {

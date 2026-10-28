@@ -47,6 +47,7 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 
 ### Fixed
 
+- **A refused connection counts as the archive turning Pagelapse away.** Cloudflare's 521, 522 and 523 (the archive refused or dropped the connection) now start the cooldown and show the rate-limit card, as a 429 does, instead of "The Archive is not answering, try again in a few minutes" with every later lookup still reaching the archive.
 - **The Internet Archive capture list is collapsed to one capture per month again.** It applies only the last of two `collapse` parameters, so the list held every distinct capture (18,640 rows instead of 273 for www.wikipedia.org) and long-lived pages ran past the 2 MB cap and failed.
 - `pnpm smoke` and `pnpm render:social` find Chrome on macOS (or `CHROME_PATH`), like the recorders.
 
