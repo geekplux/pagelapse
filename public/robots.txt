@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+# The API looks pages up in the Internet Archive: crawlers rendering ?url= links would spend its patience and ours.
+Disallow: /api/
 
 Sitemap: https://pagelapse.geekplux.com/sitemap.xml

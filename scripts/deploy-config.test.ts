@@ -42,6 +42,11 @@ describe('deploy config', () => {
     expect(wrangler.kv_namespaces.map((k: { binding: string }) => k.binding)).toEqual(['CACHE']);
   });
 
+  it('runs /api/* next to the Internet Archive, and keeps crawlers off the API', () => {
+    expect(wrangler.placement).toEqual({ hostname: 'web.archive.org' });
+    expect(read('public/robots.txt')).toMatch(/^Disallow: \/api\/$/m);
+  });
+
   it('binds CACHE to the real KV namespace id (32 hex, not the all-zeros placeholder)', () => {
     const id = wrangler.kv_namespaces[0].id as string;
     expect(id).toMatch(/^[0-9a-f]{32}$/);
