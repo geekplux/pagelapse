@@ -5,10 +5,11 @@ import { validateTargetUrl } from '../../src/core/url.ts';
 import { CDX_FRESH_S, cdxKey, kept } from '../cache.ts';
 import type { Env, Io } from '../env.ts';
 import { apiError, json } from '../http.ts';
+import { DEFAULT_MAX } from '../keys.ts';
 import { fetchUpstream } from '../limits.ts';
 
-/** Default and hard maximum number of sampled captures. */
-export const DEFAULT_MAX = 16;
+export { DEFAULT_MAX };
+/** Hard maximum number of sampled captures (the default is DEFAULT_MAX, worker/keys.ts). */
 export const HARD_MAX = 24;
 
 /**

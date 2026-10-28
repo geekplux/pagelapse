@@ -101,6 +101,17 @@ Set `SITE=https://pagelapse.geekplux.com` first.
 
 The README, the [examples gallery](../examples/README.md) deep links, the page's canonical and Open Graph tags (`index.html`), `public/robots.txt` and `public/sitemap.xml` point at https://pagelapse.geekplux.com. If you deploy your own copy elsewhere, replace that origin in those files and in the `examples-deeplinks` regexes of `scripts/smoke-flows.ts`, then run `pnpm build && pnpm smoke --flows examples-deeplinks` (the flow opens each link's path on the local preview).
 
+## Pre-warm the cache
+
+A page whose captures are in KV opens without the Internet Archive, so it never meets the archive's rate limit. `pnpm prewarm` looks up the pages in `scripts/prewarm-urls.txt` (or `--urls <file>`) from your machine, politely (one request at a time, 1.5 s apart, cached in `.cache/prewarm/`), computes exactly what the Worker would store (`worker/keys.ts`), and writes `.cache/prewarm/kv-bulk.json`. Then upload it to production KV:
+
+```sh
+pnpm prewarm
+pnpm exec wrangler kv bulk put --remote --binding CACHE .cache/prewarm/kv-bulk.json
+```
+
+Capture lists are refreshed by the Worker after 24 h, and kept if the archive refuses, so a warmed page stays fast. A 429 stops the run; run it again later and it resumes from its cache.
+
 ## Recently explored
 
 Visitors can list a page they have just looked up in "Recently explored" on the home page (`POST /api/gallery`). The Worker accepts only plain addresses (no query string) whose capture list and at least half of their sampled captures are already in KV, refuses a short list of finance and adult terms in the host, path and title, and limits sharing to 3 pages a minute per visitor. The home page lists the newest 24.

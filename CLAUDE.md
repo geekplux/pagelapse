@@ -26,7 +26,7 @@ pnpm smoke             # after a build: user flows, axe-core and layout audits i
 pnpm preview           # serve the production build on port 4173
 ```
 
-Maintenance scripts that need the network or Chrome: `pnpm record:samples`, `pnpm record:visuals`, `pnpm bake:summaries`, `pnpm render:social` and `pnpm render:gif` (see CONTRIBUTING.md and docs/EXTENDING.md).
+Maintenance scripts that need the network or Chrome: `pnpm record:samples`, `pnpm record:visuals`, `pnpm bake:summaries`, `pnpm prewarm`, `pnpm render:social` and `pnpm render:gif` (see CONTRIBUTING.md and docs/EXTENDING.md).
 
 ## Rules
 
