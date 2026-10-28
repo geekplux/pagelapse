@@ -103,14 +103,14 @@ The README, the [examples gallery](../examples/README.md) deep links, the page's
 
 ## Pre-warm the cache
 
-A page whose captures are in KV opens without the Internet Archive, so it never meets the archive's rate limit. `pnpm prewarm` looks up the pages in `scripts/prewarm-urls.txt` (or `--urls <file>`) from your machine, politely (one request at a time, 1.5 s apart, cached in `.cache/prewarm/`), computes exactly what the Worker would store (`worker/keys.ts`), and writes `.cache/prewarm/kv-bulk.json`. Then upload it to production KV:
+A page whose captures are in KV opens without the Internet Archive, so it never meets the archive's rate limit. `pnpm prewarm` looks up the pages in `scripts/prewarm-urls.txt` (or `--urls <file>`) from your machine, politely (one request at a time, 3 s apart, cached in `.cache/prewarm/`), computes exactly what the Worker would store (`worker/keys.ts`), and writes `.cache/prewarm/kv-bulk.json`. Then upload it to production KV:
 
 ```sh
 pnpm prewarm
 pnpm exec wrangler kv bulk put --remote --binding CACHE .cache/prewarm/kv-bulk.json
 ```
 
-Capture lists are refreshed by the Worker after 24 h, and kept if the archive refuses, so a warmed page stays fast. A 429 stops the run; run it again later and it resumes from its cache.
+Capture lists are refreshed by the Worker after 24 h, and kept if the archive refuses, so a warmed page stays fast. A 429 or a refused connection (the archive blocks an IP that asks too much) stops the run and writes what is done; run it again later and it resumes from its cache.
 
 ## Recently explored
 

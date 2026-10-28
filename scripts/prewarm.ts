@@ -7,7 +7,8 @@
 // It computes exactly what the Worker would store (worker/routes/captures.ts and snapshot.ts): the kept CDX listing
 // under cdx:v2 and each sampled capture's extracted text under snap:v1, with the same keys, sampling and 2 MB cap.
 // Raw responses are cached in .cache/prewarm/raw/ so a re-run never refetches; requests are serialised and spaced
-// >= 1.5 s with the identified User-Agent, and a 429 stops the run (re-run later: it resumes from the cache).
+// >= 3 s with the identified User-Agent. A 429 or a refused connection (the archive blocks an IP that asks too much)
+// stops the run and still writes what is done; re-run later and it resumes from the cache.
 // The only code besides the recorders that touches the live network; never imported by tests.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -40,7 +41,7 @@ let requests = 0;
 async function cachedGet(url: string): Promise<{ text: string; truncated: boolean } | null> {
   const file = join(rawDir, `${createHash('sha256').update(url).digest('hex')}.json`);
   if (existsSync(file)) return JSON.parse(readFileSync(file, 'utf8'));
-  await delay(Math.max(0, lastRequest + 1500 - Date.now()));
+  await delay(Math.max(0, lastRequest + 3000 - Date.now()));
   lastRequest = Date.now();
   requests++;
   let got: { text: string; truncated: boolean } | null;
@@ -85,8 +86,9 @@ try {
     console.log(report.at(-1));
   }
 } catch (err) {
-  if (!(err instanceof RateLimitedError)) throw err;
-  report.push(`stopped: the archive asked us to wait ${err.retryAfter} s; re-run later, it resumes from the cache`);
+  if (err instanceof RateLimitedError) report.push(`stopped: the archive asked us to wait ${err.retryAfter} s; re-run later, it resumes from the cache`);
+  else if (err instanceof TypeError) report.push(`stopped: the archive refused or dropped the connection (${String(err.cause ?? err)}); re-run later, it resumes from the cache`);
+  else throw err;
 }
 
 const out = resolve(root, args.out);
