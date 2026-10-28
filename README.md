@@ -21,7 +21,7 @@ git clone https://github.com/geekplux/pagelapse.git && cd pagelapse
 pnpm i && pnpm dev
 ```
 
-Open the address `pnpm dev` prints (usually http://localhost:5173). The first view deals the captures of the built-in Wikipedia sample. Open a card or a sample (Wikipedia, NASA or Creative Commons): their text and pictures ship with the app, so they need no network, no account and no key. Or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
+Open the address `pnpm dev` prints (usually http://localhost:5173). The first view deals the captures of the built-in Wikipedia sample. Open a card or a sample (Wikipedia, NASA, Creative Commons, Pluto, World Wide Web, weather.gov or GeekPlux): their text and pictures ship with the app, so they need no network, no account and no key. Or paste any URL to look it up live in the Internet Archive. The [examples gallery](examples/README.md) has deep links to the best changes and five pages to try.
 
 ## Features
 
@@ -67,13 +67,13 @@ Everything else is deterministic code: sampling, extraction, diffing, scoring, t
 
 - Every request identifies itself: `pagelapse/<version> (+https://github.com/geekplux/pagelapse)`.
 - At most 16 captures per page, fetched 2 at a time. Busy pages are collapsed to one capture per month first.
-- Everything is cached: the Worker keeps capture lists for 24 hours and extracted captures and summaries for good, and its responses carry cache headers so your browser reuses them.
+- Everything is cached: the Worker keeps capture lists, extracted captures and summaries for good (lists are refreshed daily, and a page looked up once still opens when the Archive is busy), and its responses carry cache headers so your browser reuses them.
 - If the Archive answers 429, the Worker stops all uncached requests for at least 60 s (longer if the Archive says so) and tells you when to retry. Server errors are retried with backoff, and pages over 2 MB are cut off. Each visitor also has their own limit on uncached lookups.
 - A replay frame loads only for the capture you pick, after the selection has rested for 400 ms. At most 3 frames are kept, and nothing is preloaded while a run is still fetching.
 
 ## Privacy
 
-Pagelapse has no accounts. The live site counts page views with Google Analytics: one per visit, with the page's path and nothing else, so the address you look up and the capture you pick never reach it (no events, no Google signals, no ad personalisation; Google Analytics sets its own `_ga` cookies; [src/analytics.ts](src/analytics.ts)). A self-hosted copy loads no analytics. A live lookup sends the URL to the Pagelapse Worker so it can query the archive, and the deployment's Cloudflare request logs may record it. Live pictures load directly from the Internet Archive in your browser, just like visiting the Wayback Machine. The built-in samples load nothing but the app's own files.
+Pagelapse has no accounts. The live site counts page views with Google Analytics: one per visit, with the page's path and nothing else, so the address you look up and the capture you pick never reach it (no events, no Google signals, no ad personalisation; Google Analytics sets its own `_ga` cookies; [src/analytics.ts](src/analytics.ts)). A self-hosted copy loads no analytics. A live lookup sends the URL to the Pagelapse Worker so it can query the archive, and the deployment's Cloudflare request logs may record it. Nothing you look up is shown to anyone unless you press "Add to Recently explored": that lists the page address (never one with a query string) on the home page, for everyone. Live pictures load directly from the Internet Archive in your browser, just like visiting the Wayback Machine. The built-in samples load nothing but the app's own files.
 
 ## Accessibility
 
@@ -106,11 +106,14 @@ Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers 
 ## Credits
 
 - The [Internet Archive](https://archive.org/) and its [Wayback Machine](https://web.archive.org/) are the source of every live capture.
-- [Arquivo.pt](https://arquivo.pt/) served the captures that the built-in samples were recorded from.
+- [Arquivo.pt](https://arquivo.pt/) served the captures that most built-in samples were recorded from; the Internet Archive served GeekPlux's.
 - Sample texts and pictures:
   - the Wikipedia article "Internet Archive" by Wikipedia contributors (CC BY-SA 4.0, CC BY-SA 3.0 before June 2023; a trimmed excerpt, without the blocks that state monetary figures);
   - www.nasa.gov by NASA (a US government work, generally not subject to copyright in the United States; the NASA insignia and logos are protected, and third-party images on the site may not be in the public domain; a trimmed excerpt, without the blocks that state monetary figures or budgets);
   - creativecommons.org by Creative Commons (CC BY 4.0; a trimmed excerpt, without the blocks about donations or that state monetary figures; Creative Commons and the CC logos are trademarks of Creative Commons).
+  - the Wikipedia articles "Pluto" and "World Wide Web" by Wikipedia contributors (CC BY-SA 4.0, CC BY-SA 3.0 before June 2023; trimmed excerpts, without the blocks that state monetary figures);
+  - www.weather.gov by the National Weather Service (a US government work, generally not subject to copyright in the United States; the NOAA and National Weather Service emblems are protected, and third-party images on the site may not be in the public domain; a trimmed excerpt, without the blocks that state monetary figures or budgets);
+  - geekplux.com by GeekPlux, the author of Pagelapse (included with the author's permission; a trimmed excerpt, without the blocks about money, pay or investing, in English or Chinese).
 
   The pictures are screenshots of archived captures. The page designs, logos and text belong to their authors. Details are in each sample's "About these captures" and in [`public/samples/README.md`](public/samples/README.md).
 - [Schibsted Grotesk](https://github.com/schibsted/schibsted-grotesk) by The Schibsted-Grotesk Project Authors, under the [SIL Open Font License 1.1](public/fonts/OFL-SchibstedGrotesk.txt).

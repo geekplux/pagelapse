@@ -58,7 +58,8 @@ async function stubReplay(page: Page, delay: (ts: string) => number | null = () 
 export async function mockApi(
   page: Page,
   opts: {
-    data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; snapshot?: (i: number) => Plan; frame?: (ts: string) => number | null;
+    data?: (target: string) => MockApi; captures?: keyof typeof API_ERRORS; /** `i`: the capture's index in time order; `nth`: the request's place in the run (the app asks first and latest first). */
+    snapshot?: (i: number, nth: number) => Plan; frame?: (ts: string) => number | null;
     /** `/api/summaries`: Workers AI lines (Creative Commons), a 500, or (default) "rule" for every pair, as without a binding. */
     summaries?: 'ai' | 'some' | 'error';
   } = {},
@@ -67,6 +68,7 @@ export async function mockApi(
   const log: Logged[] = [];
   const inFlight = new Map<string, number>();
   const maxInFlight = new Map<string, number>();
+  const asked = new Map<string, number>();
   await page.route('**/api/**', async (route) => {
     const u = new URL(route.request().url());
     const target = host(u.searchParams.get('url') ?? '');
@@ -77,7 +79,9 @@ export async function mockApi(
     if (u.pathname === '/api/captures') {
       reply = opts.captures ? API_ERRORS[opts.captures] : { status: 200, body: api.captures };
     } else if (u.pathname === '/api/snapshot') {
-      const plan = opts.snapshot?.(api.captures.captures.findIndex((c) => c.ts === entry.ts)) ?? {};
+      const nth = asked.get(target) ?? 0;
+      asked.set(target, nth + 1);
+      const plan = opts.snapshot?.(api.captures.captures.findIndex((c) => c.ts === entry.ts), nth) ?? {};
       if (plan.delay === null) return; // held open: the browser waits until it gives up or aborts
       const n = (inFlight.get(target) ?? 0) + 1;
       inFlight.set(target, n);
@@ -209,7 +213,7 @@ async function expectActions(page: Page, names: string[]): Promise<void> {
 
 /** Shared by live-loading and its reduced-motion variant: 6 captures answer, then the run waits on the Archive. */
 async function loading(page: Page, baseUrl: string, phone: boolean): Promise<string[]> {
-  const api = await mockApi(page, { snapshot: (i) => (i < 6 ? {} : { delay: null }) });
+  const api = await mockApi(page, { snapshot: (_, nth) => (nth < 6 ? {} : { delay: null }) });
   await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
   await page.waitForFunction(() => document.querySelector('.live-status .live-count')?.textContent === '6 of 14', null, { timeout: 10_000 });
   // Phones show the ribbon's axis only (target/V3WorkPhone.html): no thumbnails, so no pending slots.
@@ -393,7 +397,7 @@ export const liveFlows: readonly Flow[] = [
     description: 'While the timeline slider has focus during a run, its value and range stay put as changes arrive; a key catches up (End reaches the newest) and says how many are new',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      await mockApi(page, { snapshot: (i) => (i < 4 ? {} : i < 11 ? { delay: 500 } : { delay: null }) });
+      await mockApi(page, { snapshot: (_, nth) => (nth < 4 ? {} : nth < 11 ? { delay: 500 } : { delay: null }) });
       await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
       const slider = page.locator('.rb-slider');
       await slider.waitFor({ timeout: 10_000 });
@@ -476,7 +480,7 @@ export const liveFlows: readonly Flow[] = [
     shot: 'live-error-ratelimited',
     viewports: ['desktop'],
     async run({ page, baseUrl }) {
-      const api = await mockApi(page, { snapshot: (i) => (i === 4 ? { error: 'archive_rate_limited' } : {}) });
+      const api = await mockApi(page, { snapshot: (_, nth) => (nth === 4 ? { error: 'archive_rate_limited' } : {}) });
       await focusCancelOnSight(page);
       await openLive(page, baseUrl, 'creativecommons.org', 'error');
       // Cancel had focus when the error card replaced the status line: focus moves to the card's heading.
@@ -510,7 +514,8 @@ export const liveFlows: readonly Flow[] = [
       const failed = await page.locator('.rb-th .rb-none', { hasText: 'not fetched' }).count();
       if (failed !== 2) throw new Error(`${failed} "not fetched" thumbnails, expected 2`);
       const text = await statusLine(page);
-      if (!text.endsWith('2 captures not fetched')) throw new Error(`meta line "${text}"`);
+      // The finished run's meta line ends with the counts, then "Add to Recently explored".
+      if (!text.endsWith('2 captures not fetched Add to Recently explored')) throw new Error(`meta line "${text}"`);
       return { notes: [text, await expectText(page, '#rb-hint', /2 could not be fetched\./)] };
     },
   },

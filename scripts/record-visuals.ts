@@ -1,14 +1,15 @@
-// Records a picture (top of page, 1280×800) of every built-in sample capture from Arquivo.pt
-// replay, as committed WebP files in public/samples/<id>/, and writes `shot`/`visual`/`featured`
+// Records a picture (top of page, 1280×800) of every built-in sample capture from the archive its text was recorded
+// from (the fixture's `source.archive`: Arquivo.pt, or the Internet Archive for a page Arquivo.pt barely holds),
+// as committed WebP files in public/samples/<id>/, and writes `shot`/`visual`/`featured`
 // into the fixtures. Like record-samples.ts it is the only code here that touches the network
 // and is never imported by tests.
 //
 // Usage: pnpm record:visuals [--only <id>[,<id>…]] [--max <captures to load this run>] [--offline] [--dry-run]
 // Chrome: CHROME_PATH if set, else the standard install (/Applications/Google Chrome.app on macOS, /usr/bin/google-chrome elsewhere).
 // It pictures recorded samples only: run `pnpm record:samples` for a new entry first (an entry without its fixture is skipped).
-// The capture's `mp_` replay is loaded in an iframe of a local page: framed, pywb's top-frame
-// redirect into Arquivo.pt's own viewer does not fire. Only arquivo.pt hosts load (pages still
-// call live fonts and tag managers). Politeness: one browser, one capture at a time, >= 5 s
+// The capture's frame replay (`mp_` on Arquivo.pt, `if_` on the Internet Archive) is loaded in an iframe of a local
+// page: framed, pywb's top-frame redirect into Arquivo.pt's own viewer does not fire, and the Wayback Machine shows no
+// toolbar. Only that archive's hosts load (pages still call live fonts and tag managers). Politeness: one browser, one capture at a time, >= 5 s
 // apart, identified User-Agent, and every screenshot cached in .cache/record/shots/ so re-runs
 // never reload a capture. --offline re-encodes from that cache with every request blocked.
 import { createHash } from 'node:crypto';
@@ -16,10 +17,11 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { type Browser, type Page, type Request, chromium } from 'playwright-core';
+import { ARCHIVES } from '../src/archive/archives.ts';
 import { APP_VERSION, USER_AGENT } from '../src/archive/politeFetch.ts';
 import { fixtureToSnapshots, parseSampleFixture } from '../src/core/fixture.ts';
 import { buildTimeline } from '../src/core/timeline.ts';
-import type { SampleFixture, ShotRef } from '../src/core/types.ts';
+import type { ArchiveId, SampleFixture, ShotRef } from '../src/core/types.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
 import { writeFixture } from './lib/fixtureFile.ts';
 import { encodeWithin, greyPixels } from './lib/webp.ts';
@@ -41,7 +43,10 @@ const QUIET_MS = 2000;
 const CAP_MS = 15_000;
 const FULL = { width: 960, height: 600, quality: 0.62, max: 64_000 };
 const THUMB = { width: 320, height: 200, quality: 0.5, max: 8_000 };
-const ARCHIVE_HOST = /(^|\.)arquivo\.pt$/;
+/** The hosts a replay may load from, per archive; everything else is blocked. */
+const ARCHIVE_HOSTS: Record<ArchiveId, RegExp> = { 'arquivo-pt': /(^|\.)arquivo\.pt$/, 'internet-archive': /(^|\.)archive\.org$/ };
+/** The archive of the sample being pictured (the route below reads it). */
+let archive: ArchiveId = 'arquivo-pt';
 const root = resolve(import.meta.dirname, '..');
 const { values: args } = parseArgs({
   args: process.argv.slice(2).filter((a) => a !== '--'),
@@ -71,7 +76,7 @@ async function capture(page: Page, url: string, redact?: VisualConfig['visualRed
   let last = Date.now();
   let doc = 0;
   const miss = (r: Request) => {
-    if (!ARCHIVE_HOST.test(new URL(r.url()).hostname)) return;
+    if (!ARCHIVE_HOSTS[archive].test(new URL(r.url()).hostname)) return;
     if (r.resourceType() === 'stylesheet') missing.css++;
     if (r.resourceType() === 'image') missing.img++;
   };
@@ -150,7 +155,7 @@ try {
   await context?.route('**/*', (route) => {
     const req = route.request();
     const host = new URL(req.url()).hostname;
-    const allowed = !args.offline && ARCHIVE_HOST.test(host) && req.resourceType() !== 'media' && !req.url().includes('/static/js/ruffle/');
+    const allowed = !args.offline && ARCHIVE_HOSTS[archive].test(host) && req.resourceType() !== 'media' && !req.url().includes('/static/js/ruffle/');
     tally(`${allowed ? 'loaded' : 'blocked'} ${host} ${req.resourceType()}`);
     return allowed ? route.continue() : route.abort('blockedbyclient');
   });
@@ -158,6 +163,7 @@ try {
   for (const cfg of configs) {
     const file = join(root, 'src/samples', `${cfg.id}.json`);
     const fixture: SampleFixture = parseSampleFixture(JSON.parse(readFileSync(file, 'utf8')));
+    archive = fixture.source.archive;
     const cacheDir = join(root, '.cache/record/shots', cfg.id);
     const outDir = join(root, 'public/samples', cfg.id);
     mkdirSync(cacheDir, { recursive: true });
@@ -166,7 +172,7 @@ try {
     const grey = new Map<string, number[]>();
     for (const snap of fixture.snapshots) {
       const [pngFile, metaFile] = ['png', 'json'].map((ext) => join(cacheDir, `${snap.ts}.${ext}`)) as [string, string];
-      const url = replayFrameUrl('arquivo-pt', snap.ts, fixture.url);
+      const url = replayFrameUrl(archive, snap.ts, fixture.url);
       if (!existsSync(metaFile)) {
         if (args.offline) throw new Error(`--offline: ${snap.ts} of ${cfg.id} is not in .cache/record/shots/`);
         if (args['dry-run'] || captured >= Number(args.max)) {
@@ -210,14 +216,14 @@ try {
     }
     const redacted = fixture.snapshots.reduce((n, s) => n + (s.shot?.redacted ?? 0), 0);
     fixture.visual = {
-      archive: 'arquivo-pt',
+      archive,
       recordedAt: captured || !fixture.visual ? new Date().toISOString().slice(0, 10) : fixture.visual.recordedAt,
       recorder: `pagelapse record-visuals ${APP_VERSION} (chrome ${browser!.version()})`,
       viewport: { w: 1280, h: 800 },
       full: { w: 960, h: 600 },
       thumb: { w: 320, h: 200 },
       format: 'webp',
-      attribution: 'Screenshots of archived captures as replayed by Arquivo.pt, top of page only; page designs belong to their authors.',
+      attribution: `Screenshots of archived captures as replayed by ${archive === 'arquivo-pt' ? 'Arquivo.pt' : ARCHIVES[archive].name}, top of page only; page designs belong to their authors.`,
       ...(redacted && cfg.visualRedact && { notes: [cfg.visualRedact.note] }),
     };
     if (cfg.featured) fixture.featured = cfg.featured;

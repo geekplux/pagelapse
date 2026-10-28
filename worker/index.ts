@@ -2,6 +2,7 @@ import { memoryKv } from './cache.ts';
 import type { Bindings, Env, Io } from './env.ts';
 import { apiError } from './http.ts';
 import { captures } from './routes/captures.ts';
+import { gallery, share } from './routes/gallery.ts';
 import { health } from './routes/health.ts';
 import { snapshot } from './routes/snapshot.ts';
 import { summaries } from './routes/summaries.ts';
@@ -9,6 +10,7 @@ import { summaries } from './routes/summaries.ts';
 type Route = (req: Request, url: URL, env: Env, io: Io) => Promise<Response>;
 const ROUTES: Record<string, Route> = {
   'GET /api/health': health, 'GET /api/captures': captures, 'GET /api/snapshot': snapshot, 'POST /api/summaries': summaries,
+  'GET /api/gallery': gallery, 'POST /api/gallery': share,
 };
 // Workers' fetch must be called unbound from globalThis, so wrap it.
 const defaultIo: Io = { fetch: (input, init) => fetch(input, init) };

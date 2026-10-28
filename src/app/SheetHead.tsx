@@ -21,6 +21,8 @@ interface Props {
   statusShown?: boolean;
   /** The meta line, focusable from script (a live run moves focus here when it ends and takes Cancel with it). */
   metaRef?: Ref<HTMLParagraphElement> | undefined;
+  /** At the end of the meta line: a finished live run's "Add to Recently explored". */
+  action?: ReactNode;
 }
 
 const count = (n: number, one: string, many = `${one}s`) => (
@@ -41,7 +43,7 @@ export function breakAfterDots(title: string): ReactNode[] {
 }
 
 /** The title block: the title, then one meta line (captures, span, changes, trivial edits hidden, the Sample tag). */
-export function SheetHead({ id, title, captures, changes, trivial, failed = 0, sample = false, status, statusShown = false, metaRef }: Props) {
+export function SheetHead({ id, title, captures, changes, trivial, failed = 0, sample = false, status, statusShown = false, metaRef, action }: Props) {
   const meta = (
     // Always there, so a live run's line filling in does not move the stage.
     <p className="sheet-meta" aria-hidden={statusShown || undefined} tabIndex={metaRef ? -1 : undefined} ref={metaRef}>
@@ -55,6 +57,7 @@ export function SheetHead({ id, title, captures, changes, trivial, failed = 0, s
         </>
       )}
       {sample && <span className="tag">Sample</span>}
+      {action}
     </p>
   );
   return (

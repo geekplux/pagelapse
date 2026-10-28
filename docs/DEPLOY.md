@@ -4,9 +4,10 @@ Pagelapse deploys as **one Cloudflare Worker with Workers Static Assets**, live 
 
 | Binding | Kind | What it does |
 |---|---|---|
-| `CACHE` | KV namespace | CDX listings (24 h), extracted captures and summaries (kept), the archive cooldown flag, the daily AI counter |
+| `CACHE` | KV namespace | CDX listings (refreshed after 24 h, kept), extracted captures and summaries (kept), the archive cooldown flag, the daily AI counter, the Recently explored entries and block list |
 | `UPSTREAM_LIMIT` | Rate limit | 20 uncached archive fetches per minute per visitor |
 | `AI_LIMIT` | Rate limit | 10 summary batches per minute per visitor |
+| `GALLERY_LIMIT` | Rate limit | 3 pages shared to Recently explored per minute per visitor |
 | `AI` | Workers AI | one-line change summaries (production only; without it the app writes rule-based "auto summaries") |
 
 ## How the config is laid out
@@ -99,6 +100,29 @@ Set `SITE=https://pagelapse.geekplux.com` first.
 ## Live-demo links
 
 The README, the [examples gallery](../examples/README.md) deep links, the page's canonical and Open Graph tags (`index.html`), `public/robots.txt` and `public/sitemap.xml` point at https://pagelapse.geekplux.com. If you deploy your own copy elsewhere, replace that origin in those files and in the `examples-deeplinks` regexes of `scripts/smoke-flows.ts`, then run `pnpm build && pnpm smoke --flows examples-deeplinks` (the flow opens each link's path on the local preview).
+
+## Pre-warm the cache
+
+A page whose captures are in KV opens without the Internet Archive, so it never meets the archive's rate limit. `pnpm prewarm` looks up the pages in `scripts/prewarm-urls.txt` (or `--urls <file>`) from your machine, politely (one request at a time, 3 s apart, cached in `.cache/prewarm/`), computes exactly what the Worker would store (`worker/keys.ts`), and writes `.cache/prewarm/kv-bulk.json`. Then upload it to production KV:
+
+```sh
+pnpm prewarm
+pnpm exec wrangler kv bulk put --remote --binding CACHE .cache/prewarm/kv-bulk.json
+```
+
+Capture lists are refreshed by the Worker after 24 h, and kept if the archive refuses, so a warmed page stays fast. A 429, a refused connection or a timeout (the archive slows or blocks an IP that asks too much) stops the run and writes what is done; run it again later and it resumes from its cache.
+
+## Recently explored
+
+Visitors can list a page they have just looked up in "Recently explored" on the home page (`POST /api/gallery`). The Worker accepts only plain addresses (no query string) whose capture list and at least half of their sampled captures are already in KV, refuses a short list of finance and adult terms in the host, path and title, and limits sharing to 3 pages a minute per visitor. The home page lists the newest 24.
+
+To remove a page or a whole site, add it to the block list, a JSON array of hosts (`example.org`, matched with or without `www.`) or full addresses, under the KV key `gallery:block`:
+
+```sh
+pnpm exec wrangler kv key put --remote --binding CACHE gallery:block '["example.org","https://other.example/page"]'
+```
+
+Blocked entries disappear from the listing within 5 minutes (its browser cache) and cannot be shared again. Their captures stay cached. To delete an entry outright, delete its `gallery:v1:*` key and its `gallery:url:*` pointer (`wrangler kv key list --remote --binding CACHE --prefix gallery:` lists them).
 
 ## Rollback
 

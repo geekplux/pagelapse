@@ -16,24 +16,30 @@ const recorded: Responder = (url) =>
 /** The real handler over a fake KV, a fake rate limiter and a fake fetch that records every upstream call. */
 function setup() {
   const store = new Map<string, string>();
-  const puts: { key: string; value: string; ttl?: number }[] = [];
+  const puts: { key: string; value: string; ttl?: number; metadata?: unknown }[] = [];
+  const meta = new Map<string, unknown>();
   const calls: { url: string; ua: string | null }[] = [];
   const waits: number[] = [];
   const s = { store, puts, calls, waits, respond: recorded, allow: true };
   const kv = {
     get: async (key: string, type?: string) => (store.has(key) ? (type === 'json' ? JSON.parse(store.get(key)!) : store.get(key)) : null),
-    put: async (key: string, value: string, o?: { expirationTtl?: number }) => void (store.set(key, value), puts.push({ key, value, ttl: o?.expirationTtl })),
+    put: async (key: string, value: string, o?: { expirationTtl?: number; metadata?: unknown }) =>
+      void (store.set(key, value), meta.set(key, o?.metadata), puts.push({ key, value, ttl: o?.expirationTtl, metadata: o?.metadata })),
+    list: async ({ prefix = '', limit = 1000 }: { prefix?: string; limit?: number }) => ({
+      keys: [...store.keys()].filter((k) => k.startsWith(prefix)).sort().slice(0, limit).map((name) => ({ name, metadata: meta.get(name) })),
+    }),
   };
   const env: Env = { CACHE: kv as unknown as KVNamespace, UPSTREAM_LIMIT: { limit: async () => ({ success: s.allow }) } as RateLimit };
   const io = {
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => (calls.push({ url: String(input), ua: new Headers(init?.headers).get('user-agent') }), s.respond(String(input))),
     sleep: async (ms: number) => void waits.push(ms),
   };
-  const get = async (path: string) => {
-    const res = await handle(new Request(`http://127.0.0.1${path}`, { headers: { 'cf-connecting-ip': '203.0.113.7' } }), env, io);
+  const get = async (path: string, init?: RequestInit) => {
+    const res = await handle(new Request(`http://127.0.0.1${path}`, { ...init, headers: { 'cf-connecting-ip': '203.0.113.7' } }), env, io);
     return { res, body: (await res.json()) as Record<string, any> };
   };
-  return Object.assign(s, { get });
+  const share = (url: string) => get('/api/gallery', { method: 'POST', body: JSON.stringify({ url }) });
+  return Object.assign(s, { get, share, env });
 }
 
 describe('worker API', () => {
@@ -51,7 +57,7 @@ describe('worker API', () => {
     expect(t.calls).toEqual([]);
   });
 
-  it('caches CDX for 24 h and captures forever, never raw HTML; a repeated run makes 0 upstream calls', async () => {
+  it('keeps CDX (fresh for 24 h) and captures forever, never raw HTML; a repeated run makes 0 upstream calls', async () => {
     const t = setup();
     const run = async () => {
       const { res, body } = await t.get('/api/captures?url=example.org/?utm_source=x&max=6');
@@ -68,13 +74,44 @@ describe('worker API', () => {
     expect(t.calls).toHaveLength(7);
     expect(t.calls.every((c) => c.ua === USER_AGENT)).toBe(true);
     expect(t.calls[1]!.url).toMatch(/^https:\/\/web\.archive\.org\/web\/\d{14}id_\/https:\/\/example\.org\/$/);
-    expect(t.puts[0]).toMatchObject({ key: expect.stringMatching(/^cdx:v1:[0-9a-f]{64}$/), ttl: 86_400 });
+    expect(t.puts[0]).toMatchObject({ key: expect.stringMatching(/^cdx:v2:[0-9a-f]{64}$/), ttl: undefined });
+    expect(JSON.parse(t.puts[0]!.value)).toMatchObject({ at: expect.any(Number), value: expect.any(Array) });
     for (const p of t.puts.slice(1)) {
       expect(p).toMatchObject({ key: expect.stringMatching(/^snap:v1:e\d+:[0-9a-f]{64}:\d{14}$/), ttl: undefined });
       expect(p.value).not.toMatch(/<(?:html|head|body|div|p|script|nav)\b/i);
     }
     await run();
     expect(t.calls).toHaveLength(7);
+  });
+
+  it('refreshes a CDX listing after 24 h, and serves the kept one when the archive refuses or fails', async () => {
+    vi.useFakeTimers({ now: 1_000_000, toFake: ['Date'] });
+    const t = setup();
+    expect((await t.get('/api/captures?url=example.org')).body.totalCaptures).toBe(15);
+    vi.setSystemTime(1_000_000 + 25 * 3600_000);
+    for (const status of [502, 504, 429]) {
+      t.respond = () => new Response(null, { status });
+      const before = t.calls.length;
+      const { res, body } = await t.get('/api/captures?url=example.org');
+      expect([res.status, body.totalCaptures, t.calls.length > before]).toEqual([200, 15, true]);
+    }
+    // The 429 started the cooldown: the kept listing is served without another upstream call.
+    const before = t.calls.length;
+    expect((await t.get('/api/captures?url=example.org')).res.status).toBe(200);
+    expect(t.calls).toHaveLength(before);
+    t.store.delete('ia:cooldown');
+    t.respond = recorded;
+    expect((await t.get('/api/captures?url=example.org')).res.status).toBe(200);
+    expect(JSON.parse(t.puts.at(-1)!.value).at).toBe(1_000_000 + 25 * 3600_000);
+  });
+
+  it('an exclusion wins over a kept CDX listing', async () => {
+    vi.useFakeTimers({ now: 1_000_000, toFake: ['Date'] });
+    const t = setup();
+    await t.get('/api/captures?url=example.org');
+    vi.setSystemTime(1_000_000 + 25 * 3600_000);
+    t.respond = () => new Response(null, { status: 403 });
+    expect((await t.get('/api/captures?url=example.org')).body.error).toBe('excluded');
   });
 
   it('retries a 503 after its Retry-After, as a floor over the backoff', async () => {
@@ -185,6 +222,57 @@ describe('worker API', () => {
     expect(await (await get('/api/health')).json()).toMatchObject({ ok: true, ai: 'unavailable' });
     for (let i = 0; i < 2; i++) expect((await get('/api/snapshot?url=example.org&ts=20200101000000')).status).toBe(200);
     expect(calls).toHaveLength(1);
+  });
+});
+
+describe('gallery', () => {
+  /** Looks `url` up as the app does: its captures, then every sampled capture. */
+  const lookUp = async (t: ReturnType<typeof setup>, url: string) => {
+    const { body } = await t.get(`/api/captures?url=${encodeURIComponent(url)}&max=16`);
+    for (const c of body.captures as { ts: string }[]) await t.get(`/api/snapshot?url=${encodeURIComponent(body.url)}&ts=${c.ts}`);
+  };
+
+  it('lists a looked-up page once, newest first, with its title and span, and never touches the archive', async () => {
+    const t = setup();
+    expect((await t.get('/api/gallery')).body).toEqual({ entries: [] });
+    await lookUp(t, 'example.org');
+    await lookUp(t, 'example.org/about');
+    const calls = t.calls.length;
+    expect((await t.share('example.org')).body).toEqual({ shared: true });
+    expect((await t.share('https://example.org/about')).body).toEqual({ shared: true });
+    expect((await t.share('example.org')).body).toEqual({ shared: true });
+    const { res, body } = await t.get('/api/gallery');
+    expect(res.headers.get('cache-control')).toBe('public, max-age=300');
+    expect(body.entries.map((e: { url: string }) => e.url)).toEqual(['https://example.org/about', 'https://example.org/']);
+    expect(body.entries[0]).toMatchObject({ title: expect.stringMatching(/\S/), captures: 15, firstTs: '20080615120000', lastTs: '20250615120000', added: expect.any(Number) });
+    expect(t.calls).toHaveLength(calls);
+  });
+
+  it('refuses pages not looked up, addresses with a query (a fragment is dropped anyway), denied topics and blocked hosts', async () => {
+    const t = setup();
+    expect((await t.share('example.org')).body.message).toMatch(/^Look this page up first/);
+    expect((await t.share('example.org/?id=7')).body.message).toMatch(/no \? or #/);
+    expect((await t.share('bitcoin.example.org')).res.status).toBe(400);
+    await lookUp(t, 'example.org');
+    await t.share('example.org');
+    t.store.set('gallery:block', JSON.stringify(['example.org']));
+    expect((await t.get('/api/gallery')).body.entries).toEqual([]);
+    expect((await t.share('example.org/about')).body.message).toMatch(/cannot be listed/);
+    expect((await t.share('not a url')).body.error).toBe('invalid_url');
+  });
+
+  it('is limited per visitor', async () => {
+    const t = setup();
+    t.env.GALLERY_LIMIT = { limit: async () => ({ success: false }) } as RateLimit;
+    expect((await t.share('example.org')).body.error).toBe('rate_limited');
+  });
+
+  it('works over memoryKv (previews), whose list keeps name order and metadata', async () => {
+    const kv = memoryKv();
+    await kv.put('gallery:v1:2', '', { metadata: { n: 2 } });
+    await kv.put('gallery:v1:1', '', { metadata: { n: 1 } });
+    await kv.put('other', '');
+    expect((await kv.list({ prefix: 'gallery:v1:' })).keys).toEqual([{ name: 'gallery:v1:1', metadata: { n: 1 } }, { name: 'gallery:v1:2', metadata: { n: 2 } }]);
   });
 });
 

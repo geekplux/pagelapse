@@ -29,21 +29,26 @@ export function compareCaptures(base: SnapshotPage, s: SnapshotPage, opts: Timel
  * captures still surfaces. A meaningful change adds an entry and becomes the new baseline; a
  * trivial one is only listed in `trivialCaptures`. Captures must arrive in time order.
  */
-export function appendSnapshot(t: Timeline, s: SnapshotPage, opts: TimelineOptions = {}): Timeline {
+export function appendSnapshot(t: Timeline, s: SnapshotPage, opts: TimelineOptions = {}, memo?: Map<string, TimelineEntry>): Timeline {
   const last = t.snapshots.at(-1);
   if (last && s.ts <= last.ts) throw new RangeError(`appendSnapshot: capture ${s.ts} is not after ${last.ts}`);
   const snapshots = [...t.snapshots, s];
   const base = t.snapshots[t.baseline];
   if (!base) return { ...t, snapshots };
-  const entry = compareCaptures(base, s, opts);
+  const key = `${base.ts}-${s.ts}`;
+  const entry = memo?.get(key) ?? compareCaptures(base, s, opts);
+  memo?.set(key, entry);
   if (entry.significance.magnitude === 'trivial') return { ...t, snapshots, trivialCaptures: [...t.trivialCaptures, s.ts] };
   return { ...t, snapshots, entries: [...t.entries, entry], baseline: snapshots.length - 1 };
 }
 
-/** Builds the timeline of `snapshots` (sorted by time first); same result as appending them one by one. */
-export function buildTimeline(url: string, snapshots: readonly SnapshotPage[], opts: TimelineOptions = {}): Timeline {
+/**
+ * Builds the timeline of `snapshots` (sorted by time first); same result as appending them one by one. `memo` keeps
+ * comparisons by pair across builds (same `opts`), so rebuilding as captures arrive in any order diffs each pair once.
+ */
+export function buildTimeline(url: string, snapshots: readonly SnapshotPage[], opts: TimelineOptions = {}, memo?: Map<string, TimelineEntry>): Timeline {
   const sorted = [...snapshots].sort((x, y) => (x.ts < y.ts ? -1 : x.ts > y.ts ? 1 : 0));
-  return sorted.reduce((t, s) => appendSnapshot(t, s, opts), emptyTimeline(url));
+  return sorted.reduce((t, s) => appendSnapshot(t, s, opts, memo), emptyTimeline(url));
 }
 
 /**

@@ -2,21 +2,25 @@ import { buildCdxUrl, dedupeAdjacentDigests, parseCdx } from '../../src/core/cdx
 import { sampleCaptures } from '../../src/core/sampling.ts';
 import type { Capture } from '../../src/core/types.ts';
 import { validateTargetUrl } from '../../src/core/url.ts';
-import { CDX_TTL_S, cached, cdxKey } from '../cache.ts';
+import { CDX_FRESH_S, cdxKey, kept } from '../cache.ts';
 import type { Env, Io } from '../env.ts';
 import { apiError, json } from '../http.ts';
+import { DEFAULT_MAX } from '../keys.ts';
 import { fetchUpstream } from '../limits.ts';
 
-/** Default and hard maximum number of sampled captures. */
-export const DEFAULT_MAX = 16;
+export { DEFAULT_MAX };
+/** Hard maximum number of sampled captures (the default is DEFAULT_MAX, worker/keys.ts). */
 export const HARD_MAX = 24;
 
-/** `GET /api/captures?url=&max=`: the URL's deduplicated CDX listing (cached 24 h), sampled to `max`. */
+/**
+ * `GET /api/captures?url=&max=`: the URL's deduplicated CDX listing, sampled to `max`. Refreshed after 24 h and kept
+ * for good, so a page looked up once still opens when the archive refuses (the sampled captures are cached forever too).
+ */
 export async function captures(req: Request, url: URL, env: Env, io: Io): Promise<Response> {
   const check = validateTargetUrl(url.searchParams.get('url') ?? '');
   if (!check.ok) return apiError('invalid_url', check.message);
   const max = Math.min(HARD_MAX, Math.max(2, Math.floor(Number(url.searchParams.get('max')) || DEFAULT_MAX)));
-  const all = await cached<Capture[]>(env.CACHE, await cdxKey(check.url), CDX_TTL_S, async () => {
+  const all = await kept<Capture[]>(env.CACHE, await cdxKey(check.url), CDX_FRESH_S, async () => {
     const res = await fetchUpstream(req, env, io, buildCdxUrl('internet-archive', check.url));
     if (res instanceof Response) return res;
     try {

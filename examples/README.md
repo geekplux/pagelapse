@@ -1,6 +1,6 @@
 # Examples
 
-Three built-in samples to start with, and five pages to try live. The sample links open a change and a compare mode directly.
+Six built-in samples to start with, and five pages to try live. The sample links open a change and a compare mode directly.
 
 The links open the live demo at https://pagelapse.geekplux.com. To use a local copy instead, run `pnpm i && pnpm dev` ([quick start](../README.md#try-it-in-10-seconds)) and replace `https://pagelapse.geekplux.com` with `http://localhost:5173` in the address. The samples need no network and no key.
 
@@ -57,6 +57,36 @@ Open it:
 
 - [2022-02-17 → 2023-10-19 in Slider](https://pagelapse.geekplux.com/?sample=creative-commons&change=20220217002410-20231019221042&view=slider): the twentieth-anniversary page gives way to the 2023 design, what the sample opens on.
 - [2009-05-06 → 2009-09-03 in Single](https://pagelapse.geekplux.com/?sample=creative-commons&change=20090506024533-20090903130655&view=single): a smaller change inside the green design. Flip Before / After and watch the feature boxes and the news.
+
+### Wikipedia: Pluto (2009–2026)
+
+![The Wikipedia article "Pluto" as captured in April 2018: the lead now tells of the 2015 New Horizons flyby, beside the infobox](../public/samples/wikipedia-pluto/20180406222435-264d8eb6.thumb.webp)
+
+The encyclopedia article about Pluto, captured 12 times. Its lead goes from a probe that "is due to" visit in 2015 to the flyby and what New Horizons found. Two captures have no picture: one showed a fundraising notice, and the archive replays one without its styles.
+
+Open it:
+
+- [2015-04-08 → 2018-04-06 in Side by side](https://pagelapse.geekplux.com/?sample=wikipedia-pluto&change=20150408211802-20180406222435&view=side): before and after the flyby, what the sample opens on.
+
+### Wikipedia: World Wide Web (2008–2026)
+
+![The Wikipedia article "World Wide Web" as captured in January 2024, in Wikipedia's 2022 design](../public/samples/wikipedia-world-wide-web/20240124130859-5517eaea.thumb.webp)
+
+The article about the Web itself, captured 14 times over eighteen years: from the 2008 Monobook skin, through the "Internet" navigation box of 2013, to Wikipedia's 2022 design and a new section on the competition with Gopher.
+
+Open it:
+
+- [2022-09-11 → 2024-01-24 in Slider](https://pagelapse.geekplux.com/?sample=wikipedia-world-wide-web&change=20220911180807-20240124130859&view=slider): the 2022 design arrives, what the sample opens on.
+
+### weather.gov home page (2009–2026)
+
+![The weather.gov home page as captured in November 2013: the National Weather Service banner over a national map of warnings](../public/samples/weather-gov/20131106175252-f91911d5.thumb.webp)
+
+The National Weather Service's home page, captured 14 times: the same idea, a national map of warnings under the day's headline, in two designs. Each capture leads with that day's weather, so the text diff reads like a weather diary.
+
+Open it:
+
+- [2011-01-14 → 2013-11-06 in Slider](https://pagelapse.geekplux.com/?sample=weather-gov&change=20110114192848-20131106175252&view=slider): the blue sidebar design gives way to the 2013 one, what the sample opens on.
 
 ## Try these live
 

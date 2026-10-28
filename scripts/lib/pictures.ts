@@ -8,10 +8,16 @@ import { recordedSamples } from './sampleConfig.ts';
 /** The sample the hero deals as its deck (src/samples/index.ts DECK_SAMPLE). */
 const DECK_SAMPLE = 'wikipedia-internet-archive';
 
-export const PICTURE_BUDGET = { full: 64_000, thumb: 8_000, total: 2_200_000, firstView: 160_000 };
+/**
+ * `total` was 2.2 MB for three samples; 4.6 MB since Pluto, World Wide Web and weather.gov joined (six samples use
+ * about 4.0 MB). Only the first view is loaded up front, and its budget (`firstView`) is unchanged.
+ */
+export const PICTURE_BUDGET = { full: 64_000, thumb: 8_000, total: 4_600_000, firstView: 160_000 };
 /**
  * Least share of captures with a picture. 90% until the 2026-10-25 sample set: Creative Commons has four captures
  * Arquivo.pt cannot replay and one picture dropped for its fundraising price, so 34 of the 39 captures are pictured.
+ * With Pluto (two pictures dropped: a fundraising notice, an unstyled replay) and World Wide Web (one fundraising
+ * notice dropped), 71 of the 79 captures are pictured.
  */
 export const MIN_PICTURED = 0.85;
 

@@ -49,5 +49,76 @@
       "20111209164214": "Hidden: a fundraising appeal"
     },
     "featured": "20220217002410-20231019221042"
+  },
+  {
+    "id": "wikipedia-pluto",
+    "label": "Wikipedia: Pluto",
+    "url": "https://en.wikipedia.org/wiki/Pluto",
+    "description": "The encyclopedia article about Pluto, opening section and history, as it was rewritten around the 2015 New Horizons flyby, the first close look at the dwarf planet.",
+    "maxChars": 9000,
+    "dropBlocks": "^(?:Coordinates:|\\d+°)|[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros?)\\b|\\bbudget\\b|\\brevenue\\b|\\bdonations? of (?:US)?[$€£¥]|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b",
+    "license": "CC-BY-SA-4.0",
+    "attribution": "Trimmed text excerpt, not the full article (blocks stating monetary figures are omitted), from the Wikipedia article “Pluto” by Wikipedia contributors (see the article history); revisions before June 2023 were published under CC BY-SA 3.0.",
+    "visualRedact": {
+      "selector": ".infobox tr, #mw-content-text p, #mw-content-text li, [id^=\"n-sitesupport\"], [id^=\"pt-sitesupport\"], #centralNotice, #siteNotice, #mw-panel li, #p-navigation li",
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros?)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonate\\b|\\b(?:Wikipedia|Wikimedia) (?:store|shop)\\b",
+      "note": "Infobox rows and paragraphs stating monetary figures, Donate links and the sidebar store link were hidden before the screenshot."
+    },
+    "visualDrop": {
+      "20090521211858": "Hidden: a fundraising appeal",
+      "20230222073214": "Not shown: replayed without its stylesheet"
+    },
+    "featured": "20150408211802-20180406222435"
+  },
+  {
+    "id": "wikipedia-world-wide-web",
+    "label": "Wikipedia: World Wide Web",
+    "url": "https://en.wikipedia.org/wiki/World_Wide_Web",
+    "description": "The encyclopedia article about the World Wide Web, opening section and history, as it was reworded and restructured over more than a decade of edits.",
+    "maxChars": 9000,
+    "dropBlocks": "^(?:Coordinates:|\\d+°)|[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros?)\\b|\\bbudget\\b|\\brevenue\\b|\\bdonations? of (?:US)?[$€£¥]|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b",
+    "license": "CC-BY-SA-4.0",
+    "attribution": "Trimmed text excerpt, not the full article (blocks stating monetary figures are omitted), from the Wikipedia article “World Wide Web” by Wikipedia contributors (see the article history); revisions before June 2023 were published under CC BY-SA 3.0.",
+    "visualRedact": {
+      "selector": ".infobox tr, #mw-content-text p, #mw-content-text li, [id^=\"n-sitesupport\"], [id^=\"pt-sitesupport\"], #centralNotice, #siteNotice, #mw-panel li, #p-navigation li",
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros?)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonate\\b|\\b(?:Wikipedia|Wikimedia) (?:store|shop)\\b",
+      "note": "Infobox rows and paragraphs stating monetary figures, Donate links and the sidebar store link were hidden before the screenshot."
+    },
+    "visualDrop": {
+      "20081025204245": "Hidden: a fundraising appeal"
+    },
+    "featured": "20220911180807-20240124130859"
+  },
+  {
+    "id": "weather-gov",
+    "label": "weather.gov home page",
+    "url": "https://www.weather.gov/",
+    "description": "The home page of the US National Weather Service: its national forecast map, warnings and links, over more than a decade of captures and redesigns.",
+    "maxChars": 6000,
+    "dropBlocks": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\d[\\d,.]*\\s?(?:million|billion)\\s+(?:dollars|euros)|\\bfiscal year\\b|\\bFY ?\\d{2,4}\\b|\\bcontracts? (?:award|valued|worth)\\b",
+    "license": "LicenseRef-US-Government-Work",
+    "attribution": "Trimmed text excerpt from www.weather.gov by the National Weather Service (blocks stating monetary figures are omitted). National Weather Service content is a US government work and generally not subject to copyright in the United States; see the site disclaimer (www.weather.gov/disclaimer). Images and text from third parties on weather.gov may not be in the public domain, and the NOAA and National Weather Service emblems are protected.",
+    "visualRedact": {
+      "selector": "p, li, a, h2, h3, td",
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bfiscal year\\b|\\bFY ?\\d{2,4}\\b",
+      "note": "Paragraphs, list items, table cells and links stating monetary figures or budgets were hidden before the screenshot."
+    },
+    "featured": "20110114192848-20131106175252"
+  },
+  {
+    "id": "geekplux",
+    "label": "GeekPlux home page",
+    "url": "https://geekplux.com/",
+    "description": "The personal site of Pagelapse's author: how its home page, writing and projects changed over the years.",
+    "maxChars": 6000,
+    "dropBlocks": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bsponsor(?:s|ed|ship)?\\b|\\bbuy me a coffee\\b|\\bpatreon\\b|\\bcrypto\\w*\\b|\\bbitcoin\\b|\\btrading\\b|\\binvest\\w*|美元|人民币|时薪|年薪|月薪|工资|赚钱|理财|股票|基金|比特币",
+    "license": "LicenseRef-Used-With-Permission",
+    "attribution": "Trimmed text excerpt from geekplux.com by GeekPlux, the author of Pagelapse, included with the author's permission (blocks stating monetary figures, about money, investing, donations or sponsors are omitted).",
+    "visualRedact": {
+      "selector": "p, li, a, button, h2, h3",
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bsponsor(?:s|ed|ship)?\\b|\\bbuy me a coffee\\b|\\bpatreon\\b|\\bcrypto\\w*\\b|\\bbitcoin\\b|\\btrading\\b|\\binvest\\w*|美元|人民币|时薪|年薪|月薪|工资|赚钱|理财|股票|基金|比特币",
+      "note": "Paragraphs, list items and links stating monetary figures, or about money, investing, donations or sponsors, were hidden before the screenshot."
+    },
+    "featured": "20260911002301-20261023083411"
   }
 ]

@@ -26,10 +26,16 @@ export function formatUrlState({ sample, url, change, at, view }: UrlState): str
   return q ? `?${q}` : '';
 }
 
-/** Index of the entry whose `<from>-<to>` pair is `change`; the latest entry when missing or unknown (-1 if none). */
+/** Index of the entry whose `<from>-<to>` pair is `change`, or the one that now ends at its After; else the latest (-1 if none). */
 export function changeIndex(entries: readonly { from: string; to: string }[], change?: string): number {
-  const i = change ? entries.findIndex((e) => `${e.from}-${e.to}` === change) : -1;
-  return i >= 0 ? i : entries.length - 1;
+  if (!change) return entries.length - 1;
+  const i = entries.findIndex((e) => `${e.from}-${e.to}` === change);
+  if (i >= 0) return i;
+  // A change since split in two (a live run fetched a capture between its ends): the part ending at its After, so the
+  // selection stays on the same stretch of time.
+  const to = change.split('-')[1] ?? '';
+  const j = entries.findIndex((e) => e.from < to && e.to >= to);
+  return j >= 0 ? j : entries.length - 1;
 }
 
 /** The hero shows when the address names no sample and no page; anything else opens the workspace. */

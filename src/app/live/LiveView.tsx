@@ -17,9 +17,11 @@ import { type UrlState, changeIndex } from '../urlState.ts';
 import { StepNav } from '../visual/Controls.tsx';
 import { VisualPane } from '../visual/VisualPane.tsx';
 import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pairOf, parseMode, showingText, sideOf, viewQuery } from '../visual/visualState.ts';
-import { announced, progressText } from './liveState.ts';
+import { announced, progressText, settledEntries } from './liveState.ts';
 import { useLiveTimeline } from './useLiveTimeline.ts';
 import { useSummaries } from './useSummaries.ts';
+import { shareable } from './api.ts';
+import { ShareToGallery } from './ShareToGallery.tsx';
 
 interface Props {
   url: string;
@@ -53,7 +55,9 @@ const IA = ARCHIVES['internet-archive'];
 export function LiveView({ url, initialChange, initialAt, initialMode, onChange, announce, focusStatus, onRetry, onSample }: Props) {
   const { state, cancel } = useLiveTimeline(url);
   const { status, captures, failed, error } = state;
-  const ai = useSummaries(url, state.timeline.entries, status);
+  // Only changes no capture still to come can split are summarised mid-run; the rest wait (no wasted AI calls).
+  const settled = useMemo(() => settledEntries(state), [state]);
+  const ai = useSummaries(url, settled, status);
   const timeline = useMemo(() => withAiSummaries(state.timeline, ai), [state.timeline, ai]);
   const { entries, trivialCaptures, snapshots } = timeline;
   const [pick, setPick] = useState(initialChange);
@@ -91,8 +95,12 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
   const page = (ts: string) => snapshots.find((s) => s.ts === ts)!;
   const pages = useMemo(() => new Map(snapshots.map((s) => [s.ts, s])), [snapshots]);
   const view = (ts: string) => liveView(url, ts, pages.get(ts));
-  // The ribbon's thumbnails: every capture that has joined the timeline or failed, as a text outline (no image requests).
-  const items = useMemo(() => captures.slice(0, state.next).map((c) => liveView(url, c.ts, pages.get(c.ts))), [captures, state.next, url, pages]);
+  // The ribbon's thumbnails: every capture that has arrived (fetched or failed), as a text outline (no image requests);
+  // the ones still to come keep their place as empty slots.
+  const items = useMemo(
+    () => captures.flatMap((c, i) => (state.results[i] === undefined ? [] : [liveView(url, c.ts, pages.get(c.ts))])),
+    [captures, state.results, url, pages],
+  );
   const trivialSet = useMemo(() => new Set(trivialCaptures), [trivialCaptures]);
   const side = entry && shownAt && sideOf(entry, shownAt) === 'before' ? 'before' : 'after';
   const changeSteps = all.map((e) => captureForChange(e, side));
@@ -191,7 +199,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
     <LoadingStatus
       running={running}
       shown={statusShown}
-      progress={[state.next, captures.length]}
+      progress={[state.arrived, captures.length]}
       stopped={status === 'cancelled' ? text : undefined}
       onCancel={cancel}
       onRetry={status === 'cancelled' ? onRetry : undefined}
@@ -213,6 +221,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
             status={error ? undefined : statusLine}
             statusShown={statusShown}
             metaRef={status === 'done' ? setTarget : undefined}
+            action={status === 'done' && !error && snapshots.length >= 2 && shareable(url) ? <ShareToGallery url={url} /> : undefined}
           />
           {error?.code === 'no_captures' ? (
             <EmptyState url={url} onSample={onSample} headingRef={setTarget} />
@@ -293,7 +302,6 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
               </span>
               <Ribbon
                 items={items}
-                pending={captures.length - items.length}
                 times={captureTimes}
                 timeline={strip.timeline}
                 selected={stripSelected}

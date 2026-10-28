@@ -4,7 +4,7 @@ The main extension points, with the files to touch and the checks that keep them
 
 ## Add a sample (text and pictures)
 
-A sample is a committed fixture (`src/samples/<id>.json`) plus its pictures (`public/samples/<id>/`). It must be openly licensed, have at least 8 distinct captures, tell a visible story (a redesign, a rewritten pitch), and stay away from finance topics.
+A sample is a committed fixture (`src/samples/<id>.json`) plus its pictures (`public/samples/<id>/`). It must be openly licensed (or included with its author's permission, like GeekPlux), have at least 8 distinct captures, tell a visible story (a redesign, a rewritten pitch), and stay away from finance topics.
 
 The options come from `src/samples/samples.config.json`, in its order; the first recorded entry is the default (Wikipedia: Internet Archive). The app offers only entries whose fixture file exists (`import.meta.glob` in `src/samples/index.ts`), so an entry can wait in the config until it is recorded: it is not a hero option or a menu item, and its `?sample=` link opens the default.
 
@@ -14,7 +14,7 @@ The options come from `src/samples/samples.config.json`, in its order; the first
    - `visualDrop`: captures whose picture must not ship (it misrepresents the page, for example unstyled, or it shows a price or a donation amount), marked as no picture with a reason;
    - `featured`: the change a sample other than the default opens on, `"<fromTs>-<toTs>"` (the default opens on its decade compare).
 2. Record the text: `pnpm record:samples --only <id> --dry-run`, then without `--dry-run`. `--only` takes a comma-separated list. It reads from the Internet Archive by default; `--archive arquivo-pt` uses Arquivo.pt, which is what the current samples were recorded from.
-3. Record the pictures: `pnpm record:visuals --only <id>`. It replays the fixture's captures from Arquivo.pt only, one at a time, and prints each picture's status plus a visual-delta table. Pick `featured` from that table (a meaningful change whose two pictures differ visibly, both pictured and ideally `ok`), set it in the config, and re-run with `--offline` to write it into the fixture without any network.
+3. Record the pictures: `pnpm record:visuals --only <id>`. It replays the fixture's captures from the archive its text was recorded from (`source.archive`: Arquivo.pt for most samples, the Internet Archive for a page Arquivo.pt barely holds), one at a time, and prints each picture's status plus a visual-delta table. Pick `featured` from that table (a meaningful change whose two pictures differ visibly, both pictured and ideally `ok`), set it in the config, and re-run with `--offline` to write it into the fixture without any network.
 4. Run `pnpm test` (`samples.test.ts` validates the fixture and its money filter; `scripts/lib/pictures.test.ts` the pictures, their sizes and orphans) and `pnpm build && pnpm size` (the image budget is in [CONTRIBUTING.md](../CONTRIBUTING.md#samples-pictures-and-the-image-budget)).
 
 Both recorders cache everything under `.cache/record/`, so a re-run never refetches a capture.
@@ -24,7 +24,7 @@ Both recorders cache everything under `.cache/record/`, so a re-run never refetc
 The recorders need network access to the archives and Chrome (`CHROME_PATH` if it is not in its standard place). Run the steps above on such a machine, then:
 
 - **Look at every picture.** Open the sample in `pnpm dev` and step through it: money figures and donation amounts must be hidden or the picture dropped with `visualDrop` (re-run `pnpm record:visuals --only <id> --offline` to apply it), and `partial` or `failed` pictures should still tell the story.
-- **The image budget.** All sample pictures together may take 2.2 MB, and the three current samples (Wikipedia, NASA, Creative Commons) use about 1.6 MB, so a fourth sample of the same size will not fit without retiring or trimming one. At least 85% of all captures must have a picture.
+- **The image budget.** All sample pictures together may take 4.6 MB, and the six current samples use about 4.0 MB (a Wikipedia article or a home page takes 0.3 to 0.9 MB), so a seventh sample needs a small one or a raised budget. Only the first view's pictures load up front, and their 160 KB budget does not change with more samples. At least 85% of all captures must have a picture.
 - **The credits.** Add the page to the README's Credits and to `public/samples/README.md`.
 - **Commit together:** `src/samples/<id>.json`, `public/samples/<id>/` and the config entry (with its `featured` pair and any `visualDrop`). The option appears in config order in the hero and the address menu.
 

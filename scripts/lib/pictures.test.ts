@@ -44,14 +44,16 @@ describe('committed sample pictures', () => {
     expect(checkPictures(root).firstView).toBe(want);
   });
 
-  it.each(['wikipedia-internet-archive', 'nasa', 'creative-commons'])('%s features a meaningful change with two pictures', (id) => {
+  it.each(['wikipedia-internet-archive', 'nasa', 'creative-commons', 'wikipedia-pluto', 'wikipedia-world-wide-web', 'weather-gov', 'geekplux'])('%s features a meaningful change with two pictures', (id) => {
     const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', `${id}.json`), 'utf8')));
     const pairs = buildTimeline(f.url, fixtureToSnapshots(f)).entries.map((e) => `${e.from}-${e.to}`);
     expect(pairs).toContain(f.featured);
     const shot = (ts?: string) => f.snapshots.find((s) => s.ts === ts)?.shot;
     // Both sides pictured (NASA's 2000 capture is a partial copy: its images are missing, its layout is not).
     for (const s of f.featured!.split('-').map(shot)) expect([s?.status !== 'failed', !!s?.file]).toEqual([true, true]);
-    expect(f.visual).toMatchObject({ archive: 'arquivo-pt', format: 'webp' });
+    // Pictured from the archive the text came from (Arquivo.pt; the Internet Archive for GeekPlux, which Arquivo.pt barely holds).
+    expect(f.visual).toMatchObject({ archive: f.source.archive, format: 'webp' });
+    expect(f.source.archive).toBe(id === 'geekplux' ? 'internet-archive' : 'arquivo-pt');
   });
 
   it('drops the pictures samples.config.json lists in visualDrop: no file, the reason on the capture', () => {

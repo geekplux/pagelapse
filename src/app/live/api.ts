@@ -59,3 +59,29 @@ export const fetchSummaries = (url: string, pairs: { from: string; to: string }[
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ url, pairs }),
   });
+
+/** One page in "Recently explored" (worker/routes/gallery.ts). */
+export interface GalleryEntry {
+  url: string;
+  title: string;
+  captures: number;
+  firstTs: string;
+  lastTs: string;
+  added: number;
+}
+
+/** `GET /api/gallery`: the latest shared pages, newest first. */
+export const fetchGallery = (signal: AbortSignal) => get<{ entries: GalleryEntry[] }>('/api/gallery', signal).then((r) => r.entries);
+
+/** `POST /api/gallery`: lists a page the visitor has just looked up in "Recently explored". */
+export const shareToGallery = (url: string, signal: AbortSignal) =>
+  get<{ shared: true }>('/api/gallery', signal, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ url }) });
+
+/** Only a plain address (no query) can be shared: a query can hold private tokens (the Worker refuses it too). */
+export const shareable = (url: string) => {
+  try {
+    return !new URL(url).search;
+  } catch {
+    return false;
+  }
+};

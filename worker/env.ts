@@ -7,6 +7,7 @@ export interface Env {
   UPSTREAM_LIMIT?: RateLimit;
   AI?: Ai;
   AI_LIMIT?: RateLimit;
+  GALLERY_LIMIT?: RateLimit;
 }
 
 /**

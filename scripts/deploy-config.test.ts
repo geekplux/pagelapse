@@ -50,7 +50,7 @@ describe('deploy config', () => {
 
   it('gives Workers Builds previews their own rate limiters, but no production KV and no AI', () => {
     const { previews } = wrangler;
-    expect(previews.ratelimits.map((r: { name: string }) => r.name)).toEqual(['UPSTREAM_LIMIT', 'AI_LIMIT']);
+    expect(previews.ratelimits.map((r: { name: string }) => r.name)).toEqual(['UPSTREAM_LIMIT', 'AI_LIMIT', 'GALLERY_LIMIT']);
     const prodIds = wrangler.ratelimits.map((r: { namespace_id: string }) => r.namespace_id);
     for (const r of previews.ratelimits) expect(prodIds).not.toContain(r.namespace_id);
     expect(previews.kv_namespaces).toBeUndefined();

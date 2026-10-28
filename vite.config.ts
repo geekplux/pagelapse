@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import react from '@vitejs/plugin-react';
@@ -20,9 +20,26 @@ function chunkModules(): Plugin {
   };
 }
 
+/** What the gallery card of a recorded sample shows, read from its fixture at build time. */
+interface Card {
+  captures: number;
+  firstTs: string;
+  lastTs: string;
+  /** The picture file (no extension) of its latest pictured capture. */
+  shot?: string;
+}
+
+function card(fixture: string): Card | undefined {
+  if (!existsSync(fixture)) return undefined;
+  const { snapshots } = JSON.parse(readFileSync(fixture, 'utf8')) as { snapshots: { ts: string; shot?: { file?: string; status: string } }[] };
+  const shot = snapshots.findLast((s) => s.shot?.file && s.shot.status !== 'failed')?.shot?.file;
+  return { captures: snapshots.length, firstTs: snapshots[0]!.ts, lastTs: snapshots.at(-1)!.ts, ...(shot && { shot }) };
+}
+
 /**
- * `virtual:sample-catalog`: the id, label and url of every samples.config.json entry, picked at build time, so the
- * first load carries only what the hero and the address menu show (the recorders' filters and attributions stay out).
+ * `virtual:sample-catalog`: the id, label and url of every samples.config.json entry, plus a recorded one's gallery
+ * card, picked at build time, so the first load carries only what the hero, the gallery and the address menu show
+ * (the recorders' filters and attributions, and the fixtures themselves, stay out).
  */
 function sampleCatalog(): Plugin {
   const id = 'virtual:sample-catalog';
@@ -33,7 +50,11 @@ function sampleCatalog(): Plugin {
     load(loaded) {
       if (loaded !== `\0${id}`) return undefined;
       this.addWatchFile(file);
-      const entries = (JSON.parse(readFileSync(file, 'utf8')) as { id: string; label: string; url: string }[]).map(({ id, label, url }) => ({ id, label, url }));
+      const entries = (JSON.parse(readFileSync(file, 'utf8')) as { id: string; label: string; url: string }[]).map(({ id, label, url }) => {
+        const fixture = resolve(import.meta.dirname, `src/samples/${id}.json`);
+        if (existsSync(fixture)) this.addWatchFile(fixture);
+        return { id, label, url, card: card(fixture) };
+      });
       return `export default ${JSON.stringify(entries)};`;
     },
   };

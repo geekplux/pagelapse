@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SnapshotPage } from '../../core/types.ts';
 import { ApiError, fetchCaptures, fetchSnapshot } from './api.ts';
-import { SUMMARY_EVERY, initialLive, liveReducer, progressText, summariesDue } from './liveState.ts';
+import { SUMMARY_EVERY, fetchOrder, initialLive, liveReducer, progressText, settledEntries, summariesDue } from './liveState.ts';
 import { throttleLatest } from '../throttle.ts';
 
 const caps = ['20140101000000', '20150101000000', '20160101000000'].map((ts) => ({ ts, digest: ts, length: 0 }));
@@ -12,18 +12,44 @@ const page = (ts: string, text: string): SnapshotPage => ({
 const started = () => liveReducer(initialLive('https://example.org/'), { type: 'captures', captures: caps });
 
 describe('liveReducer', () => {
-  it('joins captures to the timeline in time order, whatever order they arrive in', () => {
+  it('rebuilds the timeline in time order from whatever has arrived: a capture between two others splits their change', () => {
     let s = started();
-    s = liveReducer(s, { type: 'snapshot', index: 1, page: page(caps[1]!.ts, 'A brand new paragraph about our tools and docs.') });
-    expect(s.next).toBe(0);
-    expect(s.timeline.snapshots).toHaveLength(0);
+    expect(progressText(s)).toMatch(/^Fetching the first and latest of 3 captures, filling in the years between\. We fetch slowly/);
     s = liveReducer(s, { type: 'snapshot', index: 0, page: page(caps[0]!.ts, 'Old text.') });
-    expect(s.next).toBe(2);
-    expect(s.timeline.entries.map((e) => e.to)).toEqual([caps[1]!.ts]);
-    expect(progressText(s)).toMatch(/^Fetching capture 3 of 3 \(1 Jan 2016\)\. We fetch slowly/);
-    s = liveReducer(s, { type: 'snapshot', index: 2, page: null });
-    expect(s).toMatchObject({ status: 'done', next: 3, failed: [caps[2]!.ts] });
+    s = liveReducer(s, { type: 'snapshot', index: 2, page: page(caps[2]!.ts, 'A brand new paragraph about our tools and docs.') });
+    expect(s.arrived).toBe(2);
+    expect(s.timeline.entries.map((e) => `${e.from}-${e.to}`)).toEqual([`${caps[0]!.ts}-${caps[2]!.ts}`]);
+    // Not settled: the capture between them may still split it.
+    expect(settledEntries(s)).toEqual([]);
+    expect(progressText(s)).toMatch(/^Fetched 2 of 3 captures, filling in the years between\. We fetch slowly/);
+    const compared = s.compared.size;
+    s = liveReducer(s, { type: 'snapshot', index: 1, page: page(caps[1]!.ts, 'A completely different paragraph about the archive and its history.') });
+    expect(s.timeline.entries.map((e) => e.to)).toEqual([caps[1]!.ts, caps[2]!.ts]);
+    // Two new pairs compared; the first and latest pair is not compared again.
+    expect(s.compared.size).toBe(compared + 2);
+    expect(s).toMatchObject({ status: 'done', arrived: 3, failed: [] });
+    expect(settledEntries(s)).toHaveLength(2);
+    expect(progressText(s)).toBe('Done: 3 captures, 2 meaningful changes.');
+  });
+
+  it('a failed capture settles the changes around it and is listed; a repeated answer is ignored', () => {
+    let s = started();
+    s = liveReducer(s, { type: 'snapshot', index: 0, page: page(caps[0]!.ts, 'Old text.') });
+    s = liveReducer(s, { type: 'snapshot', index: 2, page: page(caps[2]!.ts, 'A brand new paragraph about our tools and docs.') });
+    s = liveReducer(s, { type: 'snapshot', index: 1, page: null });
+    expect(liveReducer(s, { type: 'snapshot', index: 1, page: null })).toBe(s);
+    expect(s).toMatchObject({ status: 'done', arrived: 3, failed: [caps[1]!.ts] });
+    expect(settledEntries(s)).toHaveLength(1);
     expect(progressText(s)).toBe('Done: 3 captures, 1 meaningful change. 1 capture could not be fetched.');
+  });
+
+  it('fetches first and latest first, then the middle of each gap, every capture once', () => {
+    expect(fetchOrder(0)).toEqual([]);
+    expect(fetchOrder(1)).toEqual([0]);
+    expect(fetchOrder(2)).toEqual([0, 1]);
+    expect(fetchOrder(5)).toEqual([0, 4, 2, 1, 3]);
+    expect(fetchOrder(16).slice(0, 5)).toEqual([0, 15, 7, 3, 11]);
+    for (const n of [3, 7, 16, 24]) expect([...fetchOrder(n)].sort((a, b) => a - b)).toEqual([...Array(n).keys()]);
   });
 
   it('stops on cancel and ignores late answers', () => {

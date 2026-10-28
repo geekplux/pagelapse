@@ -4,7 +4,7 @@ A short guide for maintainers and coding agents working on this repository.
 
 ## What Pagelapse is
 
-Pagelapse shows how a web page looked and changed over the years. Paste a URL: a Cloudflare Worker reads the page's Internet Archive captures, the app keeps the ones where something meaningful changed and lays them out as a time-lapse, with a word-level diff and a one-line summary per change. Three built-in samples ship with the app and work offline, and the live site is https://pagelapse.geekplux.com.
+Pagelapse shows how a web page looked and changed over the years. Paste a URL: a Cloudflare Worker reads the page's Internet Archive captures, the app keeps the ones where something meaningful changed and lays them out as a time-lapse, with a word-level diff and a one-line summary per change. Seven built-in samples ship with the app and work offline, and the live site is https://pagelapse.geekplux.com.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code fits together, [CONTRIBUTING.md](CONTRIBUTING.md) for the setup and the checks, [docs/DESIGN.md](docs/DESIGN.md) before any UI change, and [docs/DEPLOY.md](docs/DEPLOY.md) for hosting.
 
@@ -26,7 +26,7 @@ pnpm smoke             # after a build: user flows, axe-core and layout audits i
 pnpm preview           # serve the production build on port 4173
 ```
 
-Maintenance scripts that need the network or Chrome: `pnpm record:samples`, `pnpm record:visuals`, `pnpm bake:summaries`, `pnpm render:social` and `pnpm render:gif` (see CONTRIBUTING.md and docs/EXTENDING.md).
+Maintenance scripts that need the network or Chrome: `pnpm record:samples`, `pnpm record:visuals`, `pnpm bake:summaries`, `pnpm prewarm`, `pnpm render:social` and `pnpm render:gif` (see CONTRIBUTING.md and docs/EXTENDING.md).
 
 ## Rules
 
