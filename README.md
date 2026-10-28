@@ -68,7 +68,7 @@ Everything else is deterministic code: sampling, extraction, diffing, scoring, t
 - Every request identifies itself: `pagelapse/<version> (+https://github.com/geekplux/pagelapse)`.
 - At most 16 captures per page, fetched 2 at a time. Busy pages are collapsed to one capture per month first.
 - Everything is cached: the Worker keeps capture lists for 24 hours and extracted captures and summaries for good, and its responses carry cache headers so your browser reuses them.
-- If the Archive answers 429, the Worker stops all uncached requests for at least 60 s and tells you when to retry. Server errors are retried with backoff, and pages over 2 MB are cut off. Each visitor also has their own limit on uncached lookups.
+- If the Archive answers 429, the Worker stops all uncached requests for at least 60 s (longer if the Archive says so) and tells you when to retry. Server errors are retried with backoff, and pages over 2 MB are cut off. Each visitor also has their own limit on uncached lookups.
 - A replay frame loads only for the capture you pick, after the selection has rested for 400 ms. At most 3 frames are kept, and nothing is preloaded while a run is still fetching.
 
 ## Privacy
