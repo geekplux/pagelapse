@@ -51,7 +51,7 @@ describe('worker API', () => {
     expect(t.calls).toEqual([]);
   });
 
-  it('caches CDX for 24 h and captures forever, never raw HTML; a repeated run makes 0 upstream calls', async () => {
+  it('keeps CDX (fresh for 24 h) and captures forever, never raw HTML; a repeated run makes 0 upstream calls', async () => {
     const t = setup();
     const run = async () => {
       const { res, body } = await t.get('/api/captures?url=example.org/?utm_source=x&max=6');
@@ -68,13 +68,44 @@ describe('worker API', () => {
     expect(t.calls).toHaveLength(7);
     expect(t.calls.every((c) => c.ua === USER_AGENT)).toBe(true);
     expect(t.calls[1]!.url).toMatch(/^https:\/\/web\.archive\.org\/web\/\d{14}id_\/https:\/\/example\.org\/$/);
-    expect(t.puts[0]).toMatchObject({ key: expect.stringMatching(/^cdx:v1:[0-9a-f]{64}$/), ttl: 86_400 });
+    expect(t.puts[0]).toMatchObject({ key: expect.stringMatching(/^cdx:v2:[0-9a-f]{64}$/), ttl: undefined });
+    expect(JSON.parse(t.puts[0]!.value)).toMatchObject({ at: expect.any(Number), value: expect.any(Array) });
     for (const p of t.puts.slice(1)) {
       expect(p).toMatchObject({ key: expect.stringMatching(/^snap:v1:e\d+:[0-9a-f]{64}:\d{14}$/), ttl: undefined });
       expect(p.value).not.toMatch(/<(?:html|head|body|div|p|script|nav)\b/i);
     }
     await run();
     expect(t.calls).toHaveLength(7);
+  });
+
+  it('refreshes a CDX listing after 24 h, and serves the kept one when the archive refuses or fails', async () => {
+    vi.useFakeTimers({ now: 1_000_000, toFake: ['Date'] });
+    const t = setup();
+    expect((await t.get('/api/captures?url=example.org')).body.totalCaptures).toBe(15);
+    vi.setSystemTime(1_000_000 + 25 * 3600_000);
+    for (const status of [502, 504, 429]) {
+      t.respond = () => new Response(null, { status });
+      const before = t.calls.length;
+      const { res, body } = await t.get('/api/captures?url=example.org');
+      expect([res.status, body.totalCaptures, t.calls.length > before]).toEqual([200, 15, true]);
+    }
+    // The 429 started the cooldown: the kept listing is served without another upstream call.
+    const before = t.calls.length;
+    expect((await t.get('/api/captures?url=example.org')).res.status).toBe(200);
+    expect(t.calls).toHaveLength(before);
+    t.store.delete('ia:cooldown');
+    t.respond = recorded;
+    expect((await t.get('/api/captures?url=example.org')).res.status).toBe(200);
+    expect(JSON.parse(t.puts.at(-1)!.value).at).toBe(1_000_000 + 25 * 3600_000);
+  });
+
+  it('an exclusion wins over a kept CDX listing', async () => {
+    vi.useFakeTimers({ now: 1_000_000, toFake: ['Date'] });
+    const t = setup();
+    await t.get('/api/captures?url=example.org');
+    vi.setSystemTime(1_000_000 + 25 * 3600_000);
+    t.respond = () => new Response(null, { status: 403 });
+    expect((await t.get('/api/captures?url=example.org')).body.error).toBe('excluded');
   });
 
   it('retries a 503 after its Retry-After, as a floor over the backoff', async () => {

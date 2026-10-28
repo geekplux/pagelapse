@@ -4,7 +4,7 @@ Pagelapse deploys as **one Cloudflare Worker with Workers Static Assets**, live 
 
 | Binding | Kind | What it does |
 |---|---|---|
-| `CACHE` | KV namespace | CDX listings (24 h), extracted captures and summaries (kept), the archive cooldown flag, the daily AI counter |
+| `CACHE` | KV namespace | CDX listings (refreshed after 24 h, kept), extracted captures and summaries (kept), the archive cooldown flag, the daily AI counter |
 | `UPSTREAM_LIMIT` | Rate limit | 20 uncached archive fetches per minute per visitor |
 | `AI_LIMIT` | Rate limit | 10 summary batches per minute per visitor |
 | `AI` | Workers AI | one-line change summaries (production only; without it the app writes rule-based "auto summaries") |
