@@ -80,7 +80,7 @@ describe('committed samples', () => {
     expect(drops('nasa', 'The fiscal year 2025 request')).toBe(true);
     expect(drops('weather-gov', 'The fiscal year 2025 request')).toBe(true);
     // GeekPlux writes in Chinese too: money, pay and investing in either language.
-    for (const t of ['如何找到时薪 80 美元的远程工作', '赚钱', 'an AI research platform for investors']) expect([drops('geekplux', t), hides('geekplux', t)]).toEqual([true, true]);
+    for (const t of ['如何找到时薪 80 美元的远程工作', '赚钱', 'an AI research platform for investors', '在美国拥有一辆车的成本', 'the cost of owning a car']) expect([drops('geekplux', t), hides('geekplux', t)]).toEqual([true, true]);
     expect(drops('geekplux', '数据可视化之 Sankey 桑基图的实现')).toBe(false);
     // Pluto's history mentions an observatory's "million-dollar" legacy: the singular is trimmed too.
     for (const id of ['wikipedia-pluto', 'wikipedia-world-wide-web']) {

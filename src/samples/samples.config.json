@@ -111,12 +111,12 @@
     "url": "https://geekplux.com/",
     "description": "The personal site of Pagelapse's author: how its home page, writing and projects changed over the years.",
     "maxChars": 6000,
-    "dropBlocks": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bsponsor(?:s|ed|ship)?\\b|\\bbuy me a coffee\\b|\\bpatreon\\b|\\bcrypto\\w*\\b|\\bbitcoin\\b|\\btrading\\b|\\binvest\\w*|美元|人民币|时薪|年薪|月薪|工资|赚钱|理财|股票|基金|比特币",
+    "dropBlocks": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bsponsor(?:s|ed|ship)?\\b|\\bbuy me a coffee\\b|\\bpatreon\\b|\\bcrypto\\w*\\b|\\bbitcoin\\b|\\btrading\\b|\\binvest\\w*|美元|人民币|时薪|年薪|月薪|工资|赚钱|理财|股票|基金|比特币|成本|\\bcost of\\b",
     "license": "LicenseRef-Used-With-Permission",
     "attribution": "Trimmed text excerpt from geekplux.com by GeekPlux, the author of Pagelapse, included with the author's permission (blocks stating monetary figures, about money, investing, donations or sponsors are omitted).",
     "visualRedact": {
       "selector": "p, li, a, button, h2, h3",
-      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bsponsor(?:s|ed|ship)?\\b|\\bbuy me a coffee\\b|\\bpatreon\\b|\\bcrypto\\w*\\b|\\bbitcoin\\b|\\btrading\\b|\\binvest\\w*|美元|人民币|时薪|年薪|月薪|工资|赚钱|理财|股票|基金|比特币",
+      "pattern": "[$€£¥]\\s?\\d|\\bUS\\$|\\b(?:dollars?|euros)\\b|\\bbudget\\b|\\brevenue\\b|\\bfunding of\\b|\\bassets\\b|\\bendowment\\b|\\b(?:operating|net) income\\b|\\bdonat(?:e|es|ed|ing|ion|ions)\\b|\\bsponsor(?:s|ed|ship)?\\b|\\bbuy me a coffee\\b|\\bpatreon\\b|\\bcrypto\\w*\\b|\\bbitcoin\\b|\\btrading\\b|\\binvest\\w*|美元|人民币|时薪|年薪|月薪|工资|赚钱|理财|股票|基金|比特币|成本|\\bcost of\\b",
       "note": "Paragraphs, list items and links stating monetary figures, or about money, investing, donations or sponsors, were hidden before the screenshot."
     },
     "featured": "20260911002301-20261023083411"
