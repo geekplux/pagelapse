@@ -4,7 +4,7 @@ A short guide for maintainers and coding agents working on this repository.
 
 ## What Pagelapse is
 
-Pagelapse shows how a web page looked and changed over the years. Paste a URL: a Cloudflare Worker reads the page's Internet Archive captures, the app keeps the ones where something meaningful changed and lays them out as a time-lapse, with a word-level diff and a one-line summary per change. Six built-in samples ship with the app and work offline, and the live site is https://pagelapse.geekplux.com.
+Pagelapse shows how a web page looked and changed over the years. Paste a URL: a Cloudflare Worker reads the page's Internet Archive captures, the app keeps the ones where something meaningful changed and lays them out as a time-lapse, with a word-level diff and a one-line summary per change. Seven built-in samples ship with the app and work offline, and the live site is https://pagelapse.geekplux.com.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code fits together, [CONTRIBUTING.md](CONTRIBUTING.md) for the setup and the checks, [docs/DESIGN.md](docs/DESIGN.md) before any UI change, and [docs/DEPLOY.md](docs/DEPLOY.md) for hosting.
 

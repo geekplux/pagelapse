@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import cc from '../samples/creative-commons.json';
+import geekplux from '../samples/geekplux.json';
 import nasa from '../samples/nasa.json';
 import weather from '../samples/weather-gov.json';
 import wiki from '../samples/wikipedia-internet-archive.json';
@@ -65,8 +66,8 @@ describe('tokenizeWords', () => {
 });
 
 describe('diffPages', () => {
-  const samples = [wiki, nasa, cc, pluto, www, weather].map((f) => fixtureToSnapshots(parseSampleFixture(f)));
-  it.each(samples.map((s, i) => [['wikipedia', 'nasa', 'creative-commons', 'wikipedia-pluto', 'wikipedia-world-wide-web', 'weather-gov'][i], s] as const))('%s: every consecutive pair round-trips', (_, snaps) => {
+  const samples = [wiki, nasa, cc, pluto, www, weather, geekplux].map((f) => fixtureToSnapshots(parseSampleFixture(f)));
+  it.each(samples.map((s, i) => [['wikipedia', 'nasa', 'creative-commons', 'wikipedia-pluto', 'wikipedia-world-wide-web', 'weather-gov', 'geekplux'][i], s] as const))('%s: every consecutive pair round-trips', (_, snaps) => {
     for (let i = 1; i < snaps.length; i++) expect(expectRoundTrip(snaps[i - 1]!, snaps[i]!).cutoff).toBe(false);
   });
 
