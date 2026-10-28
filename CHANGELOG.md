@@ -6,6 +6,9 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 
 ### Added
 
+- **A gallery on the first view:** under the deck, every sample as a card with its latest picture, and "Recently explored": pages visitors looked up and chose to share with "Add to Recently explored" (plain addresses only, already cached, limited per visitor, with a block list), plus a credit to the Internet Archive's Wayback Machine. It loads only once it scrolls into view; the hero keeps three sample options and a "More pages" link.
+- **`pnpm prewarm`:** looks a list of pages up from the maintainer's machine and writes exactly what the Worker would store, for `wrangler kv bulk put`, so those pages open without the archive.
+- **Archive logs:** one JSON line per archive event in Workers Logs (failures with their `Retry-After`, cooldowns, how long a run of 429s lasted), without visitor or page addresses.
 - **GeekPlux sample:** the home page of the author's site, geekplux.com (2014 to 2026: a blog theme, a minimal landing page, an About page, and two 2026 redesigns), recorded from the Internet Archive with pictures, without the blocks about money, pay or investing. `pnpm record:visuals` now pictures a sample from the archive its text came from.
 - **Three more built-in samples:** the Wikipedia articles "Pluto" (2011 to 2026, before and after the 2015 New Horizons flyby) and "World Wide Web" (2008 to 2026), and the weather.gov home page (2009 to 2026), recorded from Arquivo.pt with pictures, with the same money-figure filtering as the others.
 - Page-view counts on pagelapse.geekplux.com with Google Analytics: the path only, never the address you look up. Self-hosted copies load no analytics.
@@ -29,6 +32,11 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 
 ### Changed
 
+- **Live runs fetch the first and latest captures first,** then the middle of each gap, coarse to fine: the decade compare shows after one round (about 5 s instead of most of the run) and the timeline fills in evenly. AI summaries go only to changes no capture still to come can split.
+- **Capture lists are kept for good:** refreshed after 24 h, and served as they are when the archive refuses or fails, so a page looked up once keeps opening.
+- **The API runs next to the Internet Archive** (Workers placement by hostname), and `robots.txt` keeps crawlers off `/api/`.
+- **The rate-limit card says what is happening:** the archive limits the shared cloud network Pagelapse runs on, sometimes for hours; pages looked up before and the samples still open.
+
 - The redesign replaced the paper palette and serif type, the sample tabs (now options of the address field and the first view), the filmstrip and timeline (now the time ribbon), the side card and "Change details" (now the controls row and the change section) and the list of changes (now "Every change").
 - Onion skin was removed; an old `view=onion` link opens Slider.
 - Wikipedia "Internet Archive" replaced git-scm.com as the default sample; an unknown or unrecorded `?sample=` opens it.
@@ -38,6 +46,9 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 - The git-scm.com and rust-lang.org samples, replaced by NASA and Creative Commons. An old `?sample=git-scm` or `?sample=rust-lang` link opens the default sample.
 
 ### Fixed
+
+- **The Internet Archive capture list is collapsed to one capture per month again.** It applies only the last of two `collapse` parameters, so the list held every distinct capture (18,640 rows instead of 273 for www.wikipedia.org) and long-lived pages ran past the 2 MB cap and failed.
+- `pnpm smoke` and `pnpm render:social` find Chrome on macOS (or `CHROME_PATH`), like the recorders.
 
 - The automatic summary no longer reports a section rename when one side is a number, a date or a count (on the Wikipedia sample, comparing the first capture with the latest read `Renamed section "40" to "2024 cyberattacks"`).
 

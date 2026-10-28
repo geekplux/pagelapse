@@ -21,7 +21,7 @@ New here? [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md) lists well-scop
 | `pnpm test` | Vitest, offline (`fetch` is disabled in tests). It includes the design rules (spacing, accent, palette and colour-vision checks) and the docs link check |
 | `pnpm build` | the production build |
 | `pnpm size` | after a build: JavaScript, CSS, font, sample and picture budgets, and that only React reaches the browser bundle |
-| `pnpm smoke` | after a build: user flows, accessibility (axe-core) and layout audits in headless Chrome (`/usr/bin/google-chrome`); `--flows a,b` runs a subset |
+| `pnpm smoke` | after a build: user flows, accessibility (axe-core) and layout audits in headless Chrome (the system install, or `CHROME_PATH`); `--flows a,b` runs a subset |
 
 `pnpm check` runs lint, typecheck, test and build in one go. CI (`.github/workflows/ci.yml`) runs the same plus `pnpm size`.
 

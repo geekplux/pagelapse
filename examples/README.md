@@ -90,7 +90,7 @@ Open it:
 
 ## Try these live
 
-Paste any of these into the address field. A live lookup asks the Internet Archive for up to 16 captures, two at a time, so the first run of a page takes a little while. Later runs come from the cache.
+Paste any of these into the address field. A live lookup asks the Internet Archive for up to 16 captures, two at a time, the first and latest first: the decade compare shows within seconds and the years between fill in after. Later runs, by anyone, come from the cache.
 
 | Page | Why it is interesting |
 | --- | --- |

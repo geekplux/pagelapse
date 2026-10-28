@@ -23,6 +23,7 @@ import { fixtureToSnapshots, parseSampleFixture } from '../src/core/fixture.ts';
 import { buildTimeline } from '../src/core/timeline.ts';
 import type { ArchiveId, SampleFixture, ShotRef } from '../src/core/types.ts';
 import { replayFrameUrl } from '../src/core/url.ts';
+import { chromePath } from './lib/chrome.ts';
 import { writeFixture } from './lib/fixtureFile.ts';
 import { encodeWithin, greyPixels } from './lib/webp.ts';
 import { isRecorded, pickSamples, readSampleConfig } from './lib/sampleConfig.ts';
@@ -143,13 +144,12 @@ const table = (rows: string[][]) => {
   const widths = rows[0]!.map((_, i) => Math.max(...rows.map((r) => r[i]!.length)));
   for (const r of rows) console.log(r.map((c, i) => c.padEnd(widths[i]!)).join('  '));
 };
-const DEFAULT_CHROME = process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : '/usr/bin/google-chrome';
 const shots = [['id', 'ts', 'status', 'settle', 'full KB', 'thumb KB', 'missing css/img', 'redacted']];
 const deltas = [['id', 'change', 'visual delta', 'shots']];
 
 try {
   if (!args['dry-run']) {
-    browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? DEFAULT_CHROME, headless: true, args: ['--disable-dev-shm-usage', '--no-sandbox'] });
+    browser = await chromium.launch({ executablePath: chromePath(), headless: true, args: ['--disable-dev-shm-usage', '--no-sandbox'] });
   }
   const context = await browser?.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, reducedMotion: 'reduce', timezoneId: 'UTC', userAgent: USER_AGENT });
   await context?.route('**/*', (route) => {

@@ -1761,7 +1761,7 @@ export const flows: readonly Flow[] = [
       const links = [...md.matchAll(/\[(\d{4}-\d\d-\d\d) → (\d{4}-\d\d-\d\d)[^\]]* in (Slider|Side by side|Single)\]\(https:\/\/pagelapse\.geekplux\.com(\/\?sample=[^)]+)\)/g)];
       const MODE: Record<string, string> = { Slider: 'slider', 'Side by side': 'side', Single: 'single' };
       const all = md.match(/\]\(https:\/\/pagelapse\.geekplux\.com\/\?sample=/g)?.length ?? 0;
-      if (all !== 7 || links.length !== all) throw new Error(`examples/README.md: ${links.length} of ${all} sample links parsed, expected 7`);
+      if (all !== 10 || links.length !== all) throw new Error(`examples/README.md: ${links.length} of ${all} sample links parsed, expected 10`);
       const notes: string[] = [];
       for (const [, from, to, mode, path] of links) {
         const q = new URL(path!, baseUrl).searchParams;
