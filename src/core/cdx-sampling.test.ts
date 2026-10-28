@@ -5,9 +5,9 @@ import type { Capture } from './types.ts';
 
 describe('buildCdxUrl', () => {
   it.each([
-    ['internet-archive', 'https://web.archive.org/cdx/search/cdx?'],
-    ['arquivo-pt', 'https://arquivo.pt/wayback/cdx?'],
-  ] as const)('%s: endpoint, both collapses, filters and fields', (archive, base) => {
+    ['internet-archive', 'https://web.archive.org/cdx/search/cdx?', ['timestamp:6']],
+    ['arquivo-pt', 'https://arquivo.pt/wayback/cdx?', ['timestamp:6', 'digest']],
+  ] as const)('%s: endpoint, collapses, filters and fields', (archive, base, collapses) => {
     const url = buildCdxUrl(archive, 'https://example.org/a?b=1&c=2');
     expect(url.startsWith(base)).toBe(true);
     const q = new URL(url).searchParams;
@@ -15,7 +15,8 @@ describe('buildCdxUrl', () => {
     expect(q.get('output')).toBe('json');
     expect(q.get('fl')).toBe('timestamp,digest,length');
     expect(q.getAll('filter')).toEqual(['statuscode:200', 'mimetype:text/html']);
-    expect(q.getAll('collapse')).toEqual(['timestamp:6', 'digest']);
+    // The Internet Archive applies only the last collapse: monthly alone, the digest repeats are dropped locally.
+    expect(q.getAll('collapse')).toEqual(collapses);
   });
 });
 

@@ -3,8 +3,11 @@ import { isValidTimestamp } from './timestamp.ts';
 import type { ArchiveId, Capture } from './types.ts';
 
 /**
- * CDX query for a URL's HTML captures: status 200, `text/html`, collapsed to at most one
- * row per month and per digest, returning only `timestamp,digest,length`.
+ * CDX query for a URL's HTML captures: status 200, `text/html`, collapsed to at most one row per month, returning
+ * only `timestamp,digest,length`. Arquivo.pt (pywb) also collapses by digest. The Internet Archive's CDX server
+ * applies only its last `collapse`, so a second one would drop the monthly collapse and return every distinct capture
+ * (18,640 rows instead of 273 for www.wikipedia.org, cut off at the 2 MB cap); there `dedupeAdjacentDigests` drops
+ * the repeats instead.
  */
 export function buildCdxUrl(archive: ArchiveId, url: string): string {
   const q = new URLSearchParams([
@@ -14,7 +17,7 @@ export function buildCdxUrl(archive: ArchiveId, url: string): string {
     ['filter', 'statuscode:200'],
     ['filter', 'mimetype:text/html'],
     ['collapse', 'timestamp:6'],
-    ['collapse', 'digest'],
+    ...(archive === 'internet-archive' ? [] : [['collapse', 'digest']]),
   ]);
   return `${ARCHIVES[archive].cdx}?${q}`;
 }
@@ -52,7 +55,7 @@ export function parseCdx(archive: ArchiveId, body: string): Capture[] {
   return ARCHIVES[archive].cdxFormat === 'json' ? parseCdxJson(body) : parseCdxNdjson(body);
 }
 
-/** Drops captures whose digest equals the previous capture's (some CDX servers ignore `collapse`). */
+/** Drops captures whose digest equals the previous capture's (the Internet Archive's CDX collapses only by month). */
 export function dedupeAdjacentDigests(captures: readonly Capture[]): Capture[] {
   return captures.filter((c, i) => i === 0 || c.digest !== captures[i - 1]!.digest);
 }
