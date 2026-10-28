@@ -28,10 +28,11 @@ Plus the repo's own rules: never colour alone (cyan/amber always come with a wor
 
 ## Page structure
 
-One page, two states. No separate landing page and no sample tabs.
+One page, two states, plus the list of every explored page. No separate landing page and no sample tabs.
 
 1. **Hero** (no `?sample=`/`?url=` in the address): header (logo + wordmark, theme button, GitHub icon); centred 40px headline "See how any web page changed over the years", 20px lede, 48px address field with "Show its history", then "Or open a sample" with an option button for each of the first three samples and a "More pages" link down to the gallery. Under it the **deck**: every capture of the default hero sample (Wikipedia) as a card whose left edge sits at its capture date (latest whole on the right with a "Latest" tag), a year axis with a bar per meaningful change under the slivers, and a one-line caption. Under the deck, below the first viewport, the **gallery**: "Samples" (every sample as a card: its latest picture's thumbnail, name, host, years and captures), "Recently explored" (pages visitors shared, as cards led by the page title at 20/600, then its address at 12, then its years as a quiet 12px mono ticket: the first year, a hairline with a 5px sand-9 dot at each meaningful change's date (the largest 7px sand-11, told by size, not colour), the last year; loaded only when the gallery scrolls into view) and the credit to the Internet Archive's Wayback Machine. Footer.
 2. **Workspace** (a sample or a URL is open): header with the address field (holds the page address; focusing it opens a menu listing the samples, current one checked), the theme button and the GitHub icon. Title = sample label (live: the host), meta line (captures, span, changes, trivial edits hidden, "Sample" tag). Stage 1200x750, controls, time ribbon, change section, "Every change", footer.
+3. **Explored list** (`?explored`, from "See all explored pages" under the gallery's Recently explored, shown only when there are more than its 24): the workspace's header, a 40px title "Recently explored" (it takes focus when opened from the link), a one-line lede, every shared page as the gallery's cards, newest first, 60 at a time with a "Show more" button, the credit to the Internet Archive, and the hero's footer (no workspace keys). A card opens a live lookup; Back returns to the list.
 
 ## Components
 

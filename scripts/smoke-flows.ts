@@ -381,6 +381,68 @@ export const flows: readonly Flow[] = [
     },
   },
   {
+    name: 'explored-list',
+    description: 'Recently explored: cards with a title and a ticket of years on the home page, then "See all explored pages" to the full list (focus on its title, Show more, Back and Forward), and a card that opens a live lookup',
+    viewports: ['desktop', 'mobile'],
+    schemes: ['light', 'dark'],
+    apiErrors: true,
+    async run({ page, baseUrl }) {
+      const entry = (i: number) => ({
+        url: `https://site${i}.example/`, title: `Site ${i}`, captures: 16, firstTs: '20000101000000', lastTs: '20260101000000', added: 1000 - i,
+        changes: [[(i * 37) % 1000, 80], [500, 30]],
+      });
+      const asked: string[] = [];
+      await page.route('**/api/gallery**', (route) => {
+        const u = new URL(route.request().url());
+        asked.push(u.search || '(home)');
+        if (!u.searchParams.has('all')) return route.fulfill({ json: { entries: Array.from({ length: 24 }, (_, i) => entry(i)), more: true } });
+        if (u.searchParams.get('cursor') === 'next') return route.fulfill({ json: { entries: Array.from({ length: 5 }, (_, i) => entry(60 + i)) } });
+        return route.fulfill({ json: { entries: Array.from({ length: 60 }, (_, i) => entry(i)), cursor: 'next' } });
+      });
+      await page.route('**/api/captures**', (route) => route.fulfill({ status: 503, json: { error: 'archive_rate_limited', message: 'Busy.', retryAfter: 60 } }));
+      const cardsAre = (n: number) => page.waitForFunction((want) => document.querySelectorAll('.explored .g-card').length === want, n, { timeout: 10_000 });
+      await openHero(page, baseUrl);
+      if (asked.length) throw new Error(`the first view asked for the gallery: ${asked.join(', ')}`);
+      // The home page: a ticket per card, a dot per change, the largest marked.
+      await page.locator('#explored-title').scrollIntoViewIfNeeded();
+      await page.locator('.gallery-grid.is-text .g-ticket').first().waitFor({ timeout: 10_000 });
+      const dots = await page.locator('.gallery-grid.is-text .g-dot').count();
+      const tops = await page.locator('.gallery-grid.is-text .g-dot.is-top').count();
+      if (dots !== 48 || tops !== 24) throw new Error(`${dots} change dots (${tops} marked largest) on the home page, expected 48 (24)`);
+      // The title leads the card: larger than its years.
+      const sizes = await page.locator('.gallery-grid.is-text .g-card').first().evaluate((c) => [c.querySelector('.g-title'), c.querySelector('.g-ticket')].map((el) => parseFloat(getComputedStyle(el!).fontSize)));
+      if (!(sizes[0]! > sizes[1]!)) throw new Error(`the title (${sizes[0]}px) does not lead its years (${sizes[1]}px)`);
+      // The full list: its own address, focus on its title, a page of 60, then 5 more and no button.
+      await page.getByRole('link', { name: 'See all explored pages' }).click();
+      await page.locator('#explored-page-title').waitFor({ timeout: 10_000 });
+      if (new URL(page.url()).search !== '?explored') throw new Error(`the list opened at ${page.url()}`);
+      const focus = await page.evaluate(() => document.activeElement?.id);
+      if (focus !== 'explored-page-title') throw new Error(`focus on "${focus}" after opening the list`);
+      await cardsAre(60);
+      await page.getByRole('button', { name: 'Show more' }).click();
+      await cardsAre(65);
+      if (await page.getByRole('button', { name: 'Show more' }).count()) throw new Error('"Show more" stayed after the last page');
+      // The hero's footer: the workspace's keys do not apply here.
+      const foot = (await page.locator('.site-footer').innerText()).replace(/\s+/g, ' ');
+      if (/Page Up|All keyboard shortcuts/.test(foot)) throw new Error(`the list's footer shows the workspace's keys: "${foot.slice(0, 160)}"`);
+      await noPageOverflow(page);
+      // Back to the home page, Forward to the list again.
+      await page.goBack();
+      await page.locator('#intro-title').waitFor({ timeout: 10_000 });
+      await page.goForward();
+      await page.locator('#explored-page-title').waitFor({ timeout: 10_000 });
+      await cardsAre(60);
+      // A card opens a live lookup of its page; Back returns to the list.
+      await page.locator('.explored .g-card').first().click();
+      await page.waitForURL(/\?url=https%3A%2F%2Fsite0\.example%2F$/, { timeout: 10_000 });
+      await page.locator('[data-live]').waitFor({ timeout: 10_000 });
+      await page.goBack();
+      await page.locator('#explored-page-title').waitFor({ timeout: 10_000 });
+      await cardsAre(60);
+      return { notes: [`${dots} dots on the home page`, `gallery requests: ${asked.join(', ')}`, 'list: 60, Show more to 65; Back, Forward; a card opened ?url= and Back returned'] };
+    },
+  },
+  {
     name: 'sample-unrecorded',
     description: 'A config entry without a recorded fixture, or a retired sample (git-scm, rust-lang), is never offered: not a hero option, not in the address menu, and its deep link opens the default sample',
     viewports: ['desktop'],

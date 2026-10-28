@@ -6,6 +6,7 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 
 ### Added
 
+- **Every explored page in one list:** when Recently explored holds more than the home page's 24, "See all explored pages" opens `?explored`, every shared page as cards, newest first, 60 at a time with "Show more".
 - **Recently explored cards show the page's years:** the title leads, then the address, then a quiet ticket from the first year to the last with a dot at each meaningful change (the largest one bigger), computed from the cached captures when the page is shared (no pictures, no extra requests). Entries shared earlier get their dots when shared again.
 - **A gallery on the first view:** under the deck, every sample as a card with its latest picture, and "Recently explored": pages visitors looked up and chose to share with "Add to Recently explored" (plain addresses only, already cached, limited per visitor, with a block list), plus a credit to the Internet Archive's Wayback Machine. It loads only once it scrolls into view; the hero keeps three sample options and a "More pages" link.
 - **`pnpm prewarm`:** looks a list of pages up from the maintainer's machine and writes exactly what the Worker would store, for `wrangler kv bulk put`, so those pages open without the archive.

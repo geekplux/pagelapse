@@ -3,6 +3,7 @@ import type { SampleFixture } from '../core/types.ts';
 import { DECK_SAMPLE, defaultEntry, displayAddress, type SampleEntry, sampleFor, samples } from '../samples/index.ts';
 import { AppFooter } from './AppFooter.tsx';
 import { AppHeader } from './AppHeader.tsx';
+import { ExploredPage } from './explored/ExploredPage.tsx';
 import { Hero } from './hero/Hero.tsx';
 import { openTransition } from './openTransition.ts';
 import { validateTargetUrl } from '../core/url.ts';
@@ -63,6 +64,10 @@ export function App() {
   const [live, setLive] = useState(initialLive);
   // No `?sample=` and no `?url=`: the hero. Leaving it pushes a history entry, so Back returns to it.
   const [hero, setHero] = useState(() => isHeroState(parseUrlState(location.search)));
+  // `?explored`: the list of every shared page, drawn in place of the hero (the hero's state is kept underneath).
+  const [explored, setExplored] = useState(() => !!parseUrlState(location.search).explored);
+  /** Set when the list was opened from a link here: its heading takes focus as it mounts (not on a deep link). */
+  const focusExplored = useRef(false);
   const [current, setCurrent] = useState<Current | null>(() => {
     const { sample, change, at, view } = parseUrlState(location.search);
     if (hero) return null;
@@ -111,6 +116,7 @@ export function App() {
         setTimeline(() => m.TimelineView);
         setCurrent({ id: entry.id, fixture, ...q });
         setHero(false);
+        setExplored(false);
       });
       if (!how) return;
       write(how, { sample: entry.id, ...q });
@@ -146,20 +152,34 @@ export function App() {
 
   const startLive = (url: string, focus = false, how: Write = 'replace') => {
     wanted.current = undefined;
+    setExplored(false);
     setHero(false);
     setLive((l) => ({ url, run: (l?.run ?? 0) + 1, focus }));
     write(how, { url });
   };
   const openSample = () => void load(defaultEntry).then(focusContent);
+  const openExplored = () => {
+    pushUrlState({ explored: true });
+    focusExplored.current = true;
+    scrollTo({ top: 0, behavior: 'instant' });
+    setExplored(true);
+  };
+  const exploredHeading = (el: HTMLHeadingElement | null) => {
+    if (!el || !focusExplored.current) return;
+    focusExplored.current = false;
+    el.focus({ preventScroll: true });
+  };
 
   // The page shown (hero, a sample, a live run), so Back and Forward between entries of the same page (a skip link's
   // #hash, a change scrubbed since) leave it as it is: a live run is not started again.
   const page = useRef('');
-  page.current = hero ? 'hero' : live ? `url:${live.url}` : `sample:${current?.id}`;
+  page.current = explored ? 'explored' : hero ? 'hero' : live ? `url:${live.url}` : `sample:${current?.id}`;
   // Back and Forward between the hero and the workspace: show what the address now names.
   useEffect(() => {
     const onPop = () => {
       const s = parseUrlState(location.search);
+      if (s.explored) return void (page.current === 'explored' || setExplored(true));
+      setExplored(false);
       const check = s.url ? validateTargetUrl(s.url) : null;
       const entry = sampleFor(s.sample);
       if (page.current === (isHeroState(s) ? 'hero' : check?.ok ? `url:${check.url}` : `sample:${entry.id}`)) return;
@@ -190,6 +210,29 @@ export function App() {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  if (explored)
+    return (
+      <>
+        <AppHeader
+          hasDiff={false}
+          samples={samples}
+          selectedId=""
+          onSelect={(entry) => void load(entry, {}, 'push')}
+          url=""
+          onUrl={(url) => startLive(url, false, 'push')}
+        />
+        <main id="content" className="is-explored" tabIndex={-1}>
+          <ExploredPage onUrl={(url) => startLive(url, false, 'push')} headingRef={exploredHeading} />
+        </main>
+        {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
+        <p className="sr-only" role="status" aria-live="polite">
+          {announcement}
+        </p>
+        {/* The hero's footer: no workspace keys and no notes on a sample's captures. */}
+        <AppFooter hero />
+      </>
+    );
+
   if (hero)
     return (
       <>
@@ -202,6 +245,7 @@ export function App() {
             deck={deck}
             failed={failed && <LoadFailed onRetry={failed} />}
             onCapture={(at, from) => deckEntry && fromHero(deckEntry, { at }, from)}
+            onExplored={openExplored}
           />
         </main>
         {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}

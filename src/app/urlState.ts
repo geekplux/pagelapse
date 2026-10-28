@@ -1,8 +1,10 @@
 /**
  * The shareable view state: `?sample=<id>` or `?url=<page>` (a live run), then `&change=<from>-<to>&at=<ts>&view=<mode>` (`at`: the capture shown in Single
- * mode, when not the change's After; `view`: the compare mode, when not Slider).
+ * mode, when not the change's After; `view`: the compare mode, when not Slider). `?explored` alone is the list of every
+ * page shared to Recently explored.
  */
 export interface UrlState {
+  explored?: boolean | undefined;
   sample?: string | undefined;
   url?: string | undefined;
   change?: string | undefined;
@@ -12,10 +14,11 @@ export interface UrlState {
 
 export function parseUrlState(search: string): UrlState {
   const p = new URLSearchParams(search);
-  return { sample: p.get('sample') ?? undefined, url: p.get('url') ?? undefined, change: p.get('change') ?? undefined, at: p.get('at') ?? undefined, view: p.get('view') ?? undefined };
+  return { explored: p.has('explored') || undefined, sample: p.get('sample') ?? undefined, url: p.get('url') ?? undefined, change: p.get('change') ?? undefined, at: p.get('at') ?? undefined, view: p.get('view') ?? undefined };
 }
 
-export function formatUrlState({ sample, url, change, at, view }: UrlState): string {
+export function formatUrlState({ explored, sample, url, change, at, view }: UrlState): string {
+  if (explored) return '?explored';
   const p = new URLSearchParams();
   if (sample) p.set('sample', sample);
   if (url) p.set('url', url);

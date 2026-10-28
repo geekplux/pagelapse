@@ -72,8 +72,12 @@ export interface GalleryEntry {
   changes?: [number, number][];
 }
 
-/** `GET /api/gallery`: the latest shared pages, newest first. */
-export const fetchGallery = (signal: AbortSignal) => get<{ entries: GalleryEntry[] }>('/api/gallery', signal).then((r) => r.entries);
+/** `GET /api/gallery`: the latest shared pages, newest first, and whether there are more than the home page shows. */
+export const fetchGallery = (signal: AbortSignal) => get<{ entries: GalleryEntry[]; more?: boolean }>('/api/gallery', signal);
+
+/** `GET /api/gallery?all`: one page of every shared page, newest first, and the cursor of the next page, if any. */
+export const fetchExplored = (cursor: string | undefined, signal: AbortSignal) =>
+  get<{ entries: GalleryEntry[]; cursor?: string }>(`/api/gallery?all${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, signal);
 
 /** `POST /api/gallery`: lists a page the visitor has just looked up in "Recently explored". */
 export const shareToGallery = (url: string, signal: AbortSignal) =>

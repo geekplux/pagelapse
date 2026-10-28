@@ -33,8 +33,10 @@ const ENTRY_PREFIX = 'gallery:v1:';
 const URL_PREFIX = 'gallery:url:';
 /** A JSON array of hosts (`example.org`) or full addresses the maintainer removed (docs/DEPLOY.md). */
 export const BLOCK_KEY = 'gallery:block';
-/** Entries the listing returns. */
+/** Entries the home page's listing returns. */
 export const GALLERY_MAX = 24;
+/** Entries per page of the full listing (`?all`). */
+export const GALLERY_PAGE = 60;
 const MAX_URL = 200;
 const MAX_TITLE = 120;
 /** Topics the gallery never lists: finance (CLAUDE.md) and obvious adult content. Matched on host and path. */
@@ -78,11 +80,21 @@ const isBlocked = (url: string, block: Set<string>) => {
   return block.has(url) || block.has(u.hostname) || block.has(u.hostname.replace(/^www\./, '')) || DENY.test(`${u.hostname} ${u.pathname}`);
 };
 
-/** `GET /api/gallery`: the latest shared pages, newest first. */
-export async function gallery(_req: Request, _url: URL, env: Env): Promise<Response> {
-  const [list, block] = await Promise.all([env.CACHE.list<GalleryEntry>({ prefix: ENTRY_PREFIX, limit: GALLERY_MAX * 2 }), blocked(env)]);
-  const entries = list.keys.flatMap((k) => (k.metadata && !isBlocked(k.metadata.url, block) ? [k.metadata] : [])).slice(0, GALLERY_MAX);
-  return json({ entries }, 200, 'public, max-age=300');
+/**
+ * `GET /api/gallery`: the latest shared pages, newest first, and `more` when there are others (the home page links to
+ * the full list). `GET /api/gallery?all[&cursor=]`: every shared page, a page of `GALLERY_PAGE` at a time, with the
+ * `cursor` of the next page while there is one.
+ */
+export async function gallery(_req: Request, url: URL, env: Env): Promise<Response> {
+  const all = url.searchParams.has('all');
+  const cursor = url.searchParams.get('cursor') || undefined;
+  const [list, block] = await Promise.all([
+    env.CACHE.list<GalleryEntry>({ prefix: ENTRY_PREFIX, limit: all ? GALLERY_PAGE : GALLERY_MAX * 2, ...(all && cursor && { cursor }) }),
+    blocked(env),
+  ]);
+  const shown = list.keys.flatMap((k) => (k.metadata && !isBlocked(k.metadata.url, block) ? [k.metadata] : []));
+  if (all) return json({ entries: shown, ...(!list.list_complete && { cursor: list.cursor }) }, 200, 'public, max-age=300');
+  return json({ entries: shown.slice(0, GALLERY_MAX), more: shown.length > GALLERY_MAX || !list.list_complete }, 200, 'public, max-age=300');
 }
 
 /**

@@ -114,7 +114,7 @@ Capture lists are refreshed by the Worker after 24 h, and kept if the archive re
 
 ## Recently explored
 
-Visitors can list a page they have just looked up in "Recently explored" on the home page (`POST /api/gallery`). The Worker accepts only plain addresses (no query string) whose capture list and at least half of their sampled captures are already in KV, refuses a short list of finance and adult terms in the host, path and title, and limits sharing to 3 pages a minute per visitor. The home page lists the newest 24.
+Visitors can list a page they have just looked up in "Recently explored" on the home page (`POST /api/gallery`). The Worker accepts only plain addresses (no query string) whose capture list and at least half of their sampled captures are already in KV, refuses a short list of finance and adult terms in the host, path and title, and limits sharing to 3 pages a minute per visitor. The home page lists the newest 24. When there are more, it links to the full list (`?explored`, served by `GET /api/gallery?all`, 60 entries a page).
 
 Each entry carries its changes (where each meaningful change falls, drawn as dots on the card's years), computed from its cached captures when it is shared. Entries shared before they were stored show their years with a bare line until the page is shared again (`POST /api/gallery` with the same address fills them in and keeps the entry's place):
 

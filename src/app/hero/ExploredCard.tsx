@@ -7,7 +7,7 @@ import { formatUrlState } from '../urlState.ts';
 export const years = (first: string, last: string) => (first.slice(0, 4) === last.slice(0, 4) ? first.slice(0, 4) : `${first.slice(0, 4)} to ${last.slice(0, 4)}`);
 
 /** A plain click opens the page here; a modified click (new tab, new window) follows the link. */
-const plainClick = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+export const plainClick = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
 /** The index of the largest change: the highest score, the latest of a tie (the most recent redesign). */
 export function largest(changes: readonly (readonly [number, number])[]): number {

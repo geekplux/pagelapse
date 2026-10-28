@@ -2,7 +2,8 @@ import { type RefObject, useEffect, useRef, useState } from 'react';
 import { type SampleEntry, hostOf } from '../../samples/index.ts';
 import { type GalleryEntry, fetchGallery } from '../live/api.ts';
 import { PageIcon } from '../UrlForm.tsx';
-import { ExploredCard, years } from './ExploredCard.tsx';
+import { ArchiveCredit } from './ArchiveCredit.tsx';
+import { ExploredCard, plainClick, years } from './ExploredCard.tsx';
 
 interface Props {
   samples: readonly SampleEntry[];
@@ -10,10 +11,12 @@ interface Props {
   onSample: (entry: SampleEntry, from: HTMLElement) => void;
   /** Looks a shared page up (its captures are already in the Worker's cache). */
   onUrl: (url: string) => void;
+  /** Opens the list of every shared page (`?explored`). */
+  onExplored: () => void;
 }
 
 
-type Shared = GalleryEntry[] | 'loading' | 'failed';
+type Shared = { entries: GalleryEntry[]; more?: boolean | undefined } | 'loading' | 'failed';
 
 /**
  * Waits until the gallery scrolls into view, then loads "Recently explored" and lets the sample thumbnails load: the
@@ -43,7 +46,7 @@ function useGallery(ref: RefObject<HTMLElement | null>): { seen: boolean; shared
 }
 
 /** Under the deck: every sample as a card, the pages visitors shared, and the credit to the Internet Archive. */
-export function Gallery({ samples, onSample, onUrl }: Props) {
+export function Gallery({ samples, onSample, onUrl, onExplored }: Props) {
   const ref = useRef<HTMLElement>(null);
   const { seen, shared } = useGallery(ref);
   return (
@@ -79,22 +82,33 @@ export function Gallery({ samples, onSample, onUrl }: Props) {
         </p>
       ) : shared === 'failed' ? (
         <p className="gallery-note">Recently explored could not be loaded. The samples above still open.</p>
-      ) : shared.length === 0 ? (
+      ) : shared.entries.length === 0 ? (
         <p className="gallery-note">Nothing shared yet. After you look up a page, “Add to Recently explored” lists it here.</p>
       ) : (
         <ul className="gallery-grid is-text" aria-labelledby="explored-title">
-          {shared.map((e) => (
+          {shared.entries.map((e) => (
             <li key={e.url}>
               <ExploredCard entry={e} onUrl={onUrl} />
             </li>
           ))}
         </ul>
       )}
+      {typeof shared === 'object' && shared.more && (
+        <p className="explored-more">
+          <a
+            href="?explored"
+            onClick={(ev) => {
+              if (!plainClick(ev)) return;
+              ev.preventDefault();
+              onExplored();
+            }}
+          >
+            See all explored pages
+          </a>
+        </p>
+      )}
 
-      <p className="gallery-credit">
-        Every capture on Pagelapse was saved by the <a href="https://web.archive.org/">Internet Archive’s Wayback Machine</a>, which has been
-        keeping copies of the web since 1996. Pagelapse only reads them.
-      </p>
+      <ArchiveCredit />
     </section>
   );
 }

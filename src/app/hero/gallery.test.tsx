@@ -10,7 +10,7 @@ import { HERO_OPTIONS, Hero } from './Hero.tsx';
 const noop = () => {};
 
 describe('the gallery under the deck', () => {
-  const out = renderToStaticMarkup(<Gallery samples={samples} onSample={noop} onUrl={noop} />);
+  const out = renderToStaticMarkup(<Gallery samples={samples} onSample={noop} onUrl={noop} onExplored={noop} />);
 
   it('shows every sample as a card with host, years and captures; thumbnails wait until the gallery is in view', () => {
     expect(out.match(/class="g-card" data-sample=/g)).toHaveLength(samples.length);
@@ -63,7 +63,7 @@ describe('a Recently explored card', () => {
 
 describe('the hero', () => {
   it(`offers the first ${HERO_OPTIONS} samples, then "More pages" down to the gallery`, () => {
-    const out = renderToStaticMarkup(<Hero samples={samples} onSample={noop} onUrl={noop} deck={undefined} onCapture={noop} />);
+    const out = renderToStaticMarkup(<Hero samples={samples} onSample={noop} onUrl={noop} deck={undefined} onCapture={noop} onExplored={noop} />);
     expect(out.match(/class="sample-opt"/g)).toHaveLength(Math.min(HERO_OPTIONS, samples.length));
     expect(out).toContain('<a class="intro-more" href="#gallery">More pages</a>');
     expect(out).toContain('id="gallery"');

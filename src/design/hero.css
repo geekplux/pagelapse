@@ -203,3 +203,11 @@ main.is-intro { padding-top: 0; }
 .g-addr { overflow: hidden; color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); white-space: nowrap; text-overflow: ellipsis; }
 .g-meta { display: flex; flex-wrap: wrap; gap: 0 var(--space-2); margin-top: auto; color: var(--sand-11); font-size: var(--fs-12); line-height: var(--lh-12); }
 .gallery-credit { max-width: 42.5rem; margin-top: var(--space-5); color: var(--sand-11); }
+
+/* "See all explored pages" under the home page's list, and "Show more" under the full one. */
+.explored-more { margin-top: var(--space-3); }
+
+/* `?explored`: every shared page, as the gallery's cards, under a 40 px title. */
+.explored { padding-top: var(--space-5); }
+.explored h1 { font: 700 var(--fs-40) / var(--lh-40) var(--font-ui); letter-spacing: var(--track-40); }
+.explored h1:focus { outline: none; }

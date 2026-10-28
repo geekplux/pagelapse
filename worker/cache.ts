@@ -55,10 +55,13 @@ export function memoryKv(max = MEMORY_MAX, now = () => Date.now()): KVNamespace 
     return hit && hit.until > now() ? { value: hit.value, metadata: hit.metadata ?? null } : { value: null, metadata: null };
   };
   /** Live keys under `prefix` in name order, with their metadata, as KV lists them. */
-  const list = async ({ prefix = '', limit = 1000 }: { prefix?: string; limit?: number } = {}) => {
+  const list = async ({ prefix = '', limit = 1000, cursor }: { prefix?: string; limit?: number; cursor?: string } = {}) => {
     const keys = [...store].filter(([k, v]) => k.startsWith(prefix) && v.until > now()).map(([name, v]) => ({ name, metadata: v.metadata }));
     keys.sort((a, b) => (a.name < b.name ? -1 : 1));
-    return { keys: keys.slice(0, limit), list_complete: keys.length <= limit, cacheStatus: null };
+    // The cursor is the offset of the next page (KV's cursors are opaque strings too).
+    const from = Number(cursor) || 0;
+    const done = from + limit >= keys.length;
+    return { keys: keys.slice(from, from + limit), list_complete: done, ...(!done && { cursor: String(from + limit) }), cacheStatus: null };
   };
   return { get, getWithMetadata, put, list } as unknown as KVNamespace;
 }

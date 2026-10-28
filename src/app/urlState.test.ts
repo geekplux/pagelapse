@@ -28,6 +28,12 @@ describe('urlState', () => {
     expect(isHeroState(parseUrlState('?sample=nope'))).toBe(false);
     expect(isHeroState(parseUrlState('?url=example.org'))).toBe(false);
   });
+  it('?explored is the list of shared pages: alone in the address, and still the hero state underneath', () => {
+    expect(parseUrlState('?explored')).toMatchObject({ explored: true });
+    expect(parseUrlState('?sample=nasa').explored).toBeUndefined();
+    expect(formatUrlState({ explored: true, url: 'https://example.org/' })).toBe('?explored');
+    expect(isHeroState(parseUrlState('?explored'))).toBe(true);
+  });
   it('resolves a change pair, falling back to the latest entry', () => {
     expect(changeIndex(entries, '20140101000000-20150101000000')).toBe(0);
     expect(changeIndex(entries, 'bogus')).toBe(1);

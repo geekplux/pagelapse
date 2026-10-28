@@ -27,9 +27,12 @@ function setup() {
     put: async (key: string, value: string, o?: { expirationTtl?: number; metadata?: unknown }) =>
       void (store.set(key, value), meta.set(key, o?.metadata), puts.push({ key, value, ttl: o?.expirationTtl, metadata: o?.metadata })),
     getWithMetadata: async (key: string) => ({ value: store.get(key) ?? null, metadata: meta.get(key) ?? null }),
-    list: async ({ prefix = '', limit = 1000 }: { prefix?: string; limit?: number }) => ({
-      keys: [...store.keys()].filter((k) => k.startsWith(prefix)).sort().slice(0, limit).map((name) => ({ name, metadata: meta.get(name) })),
-    }),
+    list: async ({ prefix = '', limit = 1000, cursor }: { prefix?: string; limit?: number; cursor?: string }) => {
+      const names = [...store.keys()].filter((k) => k.startsWith(prefix)).sort();
+      const from = Number(cursor) || 0;
+      const done = from + limit >= names.length;
+      return { keys: names.slice(from, from + limit).map((name) => ({ name, metadata: meta.get(name) })), list_complete: done, ...(!done && { cursor: String(from + limit) }) };
+    },
   };
   const env: Env = { CACHE: kv as unknown as KVNamespace, UPSTREAM_LIMIT: { limit: async () => ({ success: s.allow }) } as RateLimit };
   const io = {
@@ -302,7 +305,7 @@ describe('gallery', () => {
 
   it('lists a looked-up page once, newest first, with its title and span, and never touches the archive', async () => {
     const t = setup();
-    expect((await t.get('/api/gallery')).body).toEqual({ entries: [] });
+    expect((await t.get('/api/gallery')).body).toEqual({ entries: [], more: false });
     await lookUp(t, 'example.org');
     await lookUp(t, 'example.org/about');
     const calls = t.calls.length;
@@ -327,6 +330,25 @@ describe('gallery', () => {
     expect((await t.get('/api/gallery')).body.entries).toEqual([]);
     expect((await t.share('example.org/about')).body.message).toMatch(/cannot be listed/);
     expect((await t.share('not a url')).body.error).toBe('invalid_url');
+  });
+
+  it('lists the newest 24 with `more`, and every entry, a page of 60 at a time, with ?all', async () => {
+    const t = setup();
+    for (let i = 0; i < 70; i++) {
+      const url = `https://site${i}.example/`;
+      await t.env.CACHE.put(`gallery:v1:${String(9_000_000 - i).padStart(13, '0')}:${i}`, '', { metadata: { url, title: `Site ${i}`, captures: 16, firstTs: '20000101000000', lastTs: '20260101000000', added: i } });
+    }
+    t.store.set('gallery:block', JSON.stringify(['site3.example']));
+    const home = (await t.get('/api/gallery')).body;
+    // Keys sort newest first: site69 was shared last.
+    expect([home.entries.length, home.more, home.entries[0].url]).toEqual([24, true, 'https://site69.example/']);
+    const first = await t.get('/api/gallery?all');
+    expect(first.res.headers.get('cache-control')).toBe('public, max-age=300');
+    expect([first.body.entries.length, typeof first.body.cursor]).toEqual([60, 'string']);
+    const next = (await t.get(`/api/gallery?all&cursor=${first.body.cursor}`)).body;
+    // The last page: sites 9 to 0 without the blocked site3.
+    expect([next.entries.length, next.cursor, next.entries.at(-1).url]).toEqual([9, undefined, 'https://site0.example/']);
+    expect(next.entries.some((e: { url: string }) => e.url.includes('site3.'))).toBe(false);
   });
 
   it('is limited per visitor', async () => {
