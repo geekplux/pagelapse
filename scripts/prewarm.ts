@@ -7,8 +7,9 @@
 // It computes exactly what the Worker would store (worker/routes/captures.ts and snapshot.ts): the kept CDX listing
 // under cdx:v2 and each sampled capture's extracted text under snap:v1, with the same keys, sampling and 2 MB cap.
 // Raw responses are cached in .cache/prewarm/raw/ so a re-run never refetches; requests are serialised and spaced
-// >= 3 s with the identified User-Agent. A 429, a refused connection or a timeout (the archive slows or blocks an IP)
-// stops the run and still writes what is done; re-run later and it resumes from the cache.
+// >= 3 s with the identified User-Agent. A 429 or a refused connection (the archive blocks an IP that asks too much)
+// stops the run and still writes what is done; re-run later and it resumes from the cache. A capture that times out or
+// arrives broken is skipped, as the Worker would, and a page whose capture list fails is skipped.
 // The only code besides the recorders that touches the live network; never imported by tests.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -60,6 +61,10 @@ const lines = readFileSync(resolve(root, args.urls), 'utf8').split('\n').map((l)
 const bulk: { key: string; value: string }[] = [];
 const report: string[] = [];
 
+/** A 429 or a refused connection means the archive wants us gone: stop. Anything else (a timeout, a broken body) is one capture's problem. */
+const fatal = (err: unknown) => err instanceof RateLimitedError || ((err as Error)?.cause as { code?: string } | undefined)?.code === 'ECONNREFUSED';
+const reason = (err: unknown) => `${err instanceof Error ? err.name : 'error'}: ${String((err as Error)?.cause ?? (err as Error)?.message ?? err)}`;
+
 try {
   for (const line of lines) {
     const check = validateTargetUrl(line);
@@ -67,7 +72,15 @@ try {
       report.push(`skip ${line}: ${check.message}`);
       continue;
     }
-    const cdx = await cachedGet(buildCdxUrl('internet-archive', check.url));
+    let cdx: Awaited<ReturnType<typeof cachedGet>>;
+    try {
+      cdx = await cachedGet(buildCdxUrl('internet-archive', check.url));
+    } catch (err) {
+      if (fatal(err)) throw err;
+      report.push(`skip ${check.url}: its capture list failed (${reason(err)})`);
+      console.log(report.at(-1));
+      continue;
+    }
     const all: Capture[] = cdx ? dedupeAdjacentDigests(parseCdx('internet-archive', cdx.text)) : [];
     if (!all.length) {
       report.push(`skip ${check.url}: no captures`);
@@ -76,7 +89,14 @@ try {
     bulk.push({ key: await cdxKey(check.url), value: keptJson(all, Date.now()) });
     let stored = 0;
     for (const c of sampleCaptures(all, DEFAULT_MAX)) {
-      const raw = await cachedGet(rawCaptureUrl('internet-archive', c.ts, check.url));
+      let raw: Awaited<ReturnType<typeof cachedGet>>;
+      try {
+        raw = await cachedGet(rawCaptureUrl('internet-archive', c.ts, check.url));
+      } catch (err) {
+        // The Worker would not cache this capture either; the run shows it as not fetched.
+        if (fatal(err)) throw err;
+        continue;
+      }
       if (!raw) continue;
       const page = raw.truncated ? { error: 'too_large' } : { ts: c.ts, ...extractPage(raw.text) };
       bulk.push({ key: await snapKey(check.url, c.ts), value: JSON.stringify(page) });
@@ -86,8 +106,8 @@ try {
     console.log(report.at(-1));
   }
 } catch (err) {
-  // A 429, a refused or dropped connection, a timeout or a 5xx after the retries: stop, keep what is done.
-  const why = err instanceof RateLimitedError ? `the archive asked us to wait ${err.retryAfter} s` : `${err instanceof Error ? err.name : 'error'}: ${String((err as Error)?.cause ?? (err as Error)?.message ?? err)}`;
+  // A 429 or a refused connection (fatal above), or a bug: stop, keep what is done.
+  const why = err instanceof RateLimitedError ? `the archive asked us to wait ${err.retryAfter} s` : reason(err);
   report.push(`stopped: ${why}; re-run later, it resumes from the cache`);
 }
 
