@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import cc from '../samples/creative-commons.json';
 import nasa from '../samples/nasa.json';
+import weather from '../samples/weather-gov.json';
 import wiki from '../samples/wikipedia-internet-archive.json';
+import pluto from '../samples/wikipedia-pluto.json';
+import www from '../samples/wikipedia-world-wide-web.json';
 import { MAX_RECORD_CHARS, MAX_SNIPPET_CHARS, toChangeRecord } from './changeRecord.ts';
 import { diffPages } from './diff.ts';
 import { fixtureToSnapshots, parseSampleFixture } from './fixture.ts';
@@ -10,7 +13,7 @@ import { MAGNITUDE_THRESHOLDS } from './score.ts';
 import { appendSnapshot, buildTimeline, emptyTimeline, trivialEntries } from './timeline.ts';
 import type { ChangeRecord, SnapshotPage } from './types.ts';
 
-const samples = [wiki, nasa, cc].map((j) => parseSampleFixture(j));
+const samples = [wiki, nasa, cc, pluto, www, weather].map((j) => parseSampleFixture(j));
 const snap = (n: number, texts: string[], title = 'Field notes'): SnapshotPage => ({
   ts: `2020010${n}000000`,
   digest: `d${n}`,
@@ -138,6 +141,6 @@ describe('buildTimeline', () => {
   it('each committed sample yields 4-15 meaningful changes', () => {
     const counts = Object.fromEntries(samples.map((f) => [f.id, buildTimeline(f.url, fixtureToSnapshots(f)).entries.length]));
     expect(Object.values(counts).every((n) => n >= 4 && n <= 15)).toBe(true);
-    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, nasa: 10, 'creative-commons': 13 }); // as recorded; re-recording a sample changes its count
+    expect(counts).toEqual({ 'wikipedia-internet-archive': 13, nasa: 10, 'creative-commons': 13, 'wikipedia-pluto': 11, 'wikipedia-world-wide-web': 13, 'weather-gov': 13 }); // as recorded; re-recording a sample changes its count
   });
 });

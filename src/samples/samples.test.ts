@@ -25,7 +25,7 @@ describe('committed samples', () => {
     expect(samples.map((s) => s.url)).toEqual(shown.map((c) => c.url));
     expect(samples.map((s) => s.name)).toEqual(shown.map((c) => sampleName(c.label)));
     // Today's options, in order.
-    expect(samples.map((s) => s.name)).toEqual(['Wikipedia: Internet Archive', 'NASA', 'Creative Commons']);
+    expect(samples.map((s) => s.name)).toEqual(['Wikipedia: Internet Archive', 'NASA', 'Creative Commons', 'Wikipedia: Pluto', 'Wikipedia: World Wide Web', 'weather.gov']);
     expect(config[0]!.id).toBe('wikipedia-internet-archive');
     expect(defaultEntry.id).toBe('wikipedia-internet-archive');
     expect(DECK_SAMPLE).toBe(defaultEntry.id);
@@ -53,8 +53,8 @@ describe('committed samples', () => {
     expect(recorded(entries, { './a.json': 1, './b.json': 1 }).map((c) => c.id)).toEqual(['a', 'b']);
     expect(recorded(entries, { './a.json': 1, './nasa.json': 1, './b.json': 1 }).map((c) => c.id)).toEqual(['a', 'nasa', 'b']);
     expect(sampleName('NASA home page')).toBe('NASA');
-    // The real config: NASA and Creative Commons carry their licences and money-figure filters, and are recorded, so offered.
-    for (const id of ['nasa', 'creative-commons']) {
+    // The real config: every sample after the default carries its licence and money-figure filters, and is offered once recorded.
+    for (const id of ['nasa', 'creative-commons', 'wikipedia-pluto', 'wikipedia-world-wide-web', 'weather-gov']) {
       expect(config.some((c) => c.id === id && c.license && c.attribution && c.dropBlocks && c.visualRedact)).toBe(true);
       expect(samples.some((s) => s.id === id)).toBe(!!RAW[`./${id}.json`]);
     }
@@ -73,11 +73,18 @@ describe('committed samples', () => {
     const cfg = (id: string) => config.find((c) => c.id === id)!;
     const drops = (id: string, text: string) => new RegExp(cfg(id).dropBlocks!, 'iu').test(text);
     const hides = (id: string, text: string) => new RegExp(cfg(id).visualRedact!.pattern, 'iu').test(text);
-    for (const id of ['nasa', 'creative-commons']) {
+    for (const id of ['nasa', 'creative-commons', 'wikipedia-pluto', 'wikipedia-world-wide-web', 'weather-gov']) {
       for (const t of ['A budget of $25.4 billion', 'US$ 300 million in revenue', 'Its assets grew']) expect([drops(id, t), hides(id, t)]).toEqual([true, true]);
       expect(drops(id, 'Webb sees a galaxy 13 billion light-years away')).toBe(false);
     }
     expect(drops('nasa', 'The fiscal year 2025 request')).toBe(true);
+    expect(drops('weather-gov', 'The fiscal year 2025 request')).toBe(true);
+    // Pluto's history mentions an observatory's "million-dollar" legacy: the singular is trimmed too.
+    for (const id of ['wikipedia-pluto', 'wikipedia-world-wide-web']) {
+      expect([drops(id, "the observatory's million-dollar portion of his legacy"), hides(id, 'a million-dollar legacy')]).toEqual([true, true]);
+      expect(drops(id, 'Pluto is 5.9 billion km from the Sun')).toBe(false);
+      for (const t of ['Donate to Wikipedia', 'Donate']) expect(hides(id, t)).toBe(true);
+    }
     for (const t of ['Donate', 'Make a donation today', 'Our fundraising campaign']) expect([drops('creative-commons', t), hides('creative-commons', t)]).toEqual([true, true]);
     expect(drops('creative-commons', 'Share your work under a CC licence')).toBe(false);
     for (const t of ['Store', 'SUPPORT US', 'Support CC', 'Help us build a vibrant commons']) expect(hides('creative-commons', t)).toBe(true);

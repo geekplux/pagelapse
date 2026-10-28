@@ -44,7 +44,7 @@ describe('committed sample pictures', () => {
     expect(checkPictures(root).firstView).toBe(want);
   });
 
-  it.each(['wikipedia-internet-archive', 'nasa', 'creative-commons'])('%s features a meaningful change with two pictures', (id) => {
+  it.each(['wikipedia-internet-archive', 'nasa', 'creative-commons', 'wikipedia-pluto', 'wikipedia-world-wide-web', 'weather-gov'])('%s features a meaningful change with two pictures', (id) => {
     const f = parseSampleFixture(JSON.parse(readFileSync(join(root, 'src/samples', `${id}.json`), 'utf8')));
     const pairs = buildTimeline(f.url, fixtureToSnapshots(f)).entries.map((e) => `${e.from}-${e.to}`);
     expect(pairs).toContain(f.featured);

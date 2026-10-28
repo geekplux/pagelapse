@@ -24,7 +24,7 @@ Both recorders cache everything under `.cache/record/`, so a re-run never refetc
 The recorders need network access to the archives and Chrome (`CHROME_PATH` if it is not in its standard place). Run the steps above on such a machine, then:
 
 - **Look at every picture.** Open the sample in `pnpm dev` and step through it: money figures and donation amounts must be hidden or the picture dropped with `visualDrop` (re-run `pnpm record:visuals --only <id> --offline` to apply it), and `partial` or `failed` pictures should still tell the story.
-- **The image budget.** All sample pictures together may take 2.2 MB, and the three current samples (Wikipedia, NASA, Creative Commons) use about 1.6 MB, so a fourth sample of the same size will not fit without retiring or trimming one. At least 85% of all captures must have a picture.
+- **The image budget.** All sample pictures together may take 4.6 MB, and the six current samples use about 4.0 MB (a Wikipedia article or a home page takes 0.3 to 0.9 MB), so a seventh sample needs a small one or a raised budget. Only the first view's pictures load up front, and their 160 KB budget does not change with more samples. At least 85% of all captures must have a picture.
 - **The credits.** Add the page to the README's Credits and to `public/samples/README.md`.
 - **Commit together:** `src/samples/<id>.json`, `public/samples/<id>/` and the config entry (with its `featured` pair and any `visualDrop`). The option appears in config order in the hero and the address menu.
 
