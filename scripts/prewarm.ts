@@ -7,7 +7,7 @@
 // It computes exactly what the Worker would store (worker/routes/captures.ts and snapshot.ts): the kept CDX listing
 // under cdx:v2 and each sampled capture's extracted text under snap:v1, with the same keys, sampling and 2 MB cap.
 // Raw responses are cached in .cache/prewarm/raw/ so a re-run never refetches; requests are serialised and spaced
-// >= 3 s with the identified User-Agent. A 429 or a refused connection (the archive blocks an IP that asks too much)
+// >= 3 s with the identified User-Agent. A 429, a refused connection or a timeout (the archive slows or blocks an IP)
 // stops the run and still writes what is done; re-run later and it resumes from the cache.
 // The only code besides the recorders that touches the live network; never imported by tests.
 import { createHash } from 'node:crypto';
@@ -86,9 +86,9 @@ try {
     console.log(report.at(-1));
   }
 } catch (err) {
-  if (err instanceof RateLimitedError) report.push(`stopped: the archive asked us to wait ${err.retryAfter} s; re-run later, it resumes from the cache`);
-  else if (err instanceof TypeError) report.push(`stopped: the archive refused or dropped the connection (${String(err.cause ?? err)}); re-run later, it resumes from the cache`);
-  else throw err;
+  // A 429, a refused or dropped connection, a timeout or a 5xx after the retries: stop, keep what is done.
+  const why = err instanceof RateLimitedError ? `the archive asked us to wait ${err.retryAfter} s` : `${err instanceof Error ? err.name : 'error'}: ${String((err as Error)?.cause ?? (err as Error)?.message ?? err)}`;
+  report.push(`stopped: ${why}; re-run later, it resumes from the cache`);
 }
 
 const out = resolve(root, args.out);

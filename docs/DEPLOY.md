@@ -110,7 +110,7 @@ pnpm prewarm
 pnpm exec wrangler kv bulk put --remote --binding CACHE .cache/prewarm/kv-bulk.json
 ```
 
-Capture lists are refreshed by the Worker after 24 h, and kept if the archive refuses, so a warmed page stays fast. A 429 or a refused connection (the archive blocks an IP that asks too much) stops the run and writes what is done; run it again later and it resumes from its cache.
+Capture lists are refreshed by the Worker after 24 h, and kept if the archive refuses, so a warmed page stays fast. A 429, a refused connection or a timeout (the archive slows or blocks an IP that asks too much) stops the run and writes what is done; run it again later and it resumes from its cache.
 
 ## Recently explored
 
