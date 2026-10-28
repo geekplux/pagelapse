@@ -20,6 +20,8 @@ import { LIVE_MODE, type Mode, captureForChange, changeForCapture, liveView, pai
 import { announced, progressText } from './liveState.ts';
 import { useLiveTimeline } from './useLiveTimeline.ts';
 import { useSummaries } from './useSummaries.ts';
+import { shareable } from './api.ts';
+import { ShareToGallery } from './ShareToGallery.tsx';
 
 interface Props {
   url: string;
@@ -213,6 +215,7 @@ export function LiveView({ url, initialChange, initialAt, initialMode, onChange,
             status={error ? undefined : statusLine}
             statusShown={statusShown}
             metaRef={status === 'done' ? setTarget : undefined}
+            action={status === 'done' && !error && snapshots.length >= 2 && shareable(url) ? <ShareToGallery url={url} /> : undefined}
           />
           {error?.code === 'no_captures' ? (
             <EmptyState url={url} onSample={onSample} headingRef={setTarget} />

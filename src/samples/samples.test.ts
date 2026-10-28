@@ -31,8 +31,17 @@ describe('committed samples', () => {
     expect(DECK_SAMPLE).toBe(defaultEntry.id);
   });
 
-  it('ships only the id, label and url of each config entry to the app (the build-time catalog)', () => {
-    expect(catalog).toEqual(config.map(({ id, label, url }) => ({ id, label, url })));
+  it('ships only the id, label, url and gallery card of each config entry to the app (the build-time catalog)', () => {
+    const card = (id: string) => {
+      const raw = RAW[`./${id}.json`];
+      if (!raw) return undefined;
+      const { snapshots } = parseSampleFixture(JSON.parse(raw));
+      const shot = snapshots.findLast((x) => x.shot?.file && x.shot.status !== 'failed')?.shot?.file;
+      return { captures: snapshots.length, firstTs: snapshots[0]!.ts, lastTs: snapshots.at(-1)!.ts, ...(shot && { shot }) };
+    };
+    expect(catalog).toEqual(config.map(({ id, label, url }) => ({ id, label, url, card: card(id) })));
+    // Every recorded sample's card has a thumbnail, and the registry turns it into a picture URL.
+    for (const s of samples) expect(s.card?.thumb).toMatch(new RegExp(`^/samples/${s.id}/\\d{14}-[0-9a-f]{8}\\.thumb\\.webp$`));
   });
 
   it('never offers an entry without a recorded fixture, and offers one as soon as it is recorded', () => {

@@ -14,6 +14,8 @@ export interface SampleEntry {
   load: () => Promise<SampleFixture>;
   /** The fixture once `load` has resolved (a deep link loads it before the first render, main.tsx). */
   loaded: () => SampleFixture | undefined;
+  /** What its gallery card shows, known at build time: captures, span, and the latest picture's thumbnail. */
+  card?: { captures: number; firstTs: string; lastTs: string; thumb?: string };
 }
 
 /** What the registry needs of a samples.config.json entry. */
@@ -21,6 +23,7 @@ export interface SampleConfig {
   id: string;
   label: string;
   url: string;
+  card?: { captures: number; firstTs: string; lastTs: string; shot?: string } | undefined;
 }
 
 /** The recorded fixtures, as a build-time list of files: a config entry without one is never offered. */
@@ -36,7 +39,8 @@ export const sampleName = (label: string) => label.replace(/ home page$/, '');
 /** Registry of the built-in samples that are recorded, in samples.config.json order; each loads lazily, once. */
 export const samples: readonly SampleEntry[] = recorded(config, FIXTURES).map((c) => {
   const fixture = retryableImport(() => FIXTURES[`./${c.id}.json`]!().then((m) => parseSampleFixture(m.default)));
-  return { id: c.id, name: sampleName(c.label), url: c.url, load: fixture.load, loaded: fixture.loaded };
+  const card = c.card && { captures: c.card.captures, firstTs: c.card.firstTs, lastTs: c.card.lastTs, ...(c.card.shot && { thumb: shotSrc(c.id, c.card.shot, true) }) };
+  return { id: c.id, name: sampleName(c.label), url: c.url, load: fixture.load, loaded: fixture.loaded, ...(card && { card }) };
 });
 
 /** The default sample: the first recorded one (Wikipedia: Internet Archive). An unknown `?sample=` opens it. */

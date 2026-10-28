@@ -11,7 +11,7 @@ Pagelapse is a React app, a pure TypeScript core and one Cloudflare Worker. The 
 | `src/app/` | The React UI: the hero deck, the workspace (stage, controls, time ribbon, change section, every change) and live mode | browser |
 | `src/design/` | Palette, tokens, CSS, the logo and the colour-vision maths | browser, tests |
 | `src/samples/`, `public/samples/` | The built-in samples: recorded text fixtures, the registry, and one content-hashed WebP picture per capture | browser, scripts |
-| `worker/` | The `/api/*` routes (`captures`, `snapshot`, `summaries`, `health`), caching, limits and the summariser | Cloudflare Worker |
+| `worker/` | The `/api/*` routes (`captures`, `snapshot`, `summaries`, `gallery`, `health`), caching, limits and the summariser | Cloudflare Worker |
 | `scripts/` | The sample recorders, the headless smoke runner, the size and docs checks, and the image renderers | Node 24 |
 
 ```text
@@ -38,6 +38,7 @@ Pagelapse is a React app, a pure TypeScript core and one Cloudflare Worker. The 
 
 ## Decisions that shaped it
 
+- **Recently explored.** After a live run a visitor may press "Add to Recently explored". `POST /api/gallery` checks that the page's captures are already cached, then stores a small entry as the metadata of a KV key whose name sorts newest first, so `GET /api/gallery` is one KV list and no reads. The hero loads the list, and the sample thumbnails, only when the gallery scrolls into view. Opening an entry is an ordinary live run that finds everything in the cache.
 - **One Worker with static assets.** Workers Static Assets serves the app, the fonts and the sample pictures, and only `/api/*` runs the Worker (`run_worker_first` in `wrangler.jsonc`). Opening a sample costs no Worker request. `@cloudflare/vite-plugin` builds both halves and runs the Worker in workerd for `pnpm dev` and `pnpm preview`, so local runs behave like production.
 - **A pure, shared core.** `src/core/` uses no DOM and no `fetch`, and lint enforces it (`.oxlintrc.json`). The same extraction, diff and scoring run in the browser, the Worker and the recorders. Code that needs IO (the Worker routes, `politeFetch`) takes it as a parameter, so tests pass a fake instead of patching globals.
 - **Extract in the Worker, diff in the browser.** The Worker caches the extracted text of a capture, never its raw HTML, so cache values stay small and Worker calls stay short. The browser diffs for display. The summaries route takes only capture pairs and rebuilds each change record from KV, so a client cannot send its own text to the model or poison the summary cache.

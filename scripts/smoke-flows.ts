@@ -390,8 +390,10 @@ export const flows: readonly Flow[] = [
       const ids = fixtures.map((f) => f.id).join();
       await openHero(page, baseUrl);
       const options = await page.locator('.sample-opt').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-sample')));
-      if (options.join() !== ids) throw new Error(`hero options ${options.join()}, expected ${ids}`);
-      const notes = [`hero options: ${options.join(', ')}`];
+      if (options.join() !== fixtures.slice(0, 3).map((f) => f.id).join()) throw new Error(`hero options ${options.join()}, expected the first 3 of ${ids}`);
+      const cards = await page.locator('.g-card[data-sample]').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-sample')));
+      if (cards.join() !== ids) throw new Error(`gallery cards ${cards.join()}, expected ${ids}`);
+      const notes = [`hero options: ${options.join(', ')}`, `gallery cards: ${cards.join(', ')}`];
       for (const id of unrecorded) {
         await openReady(page, baseUrl, `/?sample=${id}`);
         const label = (await page.locator('#sample-label').textContent())?.trim();
@@ -538,7 +540,7 @@ export const flows: readonly Flow[] = [
       if ((await page.getByRole('textbox', { name: 'Page address' }).count()) !== 1) throw new Error('no "Page address" field');
       if ((await page.getByRole('button', { name: 'Show its history' }).count()) !== 1) throw new Error('no "Show its history" button');
       const options = await page.locator('.sample-opt').evaluateAll((bs) => bs.map((b) => b.getAttribute('data-sample')));
-      if (options.join() !== fixtures.map((f) => f.id).join()) throw new Error(`sample options ${options.join()}`);
+      if (options.join() !== fixtures.slice(0, 3).map((f) => f.id).join()) throw new Error(`sample options ${options.join()}`);
       await noPageOverflow(page);
       // The deck: one button per pictured Wikipedia capture, named by its date.
       const deck = fixtures.find((f) => f.id === 'wikipedia-internet-archive')!;
@@ -547,14 +549,14 @@ export const flows: readonly Flow[] = [
       const names = shots.map((s, i) => `${i === shots.length - 1 ? 'Latest, ' : ''}${formatTimestampLong(s.ts)}, open this capture`);
       if (JSON.stringify(cards) !== JSON.stringify(names.map((n) => ['BUTTON', n]))) throw new Error(`deck cards ${JSON.stringify(cards)}`);
       notes.push(`${cards.length} deck cards, ${await page.locator('.deck-bar').count()} change bars`);
-      // Tab: field, button, the options, then every card in time order.
+      // Tab: field, button, the options, "More pages", then every card in time order.
       await page.locator('#url-input').focus();
       const stops: string[] = [];
-      for (let i = 0; i < 2 + options.length + shots.length; i++) {
+      for (let i = 0; i < 3 + options.length + shots.length; i++) {
         stops.push(await page.evaluate(() => (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent ?? '').trim()));
         await page.keyboard.press('Tab');
       }
-      const wantStops = ['Page address', 'Show its history', ...fixtures.map((f) => f.label.replace(/ home page$/, '')), ...names];
+      const wantStops = ['Page address', 'Show its history', ...fixtures.slice(0, 3).map((f) => f.label.replace(/ home page$/, '')), 'More pages', ...names];
       if (stops.join('|') !== wantStops.join('|')) throw new Error(`hero tab stops: ${stops.join(' | ')}`);
       // A sample option opens the workspace in a new history entry; Back returns to the hero.
       const before = await page.evaluate(() => history.length);
