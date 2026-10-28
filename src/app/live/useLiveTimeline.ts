@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef } from 'react';
 import { mapLimit } from '../../archive/politeFetch.ts';
 import { ApiError, fetchCaptures, fetchSnapshot } from './api.ts';
-import { initialLive, liveReducer } from './liveState.ts';
+import { fetchOrder, initialLive, liveReducer } from './liveState.ts';
 
 /** Answers already received this session (captures are immutable, listings change slowly): a re-run costs nothing. */
 const cache = new Map<string, unknown>();
@@ -14,7 +14,8 @@ async function once<T>(key: string, load: () => Promise<T>): Promise<T> {
 const CONCURRENCY = 2;
 
 /**
- * Runs a live lookup of `url` on mount: the capture list, then each capture's text, in time order, two at a time.
+ * Runs a live lookup of `url` on mount: the capture list, then each capture's text, two at a time, first and latest
+ * first and then ever finer (`fetchOrder`), so the decade compare shows after one round.
  * A capture that fails is skipped (its thumbnail says "not fetched"); a rate limit stops the run. Unmounting or `cancel` aborts everything in flight.
  */
 export function useLiveTimeline(url: string) {
@@ -29,7 +30,8 @@ export function useLiveTimeline(url: string) {
         const res = await once(`c:${url}`, () => fetchCaptures(url, signal));
         const captures = [...res.captures].sort((x, y) => (x.ts < y.ts ? -1 : 1));
         dispatch({ type: 'captures', captures });
-        await mapLimit(captures, CONCURRENCY, async ({ ts, digest }, index) => {
+        await mapLimit(fetchOrder(captures.length), CONCURRENCY, async (index) => {
+          const { ts, digest } = captures[index]!;
           // After a cancel or a fatal error, the remaining captures are never requested.
           signal.throwIfAborted();
           try {

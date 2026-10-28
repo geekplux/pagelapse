@@ -34,6 +34,15 @@ describe('urlState', () => {
     expect(changeIndex(entries)).toBe(1);
     expect(changeIndex([], 'x')).toBe(-1);
   });
+  it('follows a change a live run has since split: to the part that ends at its After', () => {
+    const split = [
+      { from: '20100101000000', to: '20150101000000' },
+      { from: '20150101000000', to: '20200101000000' },
+      { from: '20200101000000', to: '20250101000000' },
+    ];
+    expect(changeIndex(split, '20100101000000-20200101000000')).toBe(1);
+    expect(changeIndex(split, '20150101000000-20250101000000')).toBe(2);
+  });
 });
 
 describe('describeChange', () => {

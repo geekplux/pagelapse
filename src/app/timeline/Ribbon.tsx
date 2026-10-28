@@ -30,9 +30,10 @@ const SIDE: Record<Side, string> = { before: 'Before', after: 'After' };
 interface Props {
   /** The captures that have arrived (or failed), oldest first: a recorded thumbnail, a text outline or no picture. */
   items: readonly CaptureView[];
-  /** Live runs: captures still to come keep their place as empty slots after `items`, so nothing moves as they arrive. */
-  pending?: number;
-  /** Every capture's time, `items` and pending alike: the axis spans them all from the start. */
+  /**
+   * Every capture's time, oldest first: the axis spans them all from the start. Each item sits in its capture's slot;
+   * a capture without an item (a live run's, still to come) keeps its place as an empty slot, so nothing moves.
+   */
   times: readonly string[];
   timeline: Model;
   /** The selected change (the slider's value), an index into `timeline.entries`. */
@@ -73,7 +74,7 @@ const STRIP_KEYS: Record<string, (i: number, n: number) => number> = {
  * Two tab stops: the thumbnails (one stop, roving with Left/Right/Home/End; Enter or Space shows that capture) and the
  * axis, an APG slider over the changes whose value text is the change's description.
  */
-export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at, failed = NONE, onSelect, onCapture, labelledBy, note, playing = false }: Props) {
+export function Ribbon({ items, times, timeline, selected, pair, at, failed = NONE, onSelect, onCapture, labelledBy, note, playing = false }: Props) {
   const outer = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLOListElement>(null);
@@ -124,6 +125,8 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
   const shown = pair ?? entries[selected];
   const sideOf = (ts: string): Side | undefined => (!shown ? undefined : ts === shown.from ? 'before' : ts === shown.to ? 'after' : undefined);
   const cx = (i: number) => i * (thumbW + GAP) + thumbW / 2;
+  const slotOf = useMemo(() => new Map(times.map((t, i) => [t, i])), [times]);
+  const itemAt = useMemo(() => new Map(items.map((v, i) => [v.ts, i])), [items]);
   const trivial = useMemo(() => new Set([...trivialCaptures, ...entries.filter((e) => e.significance.magnitude === 'trivial').map((e) => e.to)]), [trivialCaptures, entries]);
 
   // The thumbnails' roving tab stop; it snaps back to the shown capture whenever that changes.
@@ -177,7 +180,7 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
       {!compact &&
         items.map((v, i) => {
           const end = g.ends.get(v.ts) ?? AXIS;
-          return <path key={v.ts} className="rb-cv" data-side={sideOf(v.ts)} d={hairline(cx(i), g.xOf(v.ts), end)} />;
+          return <path key={v.ts} className="rb-cv" data-side={sideOf(v.ts)} d={hairline(cx(slotOf.get(v.ts) ?? i), g.xOf(v.ts), end)} />;
         })}
       {g.first && <circle className="rb-first" cx={g.xOf(g.first)} cy={DOT_Y} r={3.25} />}
       {trivialCaptures.map((ts) => (
@@ -228,11 +231,14 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
             // Safari drops list semantics when list-style is none, so the role is not redundant here.
             // oxlint-disable-next-line jsx-a11y/no-redundant-roles, jsx-a11y/no-noninteractive-element-interactions
             <ol className="rb-strip" role="list" aria-label="Thumbnails" ref={strip} onKeyDown={onStripKey}>
-              {items.map((v, i) => {
+              {times.map((ts, slot) => {
+                const i = itemAt.get(ts);
+                if (i === undefined) return <li key={ts} className="rb-pending" aria-hidden="true" />;
+                const v = items[i]!;
                 const side = sideOf(v.ts);
                 const none = v.source === 'none';
                 const label = [
-                  `Capture ${i + 1} of ${n}, ${formatTimestampLong(v.ts)}`,
+                  `Capture ${slot + 1} of ${n}, ${formatTimestampLong(v.ts)}`,
                   side && SIDE[side],
                   trivial.has(v.ts) && 'trivial edit',
                   v.status === 'partial' && 'partial copy',
@@ -271,9 +277,6 @@ export function Ribbon({ items, pending = 0, times, timeline, selected, pair, at
                   </li>
                 );
               })}
-              {Array.from({ length: pending }, (_, i) => (
-                <li key={`p${i}`} className="rb-pending" aria-hidden="true" />
-              ))}
             </ol>
           )}
           {entry ? (

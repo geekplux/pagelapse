@@ -123,7 +123,7 @@ const VIEWS: View[] = [
   {
     name: 'live-running',
     async setup(page, baseUrl) {
-      await mockApi(page, { snapshot: (i) => (i < 6 ? {} : { delay: null }) });
+      await mockApi(page, { snapshot: (_, nth) => (nth < 6 ? {} : { delay: null }) });
       await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
       await page.waitForFunction(() => document.querySelector('.live-status .live-count')?.textContent === '6 of 14', null, { timeout: 10_000 });
     },
@@ -420,7 +420,7 @@ export const calmFlows: readonly Flow[] = [
     viewports: ['mobile', 'wide'],
     widthTag: true,
     async run({ page, baseUrl }) {
-      await mockApi(page, { snapshot: (i) => (i < 4 ? { delay: 900 } : { delay: null }) });
+      await mockApi(page, { snapshot: (_, nth) => (nth < 4 ? { delay: 900 } : { delay: null }) });
       await openLive(page, baseUrl, 'creativecommons.org', 'snapshots');
       const cancel = page.locator('.live-status button', { hasText: 'Cancel' });
       await cancel.focus();
