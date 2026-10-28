@@ -1,8 +1,8 @@
-import { type MouseEvent, type RefObject, useEffect, useRef, useState } from 'react';
-import { type SampleEntry, displayAddress, hostOf } from '../../samples/index.ts';
+import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type SampleEntry, hostOf } from '../../samples/index.ts';
 import { type GalleryEntry, fetchGallery } from '../live/api.ts';
 import { PageIcon } from '../UrlForm.tsx';
-import { formatUrlState } from '../urlState.ts';
+import { ExploredCard, years } from './ExploredCard.tsx';
 
 interface Props {
   samples: readonly SampleEntry[];
@@ -12,8 +12,6 @@ interface Props {
   onUrl: (url: string) => void;
 }
 
-/** `2009 to 2026`, or one year. */
-export const years = (first: string, last: string) => (first.slice(0, 4) === last.slice(0, 4) ? first.slice(0, 4) : `${first.slice(0, 4)} to ${last.slice(0, 4)}`);
 
 type Shared = GalleryEntry[] | 'loading' | 'failed';
 
@@ -43,9 +41,6 @@ function useGallery(ref: RefObject<HTMLElement | null>): { seen: boolean; shared
   }, [seen]);
   return { seen, shared };
 }
-
-/** A plain click opens the page here; a modified click (new tab, new window) follows the link. */
-const plainClick = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 
 /** Under the deck: every sample as a card, the pages visitors shared, and the credit to the Internet Archive. */
 export function Gallery({ samples, onSample, onUrl }: Props) {
@@ -90,23 +85,7 @@ export function Gallery({ samples, onSample, onUrl }: Props) {
         <ul className="gallery-grid is-text" aria-labelledby="explored-title">
           {shared.map((e) => (
             <li key={e.url}>
-              <a
-                className="g-card"
-                href={formatUrlState({ url: e.url }) || '/'}
-                onClick={(ev) => {
-                  if (!plainClick(ev)) return;
-                  ev.preventDefault();
-                  onUrl(e.url);
-                }}
-              >
-                <span className="g-name">{e.title || hostOf(e.url)}</span>
-                <span className="g-addr">{displayAddress(e.url)}</span>
-                <span className="g-meta">
-                  <span className="mono">
-                    {years(e.firstTs, e.lastTs)}, {e.captures} captures
-                  </span>
-                </span>
-              </a>
+              <ExploredCard entry={e} onUrl={onUrl} />
             </li>
           ))}
         </ul>

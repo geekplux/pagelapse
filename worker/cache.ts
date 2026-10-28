@@ -36,7 +36,7 @@ export const MEMORY_MAX = 200;
 
 /**
  * A stand-in for KV when the Worker has no `CACHE` binding (Workers Builds previews): per isolate, at most
- * `max` keys (oldest dropped first), `expirationTtl` honoured. Only the `get`/`put`/`list` calls the Worker makes.
+ * `max` keys (oldest dropped first), `expirationTtl` honoured. Only the `get`/`getWithMetadata`/`put`/`list` calls the Worker makes.
  */
 export function memoryKv(max = MEMORY_MAX, now = () => Date.now()): KVNamespace {
   const store = new Map<string, { value: string; until: number; metadata?: unknown }>();
@@ -50,11 +50,15 @@ export function memoryKv(max = MEMORY_MAX, now = () => Date.now()): KVNamespace 
     store.set(key, { value, until: opts?.expirationTtl ? now() + opts.expirationTtl * 1000 : Infinity, metadata: opts?.metadata });
     while (store.size > max) store.delete(store.keys().next().value!);
   };
+  const getWithMetadata = async (key: string) => {
+    const hit = store.get(key);
+    return hit && hit.until > now() ? { value: hit.value, metadata: hit.metadata ?? null } : { value: null, metadata: null };
+  };
   /** Live keys under `prefix` in name order, with their metadata, as KV lists them. */
   const list = async ({ prefix = '', limit = 1000 }: { prefix?: string; limit?: number } = {}) => {
     const keys = [...store].filter(([k, v]) => k.startsWith(prefix) && v.until > now()).map(([name, v]) => ({ name, metadata: v.metadata }));
     keys.sort((a, b) => (a.name < b.name ? -1 : 1));
     return { keys: keys.slice(0, limit), list_complete: keys.length <= limit, cacheStatus: null };
   };
-  return { get, put, list } as unknown as KVNamespace;
+  return { get, getWithMetadata, put, list } as unknown as KVNamespace;
 }

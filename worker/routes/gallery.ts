@@ -1,5 +1,7 @@
 import { sampleCaptures } from '../../src/core/sampling.ts';
-import type { Capture, ExtractedPage } from '../../src/core/types.ts';
+import { buildTimeline } from '../../src/core/timeline.ts';
+import { timestampToIso } from '../../src/core/timestamp.ts';
+import type { Capture, ExtractedPage, SnapshotPage } from '../../src/core/types.ts';
 import { validateTargetUrl } from '../../src/core/url.ts';
 import { type Kept, cdxKey, sha256, snapKey } from '../cache.ts';
 import type { Env, Io } from '../env.ts';
@@ -17,6 +19,12 @@ export interface GalleryEntry {
   lastTs: string;
   /** When it was shared (epoch ms). */
   added: number;
+  /**
+   * Each meaningful change, oldest first, as `[where, how much]`: where its After capture falls between `firstTs` and
+   * `lastTs` (0 to 1000), and its significance score (0 to 100). The card draws them as dots along its years. Entries shared
+   * before this field existed lack it until they are shared again.
+   */
+  changes?: [number, number][];
 }
 
 /** Entry keys sort newest first: `gallery:v1:<ms until year 2286, zero-padded>:<url hash>`. */
@@ -33,6 +41,32 @@ const MAX_TITLE = 120;
 const DENY = /\b(?:crypto\w*|bitcoin|btc|ethereum|nft|forex|trading|stocks?|casino|betting|gambl\w*|porn\w*|xxx|nsfw|onlyfans)\b/i;
 
 const newestFirst = (ms: number) => String(9_999_999_999_999 - ms).padStart(13, '0');
+/** KV metadata holds at most 1024 bytes of JSON. */
+const MAX_METADATA = 1000;
+
+const msOf = (ts: string) => Date.parse(timestampToIso(ts));
+
+/** The `changes` of a page: its cached sampled captures diffed in time order, as the live run would. */
+export function changePoints(url: string, sampled: readonly Capture[], pages: readonly (Partial<ExtractedPage> | null)[], firstTs: string, lastTs: string): [number, number][] {
+  const snaps: SnapshotPage[] = sampled.flatMap((c, i) => {
+    const p = pages[i];
+    return p && Array.isArray(p.blocks) ? [{ ts: c.ts, digest: c.digest, title: p.title ?? '', blocks: p.blocks }] : [];
+  });
+  const [a, b] = [msOf(firstTs), msOf(lastTs)];
+  return buildTimeline(url, snaps).entries.map((e) => [
+    Math.round(((msOf(e.to) - a) / Math.max(1, b - a)) * 1000),
+    Math.round(e.significance.score * 100),
+  ]);
+}
+
+/** Trims the title, then the changes, until the entry fits in KV metadata. */
+export function fit(entry: GalleryEntry): GalleryEntry {
+  const size = (e: GalleryEntry) => new TextEncoder().encode(JSON.stringify(e)).length;
+  let e = entry;
+  while (size(e) > MAX_METADATA && e.title.length > 20) e = { ...e, title: e.title.slice(0, -10) };
+  while (size(e) > MAX_METADATA && e.changes?.length) e = { ...e, changes: e.changes.slice(0, -1) };
+  return e;
+}
 
 async function blocked(env: Env): Promise<Set<string>> {
   const list = await env.CACHE.get<string[]>(BLOCK_KEY, 'json').catch(() => null);
@@ -55,6 +89,7 @@ export async function gallery(_req: Request, _url: URL, env: Env): Promise<Respo
  * `POST /api/gallery {url}`: lists a page in "Recently explored". Only a page someone has just looked up qualifies:
  * its capture list and at least half of its sampled captures must already be in KV, so an entry opens without the
  * archive. Addresses with a query or fragment (they can hold private tokens) and the blocked or denied ones are refused.
+ * Sharing a listed page again keeps its place, and fills in its changes if it was shared before they were stored.
  */
 export async function share(req: Request, _url: URL, env: Env, _io: Io): Promise<Response> {
   const raw = await readTextCapped(req, 1024);
@@ -75,7 +110,9 @@ export async function share(req: Request, _url: URL, env: Env, _io: Io): Promise
     return apiError('rate_limited', 'Too many pages shared from your connection. Try again in a minute.', 60);
   }
   const hash = await sha256(check.url);
-  if (await env.CACHE.get(URL_PREFIX + hash)) return json({ shared: true }, 200);
+  const listedKey = await env.CACHE.get(URL_PREFIX + hash);
+  const listed = listedKey ? (await env.CACHE.getWithMetadata<GalleryEntry>(listedKey)).metadata : null;
+  if (listed?.changes) return json({ shared: true }, 200);
 
   const listing = await env.CACHE.get<Kept<Capture[]>>(await cdxKey(check.url), 'json');
   const sampled = listing ? sampleCaptures(listing.value, DEFAULT_MAX) : [];
@@ -86,16 +123,18 @@ export async function share(req: Request, _url: URL, env: Env, _io: Io): Promise
   const all = listing!.value;
   const title = (pages.findLast((p) => p?.title)?.title ?? '').slice(0, MAX_TITLE);
   if (DENY.test(title)) return apiError('bad_request', 'This page cannot be listed in Recently explored.');
-  const entry: GalleryEntry = {
+  const [firstTs, lastTs] = [all[0]!.ts, all.at(-1)!.ts];
+  const entry = fit({
     url: check.url,
     title,
     captures: sampled.length,
-    firstTs: all[0]!.ts,
-    lastTs: all.at(-1)!.ts,
-    added: Date.now(),
-  };
-  const entryKey = `${ENTRY_PREFIX}${newestFirst(entry.added)}:${hash}`;
+    firstTs,
+    lastTs,
+    added: listed?.added ?? Date.now(),
+    changes: changePoints(check.url, sampled, pages, firstTs, lastTs),
+  });
+  const entryKey = listedKey ?? `${ENTRY_PREFIX}${newestFirst(entry.added)}:${hash}`;
   await env.CACHE.put(entryKey, '', { metadata: entry });
-  await env.CACHE.put(URL_PREFIX + hash, entryKey);
+  if (!listedKey) await env.CACHE.put(URL_PREFIX + hash, entryKey);
   return json({ shared: true }, 200);
 }

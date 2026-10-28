@@ -68,6 +68,8 @@ export interface GalleryEntry {
   firstTs: string;
   lastTs: string;
   added: number;
+  /** Each meaningful change as `[where along the years, 0 to 1000; how much changed, 0 to 100]`, oldest first. */
+  changes?: [number, number][];
 }
 
 /** `GET /api/gallery`: the latest shared pages, newest first. */

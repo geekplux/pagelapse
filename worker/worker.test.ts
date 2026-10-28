@@ -5,6 +5,7 @@ import html from '../test/fixtures/html/wikipedia-article.html?raw';
 import { memoryKv } from './cache.ts';
 import type { Env } from './env.ts';
 import { handle } from './index.ts';
+import { changePoints, fit } from './routes/gallery.ts';
 
 type Responder = (url: string) => Response;
 /** Recorded responses: the CDX listing for any CDX query, the article for any `id_` capture. */
@@ -25,6 +26,7 @@ function setup() {
     get: async (key: string, type?: string) => (store.has(key) ? (type === 'json' ? JSON.parse(store.get(key)!) : store.get(key)) : null),
     put: async (key: string, value: string, o?: { expirationTtl?: number; metadata?: unknown }) =>
       void (store.set(key, value), meta.set(key, o?.metadata), puts.push({ key, value, ttl: o?.expirationTtl, metadata: o?.metadata })),
+    getWithMetadata: async (key: string) => ({ value: store.get(key) ?? null, metadata: meta.get(key) ?? null }),
     list: async ({ prefix = '', limit = 1000 }: { prefix?: string; limit?: number }) => ({
       keys: [...store.keys()].filter((k) => k.startsWith(prefix)).sort().slice(0, limit).map((name) => ({ name, metadata: meta.get(name) })),
     }),
@@ -245,6 +247,58 @@ describe('gallery', () => {
     const { body } = await t.get(`/api/captures?url=${encodeURIComponent(url)}&max=16`);
     for (const c of body.captures as { ts: string }[]) await t.get(`/api/snapshot?url=${encodeURIComponent(body.url)}&ts=${c.ts}`);
   };
+
+  /** A page whose text is rewritten every few years, so its captures make meaningful changes. */
+  const evolving: Responder = (url) => {
+    if (!url.includes('id_/')) return recorded(url);
+    const era = Math.floor(Number(url.match(/\/web\/(\d{4})/)![1]) / 5);
+    const words = ['archive', 'library', 'museum', 'atlas', 'harbour', 'lantern', 'meadow', 'orchard'];
+    const body = Array.from({ length: 12 }, (_, i) => `<p>${words[(era + i) % words.length]} ${era} paragraph number ${i} about the collection and its many visitors.</p>`).join('');
+    return new Response(`<html><head><title>Era ${era}</title></head><body><main><h1>Era ${era}</h1>${body}</main></body></html>`, { headers: { 'content-type': 'text/html' } });
+  };
+
+  it('stores the changes: where each meaningful change falls, and how much changed', async () => {
+    const t = setup();
+    t.respond = evolving;
+    await lookUp(t, 'example.org');
+    await t.share('example.org');
+    const [entry] = (await t.get('/api/gallery')).body.entries as { changes: [number, number][] }[];
+    expect(entry!.changes.length).toBeGreaterThan(1);
+    for (const [where, much] of entry!.changes) expect([where >= 0 && where <= 1000, much > 0 && much <= 100]).toEqual([true, true]);
+    expect(entry!.changes.map(([w]) => w)).toEqual([...entry!.changes.map(([w]) => w)].sort((a, b) => a - b));
+  });
+
+  it('fills in the changes of an entry shared before they were stored, keeping its place', async () => {
+    const t = setup();
+    t.respond = evolving;
+    await lookUp(t, 'example.org');
+    await t.share('example.org');
+    const key = [...t.store.keys()].find((k) => k.startsWith('gallery:v1:'))!;
+    const { changes: _, ...old } = (await t.env.CACHE.getWithMetadata<{ changes?: unknown }>(key)).metadata!;
+    await t.env.CACHE.put(key, '', { metadata: old });
+    expect((await t.get('/api/gallery')).body.entries[0].changes).toBeUndefined();
+    await t.share('example.org');
+    const entries = (await t.get('/api/gallery')).body.entries as { added: number; changes?: unknown[] }[];
+    expect([entries.length, entries[0]!.added, entries[0]!.changes!.length > 0]).toEqual([1, (old as { added: number }).added, true]);
+    expect([...t.store.keys()].filter((k) => k.startsWith('gallery:v1:'))).toEqual([key]);
+  });
+
+  it('fits an entry into KV metadata: the title is cut first, then the changes', () => {
+    const entry = (n: number) => ({ url: `https://example.org/${'a'.repeat(170)}`, title: '漫长的标题'.repeat(24), captures: 16, firstTs: '20000101000000', lastTs: '20260101000000', added: 1, changes: Array.from({ length: n }, (_, i): [number, number] => [i * 5, 50]) });
+    const bytes = (e: object) => new TextEncoder().encode(JSON.stringify(e)).length;
+    // The longest title shared (120 characters, 3 bytes each here) and a full strip of 15 changes fit as they are.
+    const some = fit(entry(15));
+    expect([bytes(some) <= 1000, some.title.length, some.changes!.length]).toEqual([true, 120, 15]);
+    // Changes too many for any title: the title is cut to its floor, then the changes.
+    const many = fit(entry(200));
+    expect([bytes(many) <= 1000, many.title.length <= 20, many.changes!.length > 0 && many.changes!.length < 200]).toEqual([true, true, true]);
+  });
+
+  it('changePoints skips captures stored as too large, and one page has no changes', () => {
+    const page = (text: string) => ({ title: 't', blocks: [{ kind: 'paragraph' as const, text }] });
+    const caps = [{ ts: '20100101000000', digest: 'a', length: 1 }, { ts: '20200101000000', digest: 'b', length: 1 }];
+    expect(changePoints('https://example.org/', caps, [page('one'), { error: 'too_large' } as never], caps[0]!.ts, caps[1]!.ts)).toEqual([]);
+  });
 
   it('lists a looked-up page once, newest first, with its title and span, and never touches the archive', async () => {
     const t = setup();
