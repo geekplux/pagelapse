@@ -5,7 +5,7 @@ import { buildTimeline } from '../../core/timeline.ts';
 import wikipedia from '../../samples/wikipedia-internet-archive.json';
 import { samples } from '../../samples/index.ts';
 import { AXIS_Y, barHeight, deckLayout, monthYear } from './deck.ts';
-import { Hero } from './Hero.tsx';
+import { HERO_OPTIONS, Hero } from './Hero.tsx';
 
 const fixture = parseSampleFixture(wikipedia);
 const captures = fixture.snapshots.map((s) => s.ts);
@@ -48,11 +48,11 @@ describe('deckLayout', () => {
 describe('Hero', () => {
   const html = renderToStaticMarkup(<Hero samples={samples} onSample={() => {}} onUrl={() => {}} deck={fixture} onCapture={() => {}} />);
 
-  it('has the headline, the address field and one option per sample, in that order', () => {
+  it(`has the headline, the address field and an option for each of the first ${HERO_OPTIONS} samples, in that order`, () => {
     expect(html).toContain('<h1 id="intro-title">See how any web page changed over the years</h1>');
     expect(html).toMatch(/aria-label="Page address"[^>]*placeholder="whatwg.org\/faq"/);
     expect(html).toContain('Show its history');
-    expect([...html.matchAll(/class="sample-opt" data-sample="([^"]+)"/g)].map((m) => m[1])).toEqual(samples.map((s) => s.id));
+    expect([...html.matchAll(/class="sample-opt" data-sample="([^"]+)"/g)].map((m) => m[1])).toEqual(samples.slice(0, HERO_OPTIONS).map((s) => s.id));
     expect(html.indexOf('Show its history')).toBeLessThan(html.indexOf('Or open a sample'));
   });
 
