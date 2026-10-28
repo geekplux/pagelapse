@@ -510,7 +510,8 @@ export const liveFlows: readonly Flow[] = [
       const failed = await page.locator('.rb-th .rb-none', { hasText: 'not fetched' }).count();
       if (failed !== 2) throw new Error(`${failed} "not fetched" thumbnails, expected 2`);
       const text = await statusLine(page);
-      if (!text.endsWith('2 captures not fetched')) throw new Error(`meta line "${text}"`);
+      // The finished run's meta line ends with the counts, then "Add to Recently explored".
+      if (!text.endsWith('2 captures not fetched Add to Recently explored')) throw new Error(`meta line "${text}"`);
       return { notes: [text, await expectText(page, '#rb-hint', /2 could not be fetched\./)] };
     },
   },
