@@ -39,6 +39,16 @@ describe('politeFetch', () => {
     expect(h.waits).toEqual([1000, 2000]);
   });
 
+  it('reports every failed attempt to onFailure with the raw Retry-After', async () => {
+    const seen: unknown[] = [];
+    const h = harness([new TypeError('reset'), { status: 503, headers: { 'retry-after': '2' } }, 200], { onFailure: (f: unknown) => seen.push(f) });
+    await h.call();
+    expect(seen).toEqual([
+      { status: 'network', retryAfter: null, attempt: 1 },
+      { status: 503, retryAfter: '2', attempt: 2 },
+    ]);
+  });
+
   it('jitters backoff within ±20% and retries network errors', async () => {
     const lo = harness([new TypeError('reset'), new TypeError('reset'), 200], { random: () => 0 });
     await lo.call();

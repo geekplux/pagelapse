@@ -40,6 +40,15 @@ export interface PoliteFetchOptions {
   timeoutMs?: number;
   /** Retry a 429 (default true). The Worker passes false: a 429 starts its global cooldown instead. */
   retry429?: boolean;
+  /** Told about every failed attempt (an HTTP error or a network error), before any retry or throw. */
+  onFailure?: (failure: UpstreamFailure) => void;
+}
+
+/** One failed attempt: the status (or "network"), the raw `Retry-After` header, and the attempt number. */
+export interface UpstreamFailure {
+  status: number | 'network';
+  retryAfter: string | null;
+  attempt: number;
 }
 
 /** A decoded upstream response. */
@@ -111,6 +120,7 @@ export async function politeFetch(url: string, opts: PoliteFetchOptions = {}): P
         signal: AbortSignal.timeout(opts.timeoutMs ?? 20_000),
       });
     } catch (err) {
+      opts.onFailure?.({ status: 'network', retryAfter: null, attempt });
       if (last) throw err;
       await sleep(backoff(attempt));
       continue;
@@ -120,6 +130,7 @@ export async function politeFetch(url: string, opts: PoliteFetchOptions = {}): P
       return { url: res.url || url, status: res.status, text: decodeBody(bytes, res.headers.get('content-type')), truncated };
     }
     await res.body?.cancel();
+    opts.onFailure?.({ status: res.status, retryAfter: res.headers.get('retry-after'), attempt });
     if (!RETRY_STATUS.has(res.status)) throw new HttpError(res.status, url);
     const wait = retryAfterSeconds(res.headers.get('retry-after'));
     if (wait !== null && wait > MAX_RETRY_AFTER_S) throw new RateLimitedError(wait);

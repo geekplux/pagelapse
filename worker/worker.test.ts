@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { USER_AGENT } from '../src/archive/politeFetch.ts';
 import cdx from '../test/fixtures/api/cdx-example.json';
 import html from '../test/fixtures/html/wikipedia-article.html?raw';
@@ -37,6 +37,11 @@ function setup() {
 }
 
 describe('worker API', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   it('GET /api/health answers without bindings or upstream calls, with security headers', async () => {
     const t = setup();
     const { res, body } = await t.get('/api/health');
@@ -86,11 +91,43 @@ describe('worker API', () => {
     t.respond = () => new Response(null, { status: 429 });
     const { res, body } = await t.get('/api/captures?url=example.org');
     expect([res.status, res.headers.get('retry-after'), body.error, body.retryAfter]).toEqual([503, '60', 'archive_rate_limited', 60]);
-    expect(t.puts.at(-1)).toMatchObject({ key: 'ia:cooldown', ttl: 60 });
+    expect(t.puts.at(-1)).toMatchObject({ key: 'ia:cooldown', ttl: 86_400 });
     expect(t.calls).toHaveLength(2);
     expect((await t.get('/api/snapshot?url=other.org&ts=20200101000000')).body.error).toBe('archive_rate_limited');
     expect((await t.get('/api/snapshot?url=example.org&ts=20200101000000')).res.status).toBe(200);
     expect(t.calls).toHaveLength(2);
+  });
+
+  it('logs each archive failure with its Retry-After, the cooldown, and how long the archive refused once it answers', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const logged = () => warn.mock.calls.map(([line]) => JSON.parse(String(line)) as Record<string, unknown>);
+    vi.useFakeTimers({ now: 1_000_000, toFake: ['Date'] });
+    const t = setup();
+    t.respond = () => new Response(null, { status: 429, headers: { 'retry-after': '90' } });
+    expect((await t.get('/api/captures?url=example.org')).body.retryAfter).toBe(90);
+    expect((await t.get('/api/captures?url=example.org')).body.error).toBe('archive_rate_limited');
+    vi.setSystemTime(1_000_000 + 91_000);
+    t.respond = () => new Response(null, { status: 429 });
+    expect((await t.get('/api/captures?url=example.org')).body.retryAfter).toBe(60);
+    vi.setSystemTime(1_000_000 + 152_000);
+    t.respond = recorded;
+    expect((await t.get('/api/captures?url=example.org')).res.status).toBe(200);
+    expect(logged()).toEqual([
+      { event: 'archive_failure', kind: 'cdx', status: 429, retryAfter: '90', attempt: 1 },
+      { event: 'archive_cooldown_start', kind: 'cdx', cooldown: 90, retryAfter: '90', streak: 0 },
+      { event: 'archive_cooldown_hit', kind: 'cdx', wait: 90 },
+      { event: 'archive_failure', kind: 'cdx', status: 429, retryAfter: null, attempt: 1 },
+      { event: 'archive_cooldown_start', kind: 'cdx', cooldown: 60, retryAfter: null, streak: 91 },
+      { event: 'archive_recovered', kind: 'cdx', after: 152 },
+    ]);
+    expect(JSON.stringify(logged())).not.toMatch(/example\.org|203\.0\.113/);
+  });
+
+  it('reads a cooldown stored by an older deploy as a bare end time', async () => {
+    const t = setup();
+    t.store.set('ia:cooldown', String(Date.now() + 30_000));
+    expect((await t.get('/api/captures?url=example.org')).body).toMatchObject({ error: 'archive_rate_limited', retryAfter: 30 });
+    expect(t.calls).toHaveLength(0);
   });
 
   it('a capture over 2 MB is too_large, remembered, and never refetched', async () => {
