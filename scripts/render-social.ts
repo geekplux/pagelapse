@@ -9,6 +9,7 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { type Browser, chromium } from 'playwright-core';
 import { encodeWebp } from './lib/webp.ts';
+import { chromePath } from './lib/chrome.ts';
 
 const root = resolve(import.meta.dirname, '..');
 const SVG = join(root, 'assets/social-preview.svg');
@@ -35,7 +36,7 @@ let browser: Browser | undefined;
 let code = 1;
 try {
   const svg = inlineAssets(readFileSync(SVG, 'utf8'), dirname(SVG));
-  browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--disable-dev-shm-usage', '--no-sandbox', '--no-proxy-server'] });
+  browser = await chromium.launch({ executablePath: chromePath(), headless: true, args: ['--disable-dev-shm-usage', '--no-sandbox', '--no-proxy-server'] });
   const page = await browser.newPage({ viewport: SIZE, deviceScaleFactor: 1 });
   // Nothing may load from the network: every asset is inlined.
   await page.route('**/*', (route) => (route.request().url().startsWith('data:') ? route.continue() : route.abort('blockedbyclient')));

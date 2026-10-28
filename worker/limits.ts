@@ -10,7 +10,7 @@ export const STREAK_TTL_S = 86_400;
 /** Per-attempt upstream timeout: with 3 attempts and backoff, a dead archive fails in ~40 s instead of ~60 s. */
 export const UPSTREAM_TIMEOUT_MS = 12_000;
 
-const SLOW_DOWN = 'The Internet Archive asked us to slow down. Try again shortly.';
+const SLOW_DOWN = 'The Internet Archive is turning new lookups away for now. Pages looked up before still open.';
 
 /** What `ia:cooldown` holds: when the cooldown ends, and when the current run of 429s began (epoch ms). */
 interface Cooldown {

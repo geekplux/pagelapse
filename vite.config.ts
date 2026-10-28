@@ -80,5 +80,8 @@ export default defineConfig(({ command, isPreview }) => ({
     css: { include: [/src\/design\/[a-z]+\.css/] },
     // Keep the worker pool small so the tests fit on modest machines.
     maxWorkers: 2,
+    // No persistent transform cache: it kept import.meta.glob results (src/samples/index.ts) from before a new fixture
+    // was added, so the registry missed it. The suite takes seconds without it.
+    fsModuleCache: false,
   },
 }));

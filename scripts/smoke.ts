@@ -16,10 +16,10 @@ import { CVD_VARIANTS, assertAxeClean, setCvdFilter } from './smoke-a11y.ts';
 import { type FlowResult, flows as baseFlows } from './smoke-flows.ts';
 import { calmFlows } from './smoke-calm.ts';
 import { liveFlows, replayLog, summaryFlows } from './smoke-live.ts';
+import { chromePath } from './lib/chrome.ts';
 
 const flows = [...baseFlows, ...liveFlows, ...summaryFlows, ...calmFlows];
 
-const CHROME = '/usr/bin/google-chrome';
 const VIEWPORTS = {
   desktop: { width: 1280, height: 800 },
   mobile: { width: 390, height: 844 },
@@ -191,7 +191,7 @@ async function main(): Promise<number> {
   mkdirSync(outDir, { recursive: true });
   await startServer();
   browser = await chromium.launch({
-    executablePath: CHROME,
+    executablePath: chromePath(),
     headless: true,
     // We own signal handling (cleanup above). --no-sandbox: this container
     // lacks the namespaces Chrome's sandbox needs.

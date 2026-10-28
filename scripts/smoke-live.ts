@@ -485,7 +485,7 @@ export const liveFlows: readonly Flow[] = [
       await openLive(page, baseUrl, 'creativecommons.org', 'error');
       // Cancel had focus when the error card replaced the status line: focus moves to the card's heading.
       const moved = await expectFocus(page, '#state-heading', 'error replaced Cancel');
-      const first = await expectText(page, '.state-card', /asked Pagelapse to wait\. Nothing is wrong with your address.*samples still open\. Try again in 40 s\./);
+      const first = await expectText(page, '.state-card', /turning new lookups away, sometimes for hours\. Nothing is wrong with your address.*samples still open\. Try again in 40 s\./);
       const n = api.snaps().length;
       await sleep(1500);
       const later = await expectText(page, '.state-card', /Try again in 3[89] s\./);

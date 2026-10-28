@@ -40,7 +40,7 @@ Open the address `pnpm dev` prints (usually http://localhost:5173). The first vi
 flowchart LR
   A[Your URL] --> B["CDX lookup<br/>(one capture per month,<br/>identical captures collapsed)"]
   B --> C["Sample up to 16<br/>captures over time"]
-  C --> D["Fetch each raw capture<br/>(2 at a time, cached)"]
+  C --> D["Fetch each raw capture<br/>(first and latest first,<br/>2 at a time, cached)"]
   D --> E["Extract main text<br/>and outline"]
   E --> F["Diff consecutive<br/>captures"]
   F --> G["Score significance,<br/>drop trivial edits"]
@@ -66,7 +66,7 @@ Everything else is deterministic code: sampling, extraction, diffing, scoring, t
 ## Being kind to the Internet Archive
 
 - Every request identifies itself: `pagelapse/<version> (+https://github.com/geekplux/pagelapse)`.
-- At most 16 captures per page, fetched 2 at a time. Busy pages are collapsed to one capture per month first.
+- At most 16 captures per page, fetched 2 at a time, the first and latest first so the decade compare shows within seconds. Busy pages are collapsed to one capture per month first.
 - Everything is cached: the Worker keeps capture lists, extracted captures and summaries for good (lists are refreshed daily, and a page looked up once still opens when the Archive is busy), and its responses carry cache headers so your browser reuses them.
 - If the Archive answers 429, the Worker stops all uncached requests for at least 60 s (longer if the Archive says so) and tells you when to retry. Server errors are retried with backoff, and pages over 2 MB are cut off. Each visitor also has their own limit on uncached lookups.
 - A replay frame loads only for the capture you pick, after the selection has rested for 400 ms. At most 3 frames are kept, and nothing is preloaded while a run is still fetching.

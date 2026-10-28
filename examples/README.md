@@ -1,6 +1,6 @@
 # Examples
 
-Six built-in samples to start with, and five pages to try live. The sample links open a change and a compare mode directly.
+Seven built-in samples to start with, and five pages to try live. The sample links open a change and a compare mode directly.
 
 The links open the live demo at https://pagelapse.geekplux.com. To use a local copy instead, run `pnpm i && pnpm dev` ([quick start](../README.md#try-it-in-10-seconds)) and replace `https://pagelapse.geekplux.com` with `http://localhost:5173` in the address. The samples need no network and no key.
 
@@ -88,9 +88,20 @@ Open it:
 
 - [2011-01-14 → 2013-11-06 in Slider](https://pagelapse.geekplux.com/?sample=weather-gov&change=20110114192848-20131106175252&view=slider): the blue sidebar design gives way to the 2013 one, what the sample opens on.
 
+### GeekPlux home page (2014–2026)
+
+![The GeekPlux home page as captured in October 2026: "Always exploring." over a list of essays on a warm paper background](../public/samples/geekplux/20261023083411-72b76ee1.thumb.webp)
+
+The home page of Pagelapse's author, captured 13 times and included with the author's permission: a Chinese blog theme, a minimal landing page, an About page, then two redesigns in 2026. Recorded from the Wayback Machine, since Arquivo.pt holds the site only once.
+
+Open it:
+
+- [2026-09-11 → 2026-10-23 in Slider](https://pagelapse.geekplux.com/?sample=geekplux&change=20260911002301-20261023083411&view=slider): the blue landing page gives way to a quieter serif one, what the sample opens on.
+- [2015-05-26 → 2016-08-08 in Side by side](https://pagelapse.geekplux.com/?sample=geekplux&change=20150526092845-20160808221350&view=side): the blog's photo header gives way to a one-screen landing page.
+
 ## Try these live
 
-Paste any of these into the address field. A live lookup asks the Internet Archive for up to 16 captures, two at a time, so the first run of a page takes a little while. Later runs come from the cache.
+Paste any of these into the address field. A live lookup asks the Internet Archive for up to 16 captures, two at a time, the first and latest first: the decade compare shows within seconds and the years between fill in after. Later runs, by anyone, come from the cache.
 
 | Page | Why it is interesting |
 | --- | --- |

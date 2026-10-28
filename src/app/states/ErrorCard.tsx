@@ -5,7 +5,7 @@ const COPY: Partial<Record<ApiError['code'], [heading: string, cause: string]>> 
   excluded: ['This site is not in the Archive', 'The site asked the Internet Archive not to show its captures, so there is nothing to compare.'],
   archive_rate_limited: [
     'The Archive needs a pause',
-    'The Internet Archive limits how fast it serves pages, and it has asked Pagelapse to wait. Nothing is wrong with your address, and the wait can last a few minutes. Addresses looked up recently and the samples still open.',
+    'The Internet Archive limits the shared cloud network Pagelapse runs on, and right now it is turning new lookups away, sometimes for hours. Nothing is wrong with your address: pages looked up before, including those under Recently explored, and the samples still open.',
   ],
   rate_limited: ['Too many lookups at once', 'You started many new lookups in a short time.'],
   network: ['Pagelapse is unreachable', 'We could not reach the Pagelapse server. Check your connection, then try again.'],
