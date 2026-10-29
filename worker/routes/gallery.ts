@@ -33,8 +33,8 @@ const ENTRY_PREFIX = 'gallery:v1:';
 const URL_PREFIX = 'gallery:url:';
 /** A JSON array of hosts (`example.org`) or full addresses the maintainer removed (docs/DEPLOY.md). */
 export const BLOCK_KEY = 'gallery:block';
-/** Entries the home page's listing returns. */
-export const GALLERY_MAX = 24;
+/** Entries the home page's listing returns: three rows of four; more than these links to the full list. */
+export const GALLERY_MAX = 12;
 /** Entries per page of the full listing (`?all`). */
 export const GALLERY_PAGE = 60;
 const MAX_URL = 200;
