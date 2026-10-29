@@ -332,7 +332,7 @@ describe('gallery', () => {
     expect((await t.share('not a url')).body.error).toBe('invalid_url');
   });
 
-  it('lists the newest 24 with `more`, and every entry, a page of 60 at a time, with ?all', async () => {
+  it('lists the newest 12 with `more`, and every entry, a page of 60 at a time, with ?all', async () => {
     const t = setup();
     for (let i = 0; i < 70; i++) {
       const url = `https://site${i}.example/`;
@@ -341,7 +341,7 @@ describe('gallery', () => {
     t.store.set('gallery:block', JSON.stringify(['site3.example']));
     const home = (await t.get('/api/gallery')).body;
     // Keys sort newest first: site69 was shared last.
-    expect([home.entries.length, home.more, home.entries[0].url]).toEqual([24, true, 'https://site69.example/']);
+    expect([home.entries.length, home.more, home.entries[0].url]).toEqual([12, true, 'https://site69.example/']);
     const first = await t.get('/api/gallery?all');
     expect(first.res.headers.get('cache-control')).toBe('public, max-age=300');
     expect([first.body.entries.length, typeof first.body.cursor]).toEqual([60, 'string']);

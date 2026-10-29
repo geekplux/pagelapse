@@ -6,7 +6,7 @@ import { type GalleryEntry, fetchExplored } from '../live/api.ts';
 interface Props {
   /** Looks a shared page up (its captures are already in the Worker's cache). */
   onUrl: (url: string) => void;
-  /** The heading, which takes focus when the list opens (it is focusable from script only). */
+  /** The title, which takes focus when the list opens (it is focusable from script only). */
   headingRef?: RefCallback<HTMLHeadingElement> | undefined;
 }
 
@@ -40,9 +40,10 @@ export function ExploredPage({ onUrl, headingRef }: Props) {
 
   return (
     <section className="explored" aria-labelledby="explored-page-title">
-      <h1 id="explored-page-title" tabIndex={-1} ref={headingRef}>
+      {/* An h2, as a workspace title is: the header's wordmark is this view's h1. */}
+      <h2 id="explored-page-title" tabIndex={-1} ref={headingRef}>
         Recently explored
-      </h1>
+      </h2>
       <p className="gallery-lede">Every page visitors looked up and chose to share, newest first. Their captures are already fetched, so they open quickly.</p>
       {entries.length > 0 && (
         <ul className="gallery-grid is-text" aria-labelledby="explored-page-title">

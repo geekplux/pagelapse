@@ -395,7 +395,7 @@ export const flows: readonly Flow[] = [
       await page.route('**/api/gallery**', (route) => {
         const u = new URL(route.request().url());
         asked.push(u.search || '(home)');
-        if (!u.searchParams.has('all')) return route.fulfill({ json: { entries: Array.from({ length: 24 }, (_, i) => entry(i)), more: true } });
+        if (!u.searchParams.has('all')) return route.fulfill({ json: { entries: Array.from({ length: 12 }, (_, i) => entry(i)), more: true } });
         if (u.searchParams.get('cursor') === 'next') return route.fulfill({ json: { entries: Array.from({ length: 5 }, (_, i) => entry(60 + i)) } });
         return route.fulfill({ json: { entries: Array.from({ length: 60 }, (_, i) => entry(i)), cursor: 'next' } });
       });
@@ -408,7 +408,7 @@ export const flows: readonly Flow[] = [
       await page.locator('.gallery-grid.is-text .g-ticket').first().waitFor({ timeout: 10_000 });
       const dots = await page.locator('.gallery-grid.is-text .g-dot').count();
       const tops = await page.locator('.gallery-grid.is-text .g-dot.is-top').count();
-      if (dots !== 48 || tops !== 24) throw new Error(`${dots} change dots (${tops} marked largest) on the home page, expected 48 (24)`);
+      if (dots !== 24 || tops !== 12) throw new Error(`${dots} change dots (${tops} marked largest) on the home page, expected 24 (12)`);
       // The title leads the card: larger than its years.
       const sizes = await page.locator('.gallery-grid.is-text .g-card').first().evaluate((c) => [c.querySelector('.g-title'), c.querySelector('.g-ticket')].map((el) => parseFloat(getComputedStyle(el!).fontSize)));
       if (!(sizes[0]! > sizes[1]!)) throw new Error(`the title (${sizes[0]}px) does not lead its years (${sizes[1]}px)`);
@@ -418,6 +418,10 @@ export const flows: readonly Flow[] = [
       if (new URL(page.url()).search !== '?explored') throw new Error(`the list opened at ${page.url()}`);
       const focus = await page.evaluate(() => document.activeElement?.id);
       if (focus !== 'explored-page-title') throw new Error(`focus on "${focus}" after opening the list`);
+      // One h1 per view: here the header's wordmark; the list's title is an h2, as a workspace title is.
+      const h1s = await page.locator('h1').allInnerTexts();
+      const title = await page.locator('#explored-page-title').evaluate((el) => el.tagName);
+      if (h1s.length !== 1 || title !== 'H2') throw new Error(`headings: h1 ${JSON.stringify(h1s)}, list title <${title}>`);
       await cardsAre(60);
       await page.getByRole('button', { name: 'Show more' }).click();
       await cardsAre(65);
