@@ -46,7 +46,7 @@ describe('deckLayout', () => {
 });
 
 describe('Hero', () => {
-  const html = renderToStaticMarkup(<Hero samples={samples} onSample={() => {}} onUrl={() => {}} deck={fixture} onCapture={() => {}} />);
+  const html = renderToStaticMarkup(<Hero samples={samples} onSample={() => {}} onUrl={() => {}} deck={fixture} onCapture={() => {}} onExplored={() => {}} />);
 
   it(`has the headline, the address field and an option for each of the first ${HERO_OPTIONS} samples, in that order`, () => {
     expect(html).toContain('<h1 id="intro-title">See how any web page changed over the years</h1>');

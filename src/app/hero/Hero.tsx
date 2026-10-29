@@ -17,13 +17,15 @@ interface Props {
   failed?: ReactNode;
   /** Opens the deck's sample on capture `ts`; `from` is the card pressed. */
   onCapture: (ts: string, from: HTMLElement) => void;
+  /** Opens the list of every page shared to Recently explored. */
+  onExplored: () => void;
 }
 
 /** Sample options in the first view; the rest are cards in the gallery under the deck (calm caps, DESIGN.md). */
 export const HERO_OPTIONS = 3;
 
 /** The first view (no `?sample=` or `?url=`): the headline, the address field, the first samples, the deck of captures, then the gallery. */
-export function Hero({ samples, onSample, onUrl, deck, failed, onCapture }: Props) {
+export function Hero({ samples, onSample, onUrl, deck, failed, onCapture, onExplored }: Props) {
   const [first, latest] = [deck?.snapshots[0]?.ts, deck?.snapshots.at(-1)?.ts];
 
   return (
@@ -53,7 +55,7 @@ export function Hero({ samples, onSample, onUrl, deck, failed, onCapture }: Prop
           {deck && first && latest && `The Wikipedia article on the Internet Archive, ${deck.snapshots.length} captures from ${monthYear(first)} to ${monthYear(latest)}.`}
         </figcaption>
       </figure>
-      <Gallery samples={samples} onSample={onSample} onUrl={onUrl} />
+      <Gallery samples={samples} onSample={onSample} onUrl={onUrl} onExplored={onExplored} />
     </div>
   );
 }
