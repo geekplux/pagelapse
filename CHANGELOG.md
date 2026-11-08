@@ -4,6 +4,10 @@ All notable changes to Pagelapse are documented here. The format is based on [Ke
 
 ## [Unreleased]
 
+### Fixed
+
+- **A real 404:** an unknown path answers 404 with a "Page not found" page (noindex) instead of the home page with 200.
+
 ### Added
 
 - **Every explored page in one list:** when Recently explored holds more than the home page's 12 (three rows of four), "See all explored pages" opens `?explored`, every shared page as cards, newest first, 60 at a time with "Show more".
