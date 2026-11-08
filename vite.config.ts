@@ -4,6 +4,7 @@ import { cloudflare } from '@cloudflare/vite-plugin';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { notFoundPage } from './scripts/lib/notFoundPage.ts';
 
 /** Records which modules went into each client chunk, for scripts/check-size.ts. */
 function chunkModules(): Plugin {
@@ -71,7 +72,8 @@ const workerConfig = (command: 'build' | 'serve', isPreview?: boolean) =>
 export default defineConfig(({ command, isPreview }) => ({
   // The Cloudflare plugin builds the Worker next to the client and runs `vite dev`/`preview` in workerd.
   // Tests use a fake Env instead, so Vitest skips it.
-  plugins: [react(), chunkModules(), sampleCatalog(), process.env.VITEST ? [] : cloudflare(workerConfig(command, isPreview))],
+  // notFoundPage: 404.html, what an unknown path gets at status 404 (scripts/lib/notFoundPage.ts).
+  plugins: [react(), chunkModules(), sampleCatalog(), notFoundPage(), process.env.VITEST ? [] : cloudflare(workerConfig(command, isPreview))],
   test: {
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts', 'worker/**/*.test.ts'],

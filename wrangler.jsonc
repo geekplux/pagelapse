@@ -13,7 +13,7 @@
   "preview_urls": false,
   // Custom domain, also attached in the dashboard: declaring it here keeps `wrangler deploy` from removing it.
   "routes": [{ "pattern": "pagelapse.geekplux.com", "custom_domain": true }],
-  "assets": { "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
+  "assets": { "not_found_handling": "404-page", "run_worker_first": ["/api/*"] },
   // Run /api/* next to the Internet Archive rather than next to each visitor: nearly every uncached request goes there.
   // An experiment too: the archive refuses the Worker's usual egress for hours (docs/DEPLOY.md, Logs), and a different
   // data center may leave from different addresses. Static assets are still served from the nearest location.
